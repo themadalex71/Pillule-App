@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Redis from 'ioredis';
 
-// 1. Force le mode dynamique (évite les erreurs de build)
+// 1. Force le mode dynamique
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -9,7 +9,6 @@ export async function GET() {
   if (!process.env.REDIS_URL) {
     return NextResponse.json({ message: 'Build mode: Pas de Redis, on passe.' });
   }
-  // ---------------------------------
 
   try {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -18,19 +17,20 @@ export async function GET() {
     const today = new Date();
     const dateStr = today.toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
 
-    // --- CORRECTION AUTOMATIQUE SSL (Le fameux "s") ---
+    // --- CORRECTION SSL + OPTIONS ---
     let connectionString = process.env.REDIS_URL;
     if (connectionString && connectionString.startsWith("redis://")) {
       connectionString = connectionString.replace("redis://", "rediss://");
     }
-    // --------------------------------------------------
 
-    // Connexion avec la version sécurisée
-    const redis = new Redis(connectionString);
-    const key = `pill_${dateStr}`;
+    // 👇 LA NOUNOUVEAUTÉ EST ICI : On ajoute des options pour faciliter la connexion
+    const redis = new Redis(connectionString, {
+        tls: { rejectUnauthorized: false } 
+    });
     
+    const key = `pill_${dateStr}`;
     const isTaken = await redis.get(key);
-    await redis.quit(); // On ferme vite la connexion
+    await redis.quit(); 
 
     // VERDICT
     if (isTaken === 'true') {
@@ -50,8 +50,9 @@ export async function GET() {
     
     return NextResponse.json({ success: true, message: 'Rappel envoyé !' });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return NextResponse.json({ error: 'Erreur Serveur' }, { status: 500 });
+    // 👇 ON AFFICHE LA VRAIE ERREUR MAINTENANT
+    return NextResponse.json({ error: error.message || "Erreur inconnue" }, { status: 500 });
   }
 }
