@@ -6,17 +6,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { cycleStart } = body; // On reçoit la date
+    const { cycleStart } = body; 
 
-    // Correction SSL (le fameux 's')
-    let connectionString = process.env.REDIS_URL;
-    if (connectionString.startsWith("redis://")) {
-      connectionString = connectionString.replace("redis://", "rediss://");
-    }
-
-    const redis = new Redis(connectionString);
+    // 👇 Connexion simple ici aussi
+    const redis = new Redis(process.env.REDIS_URL);
     
-    // On sauvegarde la date dans la clé "cycle_start"
     await redis.set('cycle_start', cycleStart);
     await redis.quit();
     
