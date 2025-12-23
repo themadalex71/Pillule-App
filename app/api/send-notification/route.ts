@@ -55,7 +55,7 @@ export async function GET() {
     }
 
     // 4. Envoi Telegram
-    const message = `⚠️ Rappel Pilule ! \n\nTu n'as pas encore coché la case d'aujourd'hui (${dateStr}). \n\n✅ Coche-la vite ici : https://rappel-pillule.vercel.app`;
+    const message = `⚠️ Rappel Pilule ! \n\nTu n'as pas encore coché la case d'aujourd'hui (${dateStr}). \n\n✅ Coche-la vite ici : https://pillule-app.vercel.app/`;
 
     if (token && chatId) {
       await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
