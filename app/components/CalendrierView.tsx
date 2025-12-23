@@ -53,12 +53,25 @@ export default function CalendrierView() {
     }
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const dateValue = e.target.value;
     if (!dateValue) return;
+    
     const newDate = new Date(dateValue);
     setCycleStartDate(newDate);
     localStorage.setItem('cycleStart', newDate.toISOString());
+
+    // 👇 AJOUT : On prévient le serveur tout de suite !
+    try {
+      await fetch('/api/save-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cycleStart: newDate.toISOString() }),
+      });
+      console.log("Date envoyée au serveur !");
+    } catch (err) {
+      console.error("Erreur de sauvegarde", err);
+    }
   };
 
   const onNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
