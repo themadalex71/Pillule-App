@@ -1,6 +1,7 @@
 import Redis from 'ioredis';
 import { NextResponse } from 'next/server';
 
+// 1. Force le mode dynamique
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
@@ -14,7 +15,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { date, status } = body; 
 
-    const redis = new Redis(process.env.REDIS_URL);
+    // --- CORRECTION AUTOMATIQUE SSL ---
+    let connectionString = process.env.REDIS_URL;
+    if (connectionString && connectionString.startsWith("redis://")) {
+      connectionString = connectionString.replace("redis://", "rediss://");
+    }
+    // ----------------------------------
+
+    const redis = new Redis(connectionString);
     const key = `pill_${date}`;
 
     if (status === 'taken') {
