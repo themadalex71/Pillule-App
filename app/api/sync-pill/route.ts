@@ -1,26 +1,33 @@
 import Redis from 'ioredis';
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const { date, status } = body; 
+export const dynamic = 'force-dynamic';
 
-  // On se connecte avec TA clé
-  const redis = new Redis(process.env.REDIS_URL!);
-  const key = `pill_${date}`;
+export async function POST(request: Request) {
+  // --- SECURITÉ ANTI-CRASH BUILD ---
+  if (!process.env.REDIS_URL) {
+    return NextResponse.json({ message: 'Build mode: Pas de Redis' });
+  }
+  // ---------------------------------
 
   try {
+    const body = await request.json();
+    const { date, status } = body; 
+
+    const redis = new Redis(process.env.REDIS_URL);
+    const key = `pill_${date}`;
+
     if (status === 'taken') {
       await redis.set(key, 'true');
     } else {
       await redis.del(key);
     }
     
-    // On ferme la connexion pour ne pas surcharger le serveur
     await redis.quit();
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ success: false }, { status: 500 });
   }
 }
