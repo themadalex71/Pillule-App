@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Pill, Wallet, ShoppingCart, Dumbbell, Plus } from 'lucide-react';
+import { Pill, Clapperboard, ShoppingCart, Plus } from 'lucide-react'; // J'ai remplacé Wallet par Clapperboard
 
 export default function Home() {
   return (
@@ -15,7 +15,7 @@ export default function Home() {
       <div className="grid grid-cols-2 gap-4 w-full max-w-md">
         
         {/* CARTE 1 : PILULE (Active) */}
-        <Link href="/pilule" className="group">
+        <Link href="/pillule" className="group">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-pink-100 hover:shadow-md hover:border-pink-300 transition-all flex flex-col items-center gap-3 cursor-pointer h-full">
             <div className="bg-pink-100 p-3 rounded-full group-hover:bg-pink-200 transition">
               <Pill className="text-pink-600" size={32} />
@@ -24,14 +24,15 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* CARTE 2 : BUDGET (Exemple futur) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 opacity-60 flex flex-col items-center gap-3 h-full grayscale relative overflow-hidden">
-           <div className="absolute top-2 right-2 bg-gray-200 text-xs px-2 py-1 rounded-full text-gray-500">Bientôt</div>
-          <div className="bg-blue-100 p-3 rounded-full">
-            <Wallet className="text-blue-600" size={32} />
+        {/* CARTE 2 : CINÉMA (Active) */}
+        <Link href="/cinema" className="group">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md hover:border-slate-300 transition-all flex flex-col items-center gap-3 cursor-pointer h-full">
+            <div className="bg-slate-100 p-3 rounded-full group-hover:bg-slate-200 transition">
+              <Clapperboard className="text-slate-700" size={32} />
+            </div>
+            <span className="font-bold text-gray-700">Ciné / Séries</span>
           </div>
-          <span className="font-bold text-gray-400">Budget</span>
-        </div>
+        </Link>
 
         {/* CARTE 3 : COURSES (Exemple futur) */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 opacity-60 flex flex-col items-center gap-3 h-full grayscale relative">
