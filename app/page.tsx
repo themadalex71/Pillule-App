@@ -8,7 +8,7 @@ export default function Home() {
       {/* En-tête */}
       <header className="w-full max-w-md mt-8 mb-10 text-center">
         <h1 className="text-4xl font-extrabold text-gray-800 mb-2">Les Gogoles</h1>
-        <p className="text-gray-500">Bienvenue dans l'espace perso des plus Beaux ✨</p>
+        <p className="text-gray-500">Bienvenue dans le menu des plus Beaux ✨</p>
       </header>
 
       {/* Grille des Applications */}
