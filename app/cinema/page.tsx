@@ -186,7 +186,8 @@ export default function CinemaPage() {
                             {movieDetails.backdrop_path ? (
                                 <img src={movieDetails.backdrop_path} alt="" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-600">Pas d'image</div>
+                                /* CORRECTION 1 : 'Pas d'image' -> 'Pas d&apos;image' */
+                                <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-600">Pas d&apos;image</div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
                             <button onClick={closeModale} className="absolute top-4 right-4 bg-black/40 text-white p-2 rounded-full hover:bg-black/60 transition backdrop-blur-sm border border-white/10">
@@ -197,10 +198,10 @@ export default function CinemaPage() {
                         <div className="p-6 overflow-y-auto flex-1">
                             <h2 className="text-3xl font-black text-white mb-1 leading-tight">{movieDetails.title}</h2>
                             
-                            {/* --- ICI : LE GENRE JUSTE SOUS LE TITRE --- */}
                             <p className="text-yellow-500 font-medium text-sm mb-2">{movieDetails.genres}</p>
                             
-                            {movieDetails.tagline && <p className="text-slate-400 italic text-sm mb-4">"{movieDetails.tagline}"</p>}
+                            {/* CORRECTION 2 : guillemets " -> &quot; */}
+                            {movieDetails.tagline && <p className="text-slate-400 italic text-sm mb-4">&quot;{movieDetails.tagline}&quot;</p>}
 
                             <div className="flex flex-wrap gap-3 mb-6 text-xs font-medium text-slate-300">
                                 <div className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
@@ -226,7 +227,6 @@ export default function CinemaPage() {
                                     <Users size={16}/> Distribution
                                 </h3>
                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                                    {/* Réalisateur */}
                                     <div className="flex flex-col items-center min-w-[80px]">
                                         <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-yellow-500/50 flex items-center justify-center mb-2 overflow-hidden">
                                             <Clapperboard size={24} className="text-slate-500"/>
@@ -235,7 +235,6 @@ export default function CinemaPage() {
                                         <span className="text-[10px] text-slate-500">Réalisateur</span>
                                     </div>
 
-                                    {/* Acteurs */}
                                     {movieDetails.cast.map((actor, i) => (
                                         <div key={i} className="flex flex-col items-center min-w-[80px]">
                                             <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 mb-2 overflow-hidden relative">
