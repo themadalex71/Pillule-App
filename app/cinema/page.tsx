@@ -26,7 +26,7 @@ export default function CinemaPage() {
     if (activeTab === 'cinematch' && movies.length === 0) {
       fetchMovies();
     }
-  }, [activeTab]);
+  }, [activeTab, movies.length]);
 
   const fetchMovies = async () => {
     setLoading(true);
@@ -142,7 +142,7 @@ export default function CinemaPage() {
         {activeTab !== 'cinematch' && (
           <div className="text-center py-10 text-slate-500">
             <Popcorn size={48} className="mx-auto mb-4 opacity-50" />
-            <p>Contenu de l'onglet {activeTab} à venir...</p>
+            <p>Contenu de l&apos;onglet {activeTab} à venir...</p>
           </div>
         )}
 
