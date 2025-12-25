@@ -1,26 +1,62 @@
 import { NextResponse } from 'next/server';
 
-// Important : Force le serveur à ne pas garder en mémoire (cache) pour avoir du hasard à chaque fois
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   const apiKey = process.env.TMDB_API_KEY;
+  const { searchParams } = new URL(request.url);
+  
+  // Paramètres
+  const mode = searchParams.get('mode') || 'cinematch'; // 'cinematch' ou 'catalogue'
+  const genre = searchParams.get('genre');
+  const minYear = searchParams.get('minYear');
+  const maxYear = searchParams.get('maxYear');
+  const minVote = searchParams.get('minVote');
+  const sortBy = searchParams.get('sortBy') || 'popularity.desc'; // Tri par défaut
+  const page = searchParams.get('page') || '1';
 
   if (!apiKey) {
     return NextResponse.json({ error: 'API Key manquante' }, { status: 500 });
   }
 
   try {
-    // 1. On tire une page au hasard (entre 1 et 50)
-    const randomPage = Math.floor(Math.random() * 50) + 1;
-    
-    // 2. On interroge TMDB
-    const url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&language=fr-FR&sort_by=popularity.desc&include_adult=false&page=${randomPage}`;
+    // Date d'aujourd'hui (YYYY-MM-DD) pour ne pas montrer les films du futur dans le catalogue
+    const today = new Date().toISOString().split('T')[0];
+
+    let url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&language=fr-FR&include_adult=false&page=${page}`;
+
+    // --- LOGIQUE FILTRES COMMUNS ---
+    if (genre) url += `&with_genres=${genre}`;
+    if (minYear) url += `&primary_release_date.gte=${minYear}-01-01`;
+    if (minVote) url += `&vote_average.gte=${minVote}`;
+    // On exclut les films sans votes pour éviter les bugs d'affichage
+    url += `&vote_count.gte=50`; 
+
+    // --- LOGIQUE SPECIFIQUE ---
+    if (mode === 'catalogue') {
+        // Mode Catalogue : On trie et on limite à aujourd'hui max
+        
+        // Si maxYear est défini par l'utilisateur, on l'utilise, sinon c'est aujourd'hui
+        const dateLimit = maxYear ? `${maxYear}-12-31` : today;
+        url += `&primary_release_date.lte=${dateLimit}`;
+
+        // Gestion du tri
+        if (sortBy === 'newest') url += `&sort_by=primary_release_date.desc`;
+        else if (sortBy === 'oldest') url += `&sort_by=primary_release_date.asc`;
+        else if (sortBy === 'rating') url += `&sort_by=vote_average.desc`;
+        else url += `&sort_by=popularity.desc`;
+
+    } else {
+        // Mode CineMatch : Aléatoire
+        const randomPage = Math.floor(Math.random() * 20) + 1;
+        url = url.replace(`page=${page}`, `page=${randomPage}`); // On remplace la page
+        url += `&sort_by=popularity.desc`;
+        if (maxYear) url += `&primary_release_date.lte=${maxYear}-12-31`;
+    }
 
     const res = await fetch(url);
     const data = await res.json();
 
-    // 3. On nettoie les données pour ne garder que l'essentiel pour les cartes
     const formattedMovies = data.results.map((movie: any) => ({
       id: movie.id,
       title: movie.title,
@@ -29,10 +65,10 @@ export async function GET() {
       vote: movie.vote_average.toFixed(1),
     }));
     
-    // 4. On mélange les 20 résultats pour varier l'ordre
-    const shuffled = formattedMovies.sort(() => 0.5 - Math.random());
+    // Si c'est CineMatch, on mélange. Si c'est Catalogue, on garde l'ordre.
+    const finalResult = mode === 'cinematch' ? formattedMovies.sort(() => 0.5 - Math.random()) : formattedMovies;
 
-    return NextResponse.json(shuffled);
+    return NextResponse.json(finalResult);
 
   } catch (error) {
     console.error("Erreur TMDB Discover:", error);
