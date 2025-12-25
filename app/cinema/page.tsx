@@ -361,12 +361,11 @@ export default function CinemaPage() {
 
   // --- RENDU ---
   return (
-    // Utilisation de 100dvh pour s'adapter à la vraie hauteur mobile (barre d'adresse incluse)
     <main className="h-[100dvh] bg-slate-900 text-white flex flex-col relative overflow-hidden">
       
       {/* ANIMATION MATCH */}
       {showMatchAnimation && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
             <style jsx>{`
                 @keyframes clap-top { 0% { transform: rotate(-35deg); } 50% { transform: rotate(-35deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
                 @keyframes explode { 0% { transform: scale(0); opacity: 0; } 59% { transform: scale(0); opacity: 0; } 60% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
@@ -389,7 +388,7 @@ export default function CinemaPage() {
         </div>
       )}
 
-      {/* EN-TÊTE : Padding réduit sur mobile */}
+      {/* EN-TÊTE */}
       <div className="p-4 sm:p-6 z-10 relative flex justify-between items-start shrink-0">
         <div>
             {activeTab.startsWith('list-') ? (
@@ -398,7 +397,6 @@ export default function CinemaPage() {
                 <Link href="/" className="inline-flex items-center text-slate-400 mb-2 sm:mb-4 hover:text-white transition text-xs sm:text-sm"><ArrowLeft className="mr-1" size={16} /> Menu</Link>
             )}
             <div className="flex items-center gap-2">
-                {/* Taille du titre ajustée pour mobile */}
                 <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
                     {activeTab === 'cinematch' && <><Flame className="text-red-500"/> CineMatch</>}
                     {activeTab === 'hub' && <><Library className="text-blue-500"/> Mes Listes</>}
@@ -420,7 +418,7 @@ export default function CinemaPage() {
 
       {/* --- IMPORTATION MODALE (Si en cours) --- */}
       {isImporting && (
-          <div className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-6 text-center">
+          <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-6 text-center">
               <Loader2 size={48} className="animate-spin text-yellow-500 mb-4"/>
               <h2 className="text-xl font-bold mb-2">Importation en cours...</h2>
               <p className="text-slate-400 mb-4">Ne quitte pas cette page.</p>
@@ -431,9 +429,9 @@ export default function CinemaPage() {
           </div>
       )}
 
-      {/* MODALE DE CONFIRMATION DE SUPPRESSION */}
+      {/* MODALE DE CONFIRMATION DE SUPPRESSION (Z-Index augmenté) */}
       {deleteModal.show && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+            <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                 <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
                     <h3 className="text-xl font-bold text-white mb-2">Supprimer ce film ?</h3>
                     <p className="text-slate-400 mb-6">
@@ -460,7 +458,7 @@ export default function CinemaPage() {
 
       {/* FILTRES MODALE */}
       {showFilters && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
              <div className="bg-slate-900 w-[90%] max-w-md p-6 rounded-2xl border border-slate-700 shadow-2xl relative">
                  <button onClick={() => setShowFilters(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><SlidersHorizontal size={20} className="text-yellow-500"/> Filtres</h2>
@@ -492,13 +490,13 @@ export default function CinemaPage() {
         </div>
       )}
 
-      {/* CONTENU PRINCIPAL : flex-1 pour occuper l'espace restant + scroll si besoin */}
+      {/* CONTENU PRINCIPAL */}
       <div className="flex-1 relative overflow-hidden flex flex-col">
         
-        {/* CINEMATCH - CONTAINER TINDER CARD */}
+        {/* CINEMATCH - CONTAINER TINDER CARD CORRIGÉ */}
         {activeTab === 'cinematch' && (
-          // h-full ici va prendre la place restante entre le header et le footer
-          <div className="relative w-full h-full max-w-sm mx-auto px-4 pb-4">
+          // h-[65vh] pour limiter la hauteur et ne pas écraser le header/footer
+          <div className="relative w-full h-[65vh] max-w-sm mx-auto px-4 mt-2">
             {loading && <div className="flex flex-col items-center justify-center h-full text-slate-500"><Loader2 size={40} className="animate-spin mb-4 text-yellow-500"/>Chargement...</div>}
             {!loading && movies.length === 0 && (
                <div className="text-center mt-20 flex flex-col items-center">
@@ -521,7 +519,6 @@ export default function CinemaPage() {
                         <span className="bg-yellow-500 text-slate-900 text-xs font-bold px-2 py-1 rounded-full">★ {movie.vote}</span>
                         <button onTouchStart={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={() => openMovieDetails(movie.id)} className="bg-slate-700/80 hover:bg-slate-600 text-white p-2 rounded-full backdrop-blur-sm transition animate-pulse"><Info size={20} /></button>
                      </div>
-                    {/* Taille de police réduite pour mobile */}
                     <h2 className="text-2xl sm:text-3xl font-black leading-tight mb-2 drop-shadow-lg">{movie.title}</h2>
                   </div>
                 </div>
@@ -530,13 +527,12 @@ export default function CinemaPage() {
           </div>
         )}
 
-        {/* HUB - CORRIGÉ */}
+        {/* HUB */}
         {activeTab === 'hub' && (
             <div className="flex flex-col gap-4 max-w-sm mx-auto w-full px-4 overflow-y-auto pb-4">
                 <button onClick={() => setActiveTab('list-matches')} className="flex items-center justify-between bg-gradient-to-r from-pink-900/50 to-slate-800 p-4 sm:p-6 rounded-2xl border border-pink-500/30 hover:border-pink-500 hover:from-pink-900 transition group shadow-lg shadow-pink-900/10">
                     <div className="flex items-center gap-4">
                         <div className="bg-pink-500/20 p-3 sm:p-4 rounded-full text-pink-500 group-hover:bg-pink-500 group-hover:text-white transition">
-                            {/* CORRECTION ICI : Utilisation de className pour la taille */}
                             <Heart className="w-7 h-7 sm:w-8 sm:h-8" fill="currentColor" />
                         </div>
                         <div className="text-left"><h3 className="text-lg sm:text-xl font-bold text-white">Nos Matchs</h3><p className="text-xs sm:text-sm text-pink-300">Vos coups de cœur communs</p></div>
@@ -547,7 +543,6 @@ export default function CinemaPage() {
                 <button onClick={() => setActiveTab('list-wishlist')} className="flex items-center justify-between bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition group">
                     <div className="flex items-center gap-4">
                         <div className="bg-yellow-500/10 p-3 sm:p-4 rounded-full text-yellow-500 group-hover:bg-yellow-500 group-hover:text-slate-900 transition">
-                            {/* CORRECTION ICI */}
                             <Popcorn className="w-7 h-7 sm:w-8 sm:h-8" />
                         </div>
                         <div className="text-left"><h3 className="text-lg sm:text-xl font-bold">Films à voir</h3><p className="text-xs sm:text-sm text-slate-400">Ta sélection</p></div>
@@ -557,7 +552,6 @@ export default function CinemaPage() {
                 <button onClick={() => setActiveTab('list-history')} className="flex items-center justify-between bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition group">
                     <div className="flex items-center gap-4">
                         <div className="bg-green-500/10 p-3 sm:p-4 rounded-full text-green-500 group-hover:bg-green-500 group-hover:text-slate-900 transition">
-                            {/* CORRECTION ICI */}
                             <Eye className="w-7 h-7 sm:w-8 sm:h-8" />
                         </div>
                         <div className="text-left"><h3 className="text-lg sm:text-xl font-bold">Déjà vus</h3><p className="text-xs sm:text-sm text-slate-400">Ton historique noté</p></div>
@@ -577,7 +571,7 @@ export default function CinemaPage() {
             </div>
         )}
 
-         {/* LISTES - Utilisation de l'espace restant (flex-1) */}
+         {/* LISTES */}
          {['list-wishlist', 'list-history', 'list-matches'].includes(activeTab) && (
           <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
             {loading ? (
@@ -588,16 +582,16 @@ export default function CinemaPage() {
                     <p>{activeTab === 'list-matches' ? "Aucun match pour l'instant !" : `Cette liste est vide pour ${currentUser}.`}</p>
                 </div>
             ) : (
-                // Ajustement du Grid pour mobile (gap-2)
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 pb-20">
                     {savedMovies.map(movie => (
                         <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
                              <div className="aspect-[2/3] w-full bg-slate-700 relative">
                                 {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
                                 
+                                {/* BOUTON SUPPRIMER AVEC Z-INDEX CORRIGÉ (40 = sous la nav 200) */}
                                 <button 
                                     onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} 
-                                    className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-50 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
+                                    className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-40 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
                                     title="Supprimer"
                                 >
                                     <Trash2 size={14} /> 
@@ -629,7 +623,6 @@ export default function CinemaPage() {
                      <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-500"/></div>
                  ) : (
                     <>
-                        {/* Gap réduit pour mobile */}
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 pb-20">
                             {catalogueMovies.map(movie => (
                                 <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
@@ -650,18 +643,16 @@ export default function CinemaPage() {
         )}
       </div>
 
-      {/* MODALE DÉTAILS - Ajustée pour Mobile */}
+      {/* MODALE DÉTAILS - Z-INDEX CORRIGÉ */}
       {selectedMovieId && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-            {/* Hauteur ajustée (h-[85dvh]) pour voir qu'on peut fermer en cliquant au dessus */}
+        <div className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
             <div className="bg-slate-900 w-full h-[85dvh] sm:h-[90vh] sm:w-[600px] sm:rounded-2xl rounded-t-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col relative animate-in slide-in-from-bottom-10 duration-300">
                 {loadingDetails || !movieDetails ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-400"><Loader2 size={40} className="animate-spin mb-4 text-yellow-500"/> Chargement...</div>
                 ) : (
                     <>
-                        {/* Image moins haute sur mobile (h-48) */}
-                        <div className="h-48 sm:h-64 w-full relative shrink-0">
-                            {movieDetails.backdrop_path ? <img src={movieDetails.backdrop_path} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-600">Pas d&apos;image</div>}
+                        <div className="h-48 sm:h-64 w-full relative shrink-0 bg-slate-800">
+                            {movieDetails.backdrop_path ? <img src={movieDetails.backdrop_path} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-600">Pas d&apos;image</div>}
                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
                             <button onClick={closeModale} className="absolute top-4 right-4 bg-black/40 text-white p-2 rounded-full hover:bg-black/60 transition backdrop-blur-sm border border-white/10"><X size={24} /></button>
                         </div>
@@ -711,7 +702,6 @@ export default function CinemaPage() {
                                 </div>
                             </div>
                         </div>
-                        {/* Bouton fermer en sticky bottom */}
                         <div className="p-4 border-t border-slate-800 bg-slate-900 shrink-0 absolute bottom-0 w-full"><button onClick={closeModale} className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition">Fermer</button></div>
                     </>
                 )}
@@ -719,8 +709,8 @@ export default function CinemaPage() {
         </div>
       )}
 
-      {/* NAVIGATION : pb-safe pour éviter le trait noir iPhone */}
-      <nav className="fixed bottom-0 left-0 w-full bg-slate-800 border-t border-slate-700 pb-safe z-40">
+      {/* NAVIGATION : Z-INDEX 200 pour être au dessus de tout sauf les modales */}
+      <nav className="fixed bottom-0 left-0 w-full bg-slate-800 border-t border-slate-700 pb-safe z-[200]">
         <div className="flex justify-around items-center p-2 pb-4 sm:pb-2">
           <button onClick={() => setActiveTab('hub')} className={`nav-btn flex flex-col items-center transition ${['hub', 'list-wishlist', 'list-history', 'list-matches'].includes(activeTab) ? 'text-blue-500' : 'text-slate-400'}`}><Library size={24} /><span className="text-[10px] mt-1">Mes Listes</span></button>
           <button onClick={() => setActiveTab('cinematch')} className="relative -top-6"><div className={`p-4 rounded-full border-4 border-slate-900 transition ${activeTab === 'cinematch' ? 'bg-gradient-to-tr from-red-500 to-yellow-500 text-white shadow-lg shadow-red-500/20' : 'bg-slate-700 text-slate-400'}`}><Flame size={28} fill={activeTab === 'cinematch' ? "currentColor" : "none"} /></div></button>
