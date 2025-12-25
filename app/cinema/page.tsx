@@ -439,13 +439,14 @@ export default function CinemaPage() {
           </div>
       )}
 
-        {/* MODALE DE CONFIRMATION DE SUPPRESSION (Nouveau) */}
+        {/* MODALE DE CONFIRMATION DE SUPPRESSION (Corrigée) */}
         {deleteModal.show && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                 <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
                     <h3 className="text-xl font-bold text-white mb-2">Supprimer ce film ?</h3>
                     <p className="text-slate-400 mb-6">
-                        Tu es sur le point de retirer <span className="text-yellow-500 font-bold">"{deleteModal.title}"</span> de ta liste.
+                        {/* C'EST ICI QUE C'ÉTAIT CASSÉ : utilisation de &quot; au lieu de " */}
+                        Tu es sur le point de retirer <span className="text-yellow-500 font-bold">&quot;{deleteModal.title}&quot;</span> de ta liste.
                         <br/>Cette action est irréversible.
                     </p>
                     <div className="flex gap-3">
