@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Library, Popcorn, Flame, X, Loader2, Info, Calendar, Clock, Clapperboard, Users, Trash2, CheckSquare, Eye, ChevronRight, LayoutGrid, Film, Star, StarHalf, SlidersHorizontal, ArrowDownWideNarrow, ArrowUpNarrowWide, Trophy, EyeOff, Heart, Upload, FileUp } from 'lucide-react';
+import { ArrowLeft, Library, Popcorn, Flame, X, Loader2, Info, Calendar, Clock, Clapperboard, Users, Trash2, Eye, ChevronRight, LayoutGrid, Star, StarHalf, SlidersHorizontal, ArrowDownWideNarrow, ArrowUpNarrowWide, Trophy, EyeOff, Heart, FileUp } from 'lucide-react';
 import TinderCard from 'react-tinder-card';
-import Papa from 'papaparse'; // N'oublie pas : npm install papaparse
+import Papa from 'papaparse'; 
 
 // --- TYPES ---
 interface MovieBasic {
@@ -74,6 +74,11 @@ export default function CinemaPage() {
 
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   
+  // ETAT POUR LA MODALE DE SUPPRESSION (Nouveau)
+  const [deleteModal, setDeleteModal] = useState<{show: boolean, movieId: number | null, title: string}>({ 
+      show: false, movieId: null, title: '' 
+  });
+
   // ETATS POUR LES FILTRES & TRI
   const [showFilters, setShowFilters] = useState(false);
   const [cataloguePage, setCataloguePage] = useState(1);
@@ -117,91 +122,89 @@ export default function CinemaPage() {
       fileInputRef.current?.click();
   };
 
-  // Remplace ta fonction handleFileUpload et processImport par cette logique
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-  const files = event.target.files;
-  if (!files || files.length === 0) return;
+    // On traite chaque fichier envoyé
+    Array.from(files).forEach(file => {
+        const fileName = file.name.toLowerCase();
+        let targetListType = '';
 
-  // On traite chaque fichier envoyé
-  Array.from(files).forEach(file => {
-      const fileName = file.name.toLowerCase();
-      let targetListType = '';
+        // DÉTECTION AUTOMATIQUE BASÉE SUR LE NOM DU FICHIER
+        if (fileName.includes('ratings') || fileName.includes('diary') || fileName.includes('watched')) {
+            targetListType = 'history'; 
+        } else if (fileName.includes('watchlist')) {
+            targetListType = 'wishlist'; 
+        } else {
+            console.warn(`Fichier ignoré : ${fileName}`);
+            return;
+        }
 
-      // DÉTECTION AUTOMATIQUE BASÉE SUR LE NOM DU FICHIER
-      if (fileName.includes('ratings') || fileName.includes('diary') || fileName.includes('watched')) {
-          targetListType = 'history'; // Va dans Déjà vus
-      } else if (fileName.includes('watchlist')) {
-          targetListType = 'wishlist'; // Va dans À voir
-      } else {
-          console.warn(`Fichier ignoré : ${fileName} (ne semble pas être une liste connue)`);
-          return;
-      }
+        setIsImporting(true);
 
-      setIsImporting(true);
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            // Utilisation de 'any' pour éviter l'erreur TypeScript
+            complete: async (results: any) => {
+                await processImport(results.data, targetListType, fileName);
+            }
+        });
+    });
+  };
 
-      Papa.parse(file, {
-          header: true,
-          skipEmptyLines: true,
-          complete: async (results: any) => {
-              await processImport(results.data, targetListType, fileName);
-          }
-      });
-  });
-};
+  const processImport = async (rows: any[], listType: string, sourceFileName: string) => {
+    // 1. On met à jour le TOTAL une seule fois avant de commencer
+    setImportProgress(prev => ({
+        current: prev?.current || 0,
+        total: (prev?.total || 0) + rows.length
+    }));
 
-const processImport = async (rows: any[], listType: string, sourceFileName: string) => {
-  let count = 0;
-  console.log(`Début import ${sourceFileName} vers ${listType}`);
+    let count = 0;
+    console.log(`Début import ${sourceFileName} vers ${listType}`);
 
-  for (const row of rows) {
-      // Mapping basé sur ton screenshot ratings.csv
-      // Colonnes : Date, Name, Year, Letterboxd URI, Rating
-      const title = row.Name || row.Title;
-      const year = row.Year;
-      
-      // La note est dans 'Rating' (Letterboxd standard = sur 5)
-      const rating = row.Rating ? parseFloat(row.Rating) : null;
-      
-      // La date est dans 'Date' (format YYYY-MM-DD)
-      const watchedDate = row.Date || row['Watched Date'];
+    for (const row of rows) {
+        const title = row.Name || row.Title;
+        const year = row.Year;
+        const rating = row.Rating ? parseFloat(row.Rating) : null;
+        const watchedDate = row.Date || row['Watched Date'];
 
-      if (title && year) {
-          try {
-              await fetch('/api/cinema/import', {
-                  method: 'POST',
-                  body: JSON.stringify({
-                      title,
-                      year,
-                      userRating: rating,
-                      watchedDate: watchedDate,
-                      listType: listType, // history ou wishlist
-                      userId: currentUser
-                  })
-              });
-          } catch (e) {
-              console.error("Erreur import", title);
-          }
-      }
-      count++;
-      // Mise à jour visuelle (optionnel, tu peux simplifier)
-      setImportProgress(prev => ({ 
-          current: (prev?.current || 0) + 1, 
-          total: (prev?.total || 0) + rows.length 
-      }));
-  }
+        if (title && year) {
+            try {
+                await fetch('/api/cinema/import', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title,
+                        year,
+                        userRating: rating,
+                        watchedDate: watchedDate,
+                        listType: listType,
+                        userId: currentUser
+                    })
+                });
+            } catch (e) {
+                console.error("Erreur import", title);
+            }
+        }
+        
+        count++;
+        // 2. On met à jour SEULEMENT le compteur courant
+        setImportProgress(prev => ({ 
+            ...prev,
+            current: (prev?.current || 0) + 1 
+        }));
+    }
 
-  // Fin du traitement pour ce fichier
-  alert(`Importation de ${sourceFileName} terminée ! (${count} films traités)`);
-  
-  // Rafraîchir la liste affichée
-  if (activeTab === `list-${listType}`) {
-      fetchSavedList(listType);
-  }
-  setIsImporting(false);
-};
+    alert(`Importation de ${sourceFileName} terminée ! (${count} films traités)`);
+    
+    if (activeTab === `list-${listType}`) {
+        fetchSavedList(listType);
+    }
+    setIsImporting(false);
+  };
 
-  // --- AUTRES FONCTIONS API (Identiques à avant) ---
+  // --- AUTRES FONCTIONS API ---
   const fetchDiscoverMovies = async () => {
     setLoading(true);
     try {
@@ -275,6 +278,48 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
 
   const triggerMatchAnimation = () => { setShowMatchAnimation(true); setTimeout(() => setShowMatchAnimation(false), 3500); };
 
+  // --- LOGIQUE SUPPRESSION (Nouvelle Version) ---
+
+  const handleDeleteClick = (e: React.MouseEvent, movieTitle: string, movieId: number) => {
+      e.stopPropagation(); 
+      e.preventDefault();
+      // Au lieu de window.confirm, on ouvre la modale
+      setDeleteModal({ show: true, movieId: movieId, title: movieTitle });
+  };
+
+  const confirmDelete = async () => {
+    if (deleteModal.movieId) {
+        await deleteMovie(deleteModal.movieId);
+        setDeleteModal({ show: false, movieId: null, title: '' }); // Fermer la modale
+    }
+  };
+
+  const deleteMovie = async (movieId: number) => {
+    const listType = activeTab === 'list-wishlist' ? 'wishlist' : 'history';
+    const typeToSend = activeTab === 'list-matches' ? 'wishlist' : listType;
+    
+    // 1. Optimistic UI
+    if (['list-wishlist', 'list-history', 'list-matches'].includes(activeTab)) {
+         setSavedMovies(prev => prev.filter(m => m.id !== movieId));
+    }
+
+    try {
+        // 2. Appel DELETE correct
+        await fetch('/api/cinema/save', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                movieId, 
+                listType: typeToSend, 
+                userId: currentUser 
+            })
+        });
+    } catch (error) { 
+        console.error("Erreur suppression", error);
+        fetchSavedList(listType); // Rollback en cas d'erreur
+    }
+  };
+
   const toggleWishlist = async () => {
     if (!movieDetails) return;
     if (isInWishlist) {
@@ -288,46 +333,14 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
     }
   };
 
-  const deleteMovie = async (movieId: number) => {
-    // On détermine dans quelle liste on est pour savoir quoi dire au backend
-    const listType = activeTab === 'list-wishlist' ? 'wishlist' : 'history';
-    // Si on est dans "Nos Matchs", on supprime de la wishlist par défaut
-    const typeToSend = activeTab === 'list-matches' ? 'wishlist' : listType;
-    
-    // 1. Mise à jour visuelle immédiate (Optimistic UI)
-    if (['list-wishlist', 'list-history', 'list-matches'].includes(activeTab)) {
-         setSavedMovies(prev => prev.filter(m => m.id !== movieId));
-    }
-
-    try {
-        // 2. Appel au Backend (Route "save" avec méthode DELETE)
-        await fetch('/api/cinema/save', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                movieId, 
-                listType: typeToSend, 
-                userId: currentUser 
-            })
-        });
-        console.log("Film supprimé côté serveur");
-    } catch (error) { 
-        console.error("Erreur suppression", error);
-        // En cas d'erreur, on recharge la liste pour remettre le film
-        fetchSavedList(listType);
-    }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, movieTitle: string, movieId: number) => {
-      e.stopPropagation();
-      const message = activeTab === 'list-matches' ? `Si tu supprimes "${movieTitle}", ce ne sera plus un match. Continuer ?` : `Veux-tu vraiment supprimer "${movieTitle}" de ta liste ?`;
-      if (window.confirm(message)) deleteMovie(movieId);
-  };
-
   const rateAndMoveToHistory = async () => {
       if (!movieDetails) return;
       await saveMovie(movieDetails, 'history', rating);
-      await fetch('/api/cinema/delete', { method: 'POST', body: JSON.stringify({ movieId: movieDetails.id, listType: 'wishlist', userId: currentUser }) });
+      await fetch('/api/cinema/save', { // Changé pour utiliser la bonne route "save" en DELETE
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ movieId: movieDetails.id, listType: 'wishlist', userId: currentUser }) 
+      });
       if (activeTab === 'list-history') fetchSavedList('history'); 
       else setSavedMovies(prev => prev.filter(m => m.id !== movieDetails.id));
       closeModale();
@@ -425,6 +438,33 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
               <p className="mt-2 text-xs font-mono">{importProgress.current} / {importProgress.total} films</p>
           </div>
       )}
+
+        {/* MODALE DE CONFIRMATION DE SUPPRESSION (Nouveau) */}
+        {deleteModal.show && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                    <h3 className="text-xl font-bold text-white mb-2">Supprimer ce film ?</h3>
+                    <p className="text-slate-400 mb-6">
+                        Tu es sur le point de retirer <span className="text-yellow-500 font-bold">"{deleteModal.title}"</span> de ta liste.
+                        <br/>Cette action est irréversible.
+                    </p>
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setDeleteModal({ show: false, movieId: null, title: '' })} 
+                            className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-700 transition"
+                        >
+                            Annuler
+                        </button>
+                        <button 
+                            onClick={confirmDelete} 
+                            className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition shadow-lg shadow-red-900/20"
+                        >
+                            Oui, supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
       {/* FILTRES MODALE */}
       {showFilters && (
@@ -524,7 +564,7 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
 
                 {/* ZONE D'IMPORTATION LETTERBOXD */}
                 <div className="mt-4 pt-6 border-t border-slate-800">
-                    <input type="file" accept=".csv" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                    <input type="file" accept=".csv" multiple ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
                     <button onClick={handleFileClick} className="w-full flex items-center justify-center gap-2 bg-slate-800/50 border border-slate-700 border-dashed text-slate-500 p-4 rounded-xl hover:bg-slate-800 hover:text-white transition">
                         <FileUp size={20} />
                         <span className="text-sm font-medium">Importer un CSV Letterboxd</span>
@@ -550,17 +590,16 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
                         <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
                              <div className="aspect-[2/3] w-full bg-slate-700 relative">
                                 {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
+                                
+                                {/* BOUTON SUPPRIMER CORRIGÉ */}
                                 <button 
-    onClick={(e) => {
-        e.stopPropagation(); // EMPÊCHE D'OUVRIR LA MODALE
-        e.preventDefault();  // Sécurité supplémentaire
-        handleDeleteClick(e, movie.title, movie.id);
-    }} 
-    className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-50 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
-    title="Supprimer"
->
-    <Trash2 size={14} /> 
-</button>
+                                    onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} 
+                                    className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-50 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
+                                    title="Supprimer"
+                                >
+                                    <Trash2 size={14} /> 
+                                </button>
+
                                 {movie.userRating ? (
                                     <div className="absolute top-1 right-1 bg-green-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-1 z-10"><Star size={8} fill="currentColor"/> {movie.userRating}</div>
                                 ) : (
@@ -640,7 +679,7 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
                                 {rating > 0 && (<button onClick={rateAndMoveToHistory} className="mt-3 w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 rounded-lg transition animate-in zoom-in duration-200">Valider & Mettre dans Vus</button>)}
                             </div>
                             {(activeTab === 'list-wishlist' || activeTab === 'list-history' || activeTab === 'list-matches') && (
-                                <button onClick={() => deleteMovie(movieDetails.id)} className="w-full mb-6 border border-slate-700 text-slate-500 py-2 rounded-lg text-xs hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition flex items-center justify-center gap-2"><Trash2 size={14}/> Supprimer de la liste</button>
+                                <button onClick={() => setDeleteModal({ show: true, movieId: movieDetails.id, title: movieDetails.title })} className="w-full mb-6 border border-slate-700 text-slate-500 py-2 rounded-lg text-xs hover:bg-red-900/20 hover:text-red-400 hover:border-red-900/50 transition flex items-center justify-center gap-2"><Trash2 size={14}/> Supprimer de la liste</button>
                             )}
                             {movieDetails.tagline && <p className="text-slate-400 italic text-sm mb-4">&quot;{movieDetails.tagline}&quot;</p>}
                             <div className="flex flex-wrap gap-3 mb-6 text-xs font-medium text-slate-300">
