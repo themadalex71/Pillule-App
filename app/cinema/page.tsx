@@ -361,11 +361,13 @@ export default function CinemaPage() {
 
   // --- RENDU ---
   return (
+    // CONTENEUR PRINCIPAL VERROUILLÉ (100dvh + overflow-hidden)
+    // Cela empêche le scroll global et stabilise la barre du bas
     <main className="h-[100dvh] bg-slate-900 text-white flex flex-col relative overflow-hidden">
       
-      {/* ANIMATION MATCH */}
+      {/* ANIMATION MATCH - Z-INDEX MAXIMAL */}
       {showMatchAnimation && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
             <style jsx>{`
                 @keyframes clap-top { 0% { transform: rotate(-35deg); } 50% { transform: rotate(-35deg); } 60% { transform: rotate(0deg); } 100% { transform: rotate(0deg); } }
                 @keyframes explode { 0% { transform: scale(0); opacity: 0; } 59% { transform: scale(0); opacity: 0; } 60% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
@@ -388,8 +390,8 @@ export default function CinemaPage() {
         </div>
       )}
 
-      {/* EN-TÊTE */}
-      <div className="p-4 sm:p-6 z-10 relative flex justify-between items-start shrink-0">
+      {/* EN-TÊTE FIXE (ne scrolle pas) */}
+      <div className="p-4 sm:p-6 z-20 relative flex justify-between items-start shrink-0 bg-slate-900">
         <div>
             {activeTab.startsWith('list-') ? (
                  <button onClick={() => setActiveTab('hub')} className="inline-flex items-center text-slate-400 mb-2 sm:mb-4 hover:text-white transition text-xs sm:text-sm"><ArrowLeft className="mr-1" size={16} /> Retour aux listes</button>
@@ -418,7 +420,7 @@ export default function CinemaPage() {
 
       {/* --- IMPORTATION MODALE (Si en cours) --- */}
       {isImporting && (
-          <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-6 text-center">
+          <div className="fixed inset-0 z-[1000] bg-black/90 flex flex-col items-center justify-center p-6 text-center">
               <Loader2 size={48} className="animate-spin text-yellow-500 mb-4"/>
               <h2 className="text-xl font-bold mb-2">Importation en cours...</h2>
               <p className="text-slate-400 mb-4">Ne quitte pas cette page.</p>
@@ -429,9 +431,9 @@ export default function CinemaPage() {
           </div>
       )}
 
-      {/* MODALE DE CONFIRMATION DE SUPPRESSION (Z-Index augmenté) */}
+      {/* MODALE DE CONFIRMATION DE SUPPRESSION (Z-Index Elevé) */}
       {deleteModal.show && (
-            <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+            <div className="fixed inset-0 z-[900] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                 <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-in zoom-in-95 duration-200">
                     <h3 className="text-xl font-bold text-white mb-2">Supprimer ce film ?</h3>
                     <p className="text-slate-400 mb-6">
@@ -458,7 +460,7 @@ export default function CinemaPage() {
 
       {/* FILTRES MODALE */}
       {showFilters && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[800] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
              <div className="bg-slate-900 w-[90%] max-w-md p-6 rounded-2xl border border-slate-700 shadow-2xl relative">
                  <button onClick={() => setShowFilters(false)} className="absolute top-4 right-4 text-slate-400 hover:text-white"><X size={24}/></button>
                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><SlidersHorizontal size={20} className="text-yellow-500"/> Filtres</h2>
@@ -490,162 +492,170 @@ export default function CinemaPage() {
         </div>
       )}
 
-      {/* CONTENU PRINCIPAL */}
-      <div className="flex-1 relative overflow-hidden flex flex-col">
+      {/* ZONE DE CONTENU PRINCIPALE (Prend tout l'espace restant) */}
+      <div className="flex-1 relative w-full max-w-md mx-auto">
         
-        {/* CINEMATCH - CONTAINER TINDER CARD CORRIGÉ */}
+        {/* CINEMATCH - FIXÉ ABSOLUMENT POUR EVITER LES BUGS DE LAYOUT */}
         {activeTab === 'cinematch' && (
-          // h-[65vh] pour limiter la hauteur et ne pas écraser le header/footer
-          <div className="relative w-full h-[65vh] max-w-sm mx-auto px-4 mt-2">
-            {loading && <div className="flex flex-col items-center justify-center h-full text-slate-500"><Loader2 size={40} className="animate-spin mb-4 text-yellow-500"/>Chargement...</div>}
-            {!loading && movies.length === 0 && (
-               <div className="text-center mt-20 flex flex-col items-center">
-                  <Popcorn size={48} className="text-slate-600 mb-4"/>
-                  <p className="text-slate-400 mb-2">Aucun film trouvé !</p>
-                  <p className="text-slate-500 text-sm mb-4">Essaie de changer tes filtres.</p>
-                  <div className="flex gap-2">
-                      <button onClick={() => {resetFilters(); fetchDiscoverMovies();}} className="bg-slate-700 text-white px-4 py-2 rounded-full text-sm font-bold">Reset</button>
-                      <button onClick={fetchDiscoverMovies} className="bg-yellow-500 text-slate-900 px-4 py-2 rounded-full font-bold">Recharger</button>
-                  </div>
-               </div>
-            )}
-            {movies.map((movie, index) => (
-              <TinderCard ref={(el) => cardRefs.current[index] = el} key={movie.id} onSwipe={(dir) => onSwipe(dir, movie)} preventSwipe={['up', 'down']} className="absolute top-0 left-0 w-full h-full p-2">
-                <div className="relative w-full h-full bg-slate-800 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 select-none">
-                  {movie.poster_path && <img src={movie.poster_path} alt={movie.title} className="absolute top-0 left-0 w-full h-full object-cover pointer-events-none" />}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                  <div className="absolute bottom-0 left-0 p-6 w-full z-10 pb-20">
-                     <div className="flex items-center justify-between mb-2">
-                        <span className="bg-yellow-500 text-slate-900 text-xs font-bold px-2 py-1 rounded-full">★ {movie.vote}</span>
-                        <button onTouchStart={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={() => openMovieDetails(movie.id)} className="bg-slate-700/80 hover:bg-slate-600 text-white p-2 rounded-full backdrop-blur-sm transition animate-pulse"><Info size={20} /></button>
-                     </div>
-                    <h2 className="text-2xl sm:text-3xl font-black leading-tight mb-2 drop-shadow-lg">{movie.title}</h2>
-                  </div>
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+            {/* Conteneur des cartes centré */}
+            <div className="relative w-full h-full max-h-[600px] p-4">
+                {loading && <div className="flex flex-col items-center justify-center h-full text-slate-500"><Loader2 size={40} className="animate-spin mb-4 text-yellow-500"/>Chargement...</div>}
+                {!loading && movies.length === 0 && (
+                <div className="text-center mt-20 flex flex-col items-center">
+                    <Popcorn size={48} className="text-slate-600 mb-4"/>
+                    <p className="text-slate-400 mb-2">Aucun film trouvé !</p>
+                    <p className="text-slate-500 text-sm mb-4">Essaie de changer tes filtres.</p>
+                    <div className="flex gap-2">
+                        <button onClick={() => {resetFilters(); fetchDiscoverMovies();}} className="bg-slate-700 text-white px-4 py-2 rounded-full text-sm font-bold">Reset</button>
+                        <button onClick={fetchDiscoverMovies} className="bg-yellow-500 text-slate-900 px-4 py-2 rounded-full font-bold">Recharger</button>
+                    </div>
                 </div>
-              </TinderCard>
-            ))}
+                )}
+                {/* Boucle des cartes */}
+                {movies.map((movie, index) => (
+                <TinderCard ref={(el) => cardRefs.current[index] = el} key={movie.id} onSwipe={(dir) => onSwipe(dir, movie)} preventSwipe={['up', 'down']} className="absolute inset-0 p-4 z-10">
+                    <div className="relative w-full h-full bg-slate-800 rounded-3xl overflow-hidden shadow-2xl border border-slate-700 select-none cursor-grab active:cursor-grabbing">
+                        {movie.poster_path && <img src={movie.poster_path} alt={movie.title} className="absolute top-0 left-0 w-full h-full object-cover pointer-events-none" />}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 p-6 w-full z-10 pb-20">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="bg-yellow-500 text-slate-900 text-xs font-bold px-2 py-1 rounded-full">★ {movie.vote}</span>
+                                <button onTouchStart={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onClick={() => openMovieDetails(movie.id)} className="bg-slate-700/80 hover:bg-slate-600 text-white p-2 rounded-full backdrop-blur-sm transition animate-pulse"><Info size={20} /></button>
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl font-black leading-tight mb-2 drop-shadow-lg">{movie.title}</h2>
+                        </div>
+                    </div>
+                </TinderCard>
+                ))}
+            </div>
           </div>
         )}
 
-        {/* HUB */}
+        {/* HUB - SCROLLABLE */}
         {activeTab === 'hub' && (
-            <div className="flex flex-col gap-4 max-w-sm mx-auto w-full px-4 overflow-y-auto pb-4">
-                <button onClick={() => setActiveTab('list-matches')} className="flex items-center justify-between bg-gradient-to-r from-pink-900/50 to-slate-800 p-4 sm:p-6 rounded-2xl border border-pink-500/30 hover:border-pink-500 hover:from-pink-900 transition group shadow-lg shadow-pink-900/10">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-pink-500/20 p-3 sm:p-4 rounded-full text-pink-500 group-hover:bg-pink-500 group-hover:text-white transition">
-                            <Heart className="w-7 h-7 sm:w-8 sm:h-8" fill="currentColor" />
+            <div className="absolute inset-0 overflow-y-auto px-4 pb-24 scrollbar-hide">
+                <div className="flex flex-col gap-4 py-4">
+                    <button onClick={() => setActiveTab('list-matches')} className="flex items-center justify-between bg-gradient-to-r from-pink-900/50 to-slate-800 p-4 sm:p-6 rounded-2xl border border-pink-500/30 hover:border-pink-500 hover:from-pink-900 transition group shadow-lg shadow-pink-900/10">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-pink-500/20 p-3 sm:p-4 rounded-full text-pink-500 group-hover:bg-pink-500 group-hover:text-white transition">
+                                <Heart className="w-7 h-7 sm:w-8 sm:h-8" fill="currentColor" />
+                            </div>
+                            <div className="text-left"><h3 className="text-lg sm:text-xl font-bold text-white">Nos Matchs</h3><p className="text-xs sm:text-sm text-pink-300">Vos coups de cœur communs</p></div>
                         </div>
-                        <div className="text-left"><h3 className="text-lg sm:text-xl font-bold text-white">Nos Matchs</h3><p className="text-xs sm:text-sm text-pink-300">Vos coups de cœur communs</p></div>
-                    </div>
-                    <ChevronRight className="text-pink-500 group-hover:text-white transition"/>
-                </button>
-
-                <button onClick={() => setActiveTab('list-wishlist')} className="flex items-center justify-between bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition group">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-yellow-500/10 p-3 sm:p-4 rounded-full text-yellow-500 group-hover:bg-yellow-500 group-hover:text-slate-900 transition">
-                            <Popcorn className="w-7 h-7 sm:w-8 sm:h-8" />
-                        </div>
-                        <div className="text-left"><h3 className="text-lg sm:text-xl font-bold">Films à voir</h3><p className="text-xs sm:text-sm text-slate-400">Ta sélection</p></div>
-                    </div>
-                    <ChevronRight className="text-slate-500 group-hover:text-white transition"/>
-                </button>
-                <button onClick={() => setActiveTab('list-history')} className="flex items-center justify-between bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition group">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-green-500/10 p-3 sm:p-4 rounded-full text-green-500 group-hover:bg-green-500 group-hover:text-slate-900 transition">
-                            <Eye className="w-7 h-7 sm:w-8 sm:h-8" />
-                        </div>
-                        <div className="text-left"><h3 className="text-lg sm:text-xl font-bold">Déjà vus</h3><p className="text-xs sm:text-sm text-slate-400">Ton historique noté</p></div>
-                    </div>
-                    <ChevronRight className="text-slate-500 group-hover:text-white transition"/>
-                </button>
-
-                {/* ZONE D'IMPORTATION LETTERBOXD */}
-                <div className="mt-2 pt-6 border-t border-slate-800">
-                    <input type="file" accept=".csv" multiple ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-                    <button onClick={handleFileClick} className="w-full flex items-center justify-center gap-2 bg-slate-800/50 border border-slate-700 border-dashed text-slate-500 p-4 rounded-xl hover:bg-slate-800 hover:text-white transition">
-                        <FileUp size={20} />
-                        <span className="text-sm font-medium">Importer un CSV Letterboxd</span>
+                        <ChevronRight className="text-pink-500 group-hover:text-white transition"/>
                     </button>
-                    <p className="text-[10px] text-center text-slate-600 mt-2">Compatible avec les exports <i>watchlist.csv</i> et <i>watched.csv</i></p>
+
+                    <button onClick={() => setActiveTab('list-wishlist')} className="flex items-center justify-between bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition group">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-yellow-500/10 p-3 sm:p-4 rounded-full text-yellow-500 group-hover:bg-yellow-500 group-hover:text-slate-900 transition">
+                                <Popcorn className="w-7 h-7 sm:w-8 sm:h-8" />
+                            </div>
+                            <div className="text-left"><h3 className="text-lg sm:text-xl font-bold">Films à voir</h3><p className="text-xs sm:text-sm text-slate-400">Ta sélection</p></div>
+                        </div>
+                        <ChevronRight className="text-slate-500 group-hover:text-white transition"/>
+                    </button>
+                    <button onClick={() => setActiveTab('list-history')} className="flex items-center justify-between bg-slate-800 p-4 sm:p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition group">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-green-500/10 p-3 sm:p-4 rounded-full text-green-500 group-hover:bg-green-500 group-hover:text-slate-900 transition">
+                                <Eye className="w-7 h-7 sm:w-8 sm:h-8" />
+                            </div>
+                            <div className="text-left"><h3 className="text-lg sm:text-xl font-bold">Déjà vus</h3><p className="text-xs sm:text-sm text-slate-400">Ton historique noté</p></div>
+                        </div>
+                        <ChevronRight className="text-slate-500 group-hover:text-white transition"/>
+                    </button>
+
+                    {/* ZONE D'IMPORTATION LETTERBOXD */}
+                    <div className="mt-2 pt-6 border-t border-slate-800">
+                        <input type="file" accept=".csv" multiple ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                        <button onClick={handleFileClick} className="w-full flex items-center justify-center gap-2 bg-slate-800/50 border border-slate-700 border-dashed text-slate-500 p-4 rounded-xl hover:bg-slate-800 hover:text-white transition">
+                            <FileUp size={20} />
+                            <span className="text-sm font-medium">Importer un CSV Letterboxd</span>
+                        </button>
+                        <p className="text-[10px] text-center text-slate-600 mt-2">Compatible avec les exports <i>watchlist.csv</i> et <i>watched.csv</i></p>
+                    </div>
                 </div>
             </div>
         )}
 
-         {/* LISTES */}
+         {/* LISTES - SCROLLABLE */}
          {['list-wishlist', 'list-history', 'list-matches'].includes(activeTab) && (
-          <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
-            {loading ? (
-                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-500"/></div>
-            ) : savedMovies.length === 0 ? (
-                <div className="text-center py-10 text-slate-500 opacity-50">
-                    {activeTab === 'list-matches' ? <Heart size={48} className="mx-auto mb-4"/> : <Popcorn size={48} className="mx-auto mb-4" />}
-                    <p>{activeTab === 'list-matches' ? "Aucun match pour l'instant !" : `Cette liste est vide pour ${currentUser}.`}</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 pb-20">
-                    {savedMovies.map(movie => (
-                        <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
-                             <div className="aspect-[2/3] w-full bg-slate-700 relative">
-                                {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
-                                
-                                {/* BOUTON SUPPRIMER AVEC Z-INDEX CORRIGÉ (40 = sous la nav 200) */}
-                                <button 
-                                    onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} 
-                                    className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-40 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
-                                    title="Supprimer"
-                                >
-                                    <Trash2 size={14} /> 
-                                </button>
+          <div className="absolute inset-0 overflow-y-auto px-4 pb-24 scrollbar-hide">
+             <div className="py-4">
+                {loading ? (
+                    <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-500"/></div>
+                ) : savedMovies.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500 opacity-50">
+                        {activeTab === 'list-matches' ? <Heart size={48} className="mx-auto mb-4"/> : <Popcorn size={48} className="mx-auto mb-4" />}
+                        <p>{activeTab === 'list-matches' ? "Aucun match pour l'instant !" : `Cette liste est vide pour ${currentUser}.`}</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3">
+                        {savedMovies.map(movie => (
+                            <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
+                                <div className="aspect-[2/3] w-full bg-slate-700 relative">
+                                    {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
+                                    
+                                    <button 
+                                        onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} 
+                                        className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-40 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
+                                        title="Supprimer"
+                                    >
+                                        <Trash2 size={14} /> 
+                                    </button>
 
-                                {movie.userRating ? (
-                                    <div className="absolute top-1 right-1 bg-green-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-1 z-10"><Star size={8} fill="currentColor"/> {movie.userRating}</div>
-                                ) : (
-                                    <div className="absolute top-1 right-1 bg-black/60 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm z-10">★ {movie.vote}</div>
-                                )}
-                             </div>
-                             <div className="p-2 text-center"><h3 className="font-bold text-[10px] sm:text-xs leading-tight line-clamp-1 truncate text-slate-300">{movie.title}</h3></div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                                    {movie.userRating ? (
+                                        <div className="absolute top-1 right-1 bg-green-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-1 z-10"><Star size={8} fill="currentColor"/> {movie.userRating}</div>
+                                    ) : (
+                                        <div className="absolute top-1 right-1 bg-black/60 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm z-10">★ {movie.vote}</div>
+                                    )}
+                                </div>
+                                <div className="p-2 text-center"><h3 className="font-bold text-[10px] sm:text-xs leading-tight line-clamp-1 truncate text-slate-300">{movie.title}</h3></div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+             </div>
           </div>
         )}
 
-        {/* CATALOGUE */}
+        {/* CATALOGUE - SCROLLABLE */}
         {activeTab === 'catalogue' && (
-             <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
-                 <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide py-1">
-                     <button onClick={() => setSortOption('newest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'newest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowDownWideNarrow size={14}/> Récents</button>
-                     <button onClick={() => setSortOption('oldest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'oldest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowUpNarrowWide size={14}/> Anciens</button>
-                     <button onClick={() => setSortOption('rating')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'rating' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><Trophy size={14}/> Top Notes</button>
-                 </div>
-                 {loading && catalogueMovies.length === 0 ? (
-                     <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-500"/></div>
-                 ) : (
-                    <>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 pb-20">
-                            {catalogueMovies.map(movie => (
-                                <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
-                                    <div className="aspect-[2/3] w-full bg-slate-700 relative">
-                                        {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
-                                        <div className="absolute top-1 right-1 bg-black/60 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm z-10">★ {movie.vote}</div>
+             <div className="absolute inset-0 overflow-y-auto px-4 pb-24 scrollbar-hide">
+                 <div className="py-4">
+                    <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide py-1">
+                        <button onClick={() => setSortOption('newest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'newest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowDownWideNarrow size={14}/> Récents</button>
+                        <button onClick={() => setSortOption('oldest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'oldest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowUpNarrowWide size={14}/> Anciens</button>
+                        <button onClick={() => setSortOption('rating')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'rating' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><Trophy size={14}/> Top Notes</button>
+                    </div>
+                    {loading && catalogueMovies.length === 0 ? (
+                        <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-500"/></div>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 mb-6">
+                                {catalogueMovies.map(movie => (
+                                    <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
+                                        <div className="aspect-[2/3] w-full bg-slate-700 relative">
+                                            {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
+                                            <div className="absolute top-1 right-1 bg-black/60 text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm z-10">★ {movie.vote}</div>
+                                        </div>
+                                        <div className="p-2 text-center"><h3 className="font-bold text-[10px] sm:text-xs leading-tight line-clamp-1 truncate text-slate-300">{movie.title}</h3></div>
                                     </div>
-                                    <div className="p-2 text-center"><h3 className="font-bold text-[10px] sm:text-xs leading-tight line-clamp-1 truncate text-slate-300">{movie.title}</h3></div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-center py-4 mb-20">
-                            <button onClick={() => fetchCatalogueMovies(cataloguePage + 1)} className="bg-slate-800 border border-slate-700 text-slate-400 px-6 py-2 rounded-full text-xs font-bold hover:bg-slate-700 hover:text-white transition flex items-center gap-2">{loading ? <Loader2 size={14} className="animate-spin"/> : "Voir la suite"}</button>
-                        </div>
-                    </>
-                 )}
+                                ))}
+                            </div>
+                            <div className="flex justify-center py-4">
+                                <button onClick={() => fetchCatalogueMovies(cataloguePage + 1)} className="bg-slate-800 border border-slate-700 text-slate-400 px-6 py-2 rounded-full text-xs font-bold hover:bg-slate-700 hover:text-white transition flex items-center gap-2">{loading ? <Loader2 size={14} className="animate-spin"/> : "Voir la suite"}</button>
+                            </div>
+                        </>
+                    )}
+                 </div>
              </div>
         )}
       </div>
 
-      {/* MODALE DÉTAILS - Z-INDEX CORRIGÉ */}
+      {/* MODALE DÉTAILS - Z-INDEX MAXIMAL ET FIXÉ */}
       {selectedMovieId && (
-        <div className="fixed inset-0 z-[250] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
             <div className="bg-slate-900 w-full h-[85dvh] sm:h-[90vh] sm:w-[600px] sm:rounded-2xl rounded-t-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col relative animate-in slide-in-from-bottom-10 duration-300">
                 {loadingDetails || !movieDetails ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-400"><Loader2 size={40} className="animate-spin mb-4 text-yellow-500"/> Chargement...</div>
@@ -709,9 +719,9 @@ export default function CinemaPage() {
         </div>
       )}
 
-      {/* NAVIGATION : Z-INDEX 200 pour être au dessus de tout sauf les modales */}
-      <nav className="fixed bottom-0 left-0 w-full bg-slate-800 border-t border-slate-700 pb-safe z-[200]">
-        <div className="flex justify-around items-center p-2 pb-4 sm:pb-2">
+      {/* NAVIGATION - FIXÉE EN BAS */}
+      <nav className="p-2 pb-safe bg-slate-800 border-t border-slate-700 z-[900] shrink-0">
+        <div className="flex justify-around items-center">
           <button onClick={() => setActiveTab('hub')} className={`nav-btn flex flex-col items-center transition ${['hub', 'list-wishlist', 'list-history', 'list-matches'].includes(activeTab) ? 'text-blue-500' : 'text-slate-400'}`}><Library size={24} /><span className="text-[10px] mt-1">Mes Listes</span></button>
           <button onClick={() => setActiveTab('cinematch')} className="relative -top-6"><div className={`p-4 rounded-full border-4 border-slate-900 transition ${activeTab === 'cinematch' ? 'bg-gradient-to-tr from-red-500 to-yellow-500 text-white shadow-lg shadow-red-500/20' : 'bg-slate-700 text-slate-400'}`}><Flame size={28} fill={activeTab === 'cinematch' ? "currentColor" : "none"} /></div></button>
           <button onClick={() => setActiveTab('catalogue')} className={`nav-btn flex flex-col items-center transition ${activeTab === 'catalogue' ? 'text-purple-500' : 'text-slate-400'}`}><LayoutGrid size={24} /><span className="text-[10px] mt-1">Catalogue</span></button>
