@@ -143,7 +143,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
       Papa.parse(file, {
           header: true,
           skipEmptyLines: true,
-          complete: async (results) => {
+          complete: async (results: any) => {
               await processImport(results.data, targetListType, fileName);
           }
       });
