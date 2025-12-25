@@ -550,7 +550,17 @@ const processImport = async (rows: any[], listType: string, sourceFileName: stri
                         <div key={movie.id} onClick={() => openMovieDetails(movie.id)} className="bg-slate-800 rounded-lg overflow-hidden shadow border border-slate-700 cursor-pointer active:scale-95 transition hover:scale-105 group relative">
                              <div className="aspect-[2/3] w-full bg-slate-700 relative">
                                 {movie.poster_path ? <img src={movie.poster_path} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500">Pas d&apos;image</div>}
-                                <button onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} className="absolute top-1 left-1 bg-red-600/90 text-white p-1.5 rounded-full shadow-md opacity-80 hover:opacity-100 active:scale-90 transition z-20"><Trash2 size={10} /></button>
+                                <button 
+    onClick={(e) => {
+        e.stopPropagation(); // EMPÊCHE D'OUVRIR LA MODALE
+        e.preventDefault();  // Sécurité supplémentaire
+        handleDeleteClick(e, movie.title, movie.id);
+    }} 
+    className="absolute top-1 left-1 bg-red-600 text-white p-2 rounded-full shadow-lg z-50 hover:bg-red-700 hover:scale-110 transition cursor-pointer"
+    title="Supprimer"
+>
+    <Trash2 size={14} /> 
+</button>
                                 {movie.userRating ? (
                                     <div className="absolute top-1 right-1 bg-green-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-md flex items-center gap-1 z-10"><Star size={8} fill="currentColor"/> {movie.userRating}</div>
                                 ) : (
