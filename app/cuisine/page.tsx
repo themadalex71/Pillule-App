@@ -2,16 +2,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, X, UtensilsCrossed, Pencil, Check, Image as ImageIcon, Refrigerator, Sparkles, Plus, FolderPlus, Tag, Trash2, Link as LinkIcon, HelpCircle, FileText, Instagram } from 'lucide-react';
+import { ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, X, UtensilsCrossed, Pencil, Check, Image as ImageIcon, Refrigerator, Sparkles, Plus, FolderPlus, Tag, Trash2, Link as LinkIcon, HelpCircle, FileText, Instagram, Edit3 } from 'lucide-react';
 
 // --- TYPES ---
+// Structure avancée : on sépare quantité et nom
+interface IngredientItem {
+    quantity: string;
+    name: string;
+}
+
 interface Recipe {
     id: string;
     title: string;
     prepTime: string;
     cookTime: string;
     servings: string;
-    ingredients: string[];
+    // Accepte les deux formats pour ne pas casser tes vieilles recettes
+    ingredients: (IngredientItem | string)[]; 
     steps: string[];
     addedBy: string;
     image?: string;
@@ -32,7 +39,7 @@ const INITIAL_CATEGORIES: Category[] = [
 ];
 
 export default function CuisinePage() {
-  // --- ETATS ---
+  // --- ETATS PRINCIPAUX ---
   const [activeTab, setActiveTab] = useState<'scan' | 'book' | 'fridge'>('scan');
   
   // SCANNER & IMPORT
@@ -40,10 +47,10 @@ export default function CuisinePage() {
   const [saving, setSaving] = useState(false);
   const [scannedRecipe, setScannedRecipe] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false); // Modale pour coller le texte
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
   const [importText, setImportText] = useState("");
 
-  // DONNÉES GLOBALES
+  // DONNÉES GLOBALES (Cache)
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [aliases, setAliases] = useState<Record<string, string[]>>({});
   const [loadingData, setLoadingData] = useState(true);
@@ -55,30 +62,38 @@ export default function CuisinePage() {
   const [hasSearchedFridge, setHasSearchedFridge] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
 
-  // RÉSOLUTION INCONNUS
-  const [unknownQueue, setUnknownQueue] = useState<string[]>([]);
-  const [currentUnknown, setCurrentUnknown] = useState<string | null>(null);
+  // RÉSOLUTION INCONNUS (Le coeur de l'intelligence)
+  const [unknownQueue, setUnknownQueue] = useState<IngredientItem[]>([]); 
+  const [currentUnknown, setCurrentUnknown] = useState<IngredientItem | null>(null);
+  const [cleanNameInput, setCleanNameInput] = useState(""); // Champ pour renommer/nettoyer
   const [pendingRecipeToSave, setPendingRecipeToSave] = useState<any>(null);
   const [resolveType, setResolveType] = useState<'alias' | 'new' | null>(null);
 
-  // MODALES GESTION
+  // MODALES UI
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [pendingIngredient, setPendingIngredient] = useState<string | null>(null);
+  const [pendingIngredient, setPendingIngredient] = useState<string | null>(null); // Pour l'ajout manuel frigo
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
-  // LIVRE
+  // LIVRE RECETTES
   const [myRecipes, setMyRecipes] = useState<Recipe[]>([]);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'az'>('newest');
 
-  // --- CHARGEMENT ---
+  // --- 1. CHARGEMENT DONNÉES ---
   useEffect(() => {
       fetchRecipes();
       fetchCategoriesAndAliases();
   }, []);
+
+  // Dès qu'on a un nouvel inconnu, on remplit le champ d'édition avec son nom
+  useEffect(() => {
+      if (currentUnknown) {
+          setCleanNameInput(currentUnknown.name); 
+      }
+  }, [currentUnknown]);
 
   const fetchRecipes = async () => {
       setLoadingRecipes(true);
@@ -103,7 +118,6 @@ export default function CuisinePage() {
       } catch (e) { console.error(e); } finally { setLoadingData(false); }
   };
 
-  // --- SAUVEGARDES DATA ---
   const saveCategoriesToDb = async (newCategories: Category[]) => {
       setCategories(newCategories);
       await fetch('/api/cuisine/save-categories', {
@@ -122,8 +136,17 @@ export default function CuisinePage() {
       });
   };
 
+  // --- 2. LOGIQUE FRIGO & RECHERCHE ---
   const filteredBookRecipes = myRecipes
-    .filter(recipe => recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) || recipe.ingredients.some(ing => ing.toLowerCase().includes(searchTerm.toLowerCase())))
+    .filter(recipe => {
+        // Recherche texte simple dans titre
+        if (recipe.title.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+        // Recherche dans ingrédients (compatible String et Objet)
+        return recipe.ingredients.some(ing => {
+            if (typeof ing === 'string') return ing.toLowerCase().includes(searchTerm.toLowerCase());
+            return ing.name.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+    })
     .sort((a, b) => {
         if (sortBy === 'newest') return b.id.localeCompare(a.id);
         if (sortBy === 'oldest') return a.id.localeCompare(b.id);
@@ -131,30 +154,34 @@ export default function CuisinePage() {
         return 0;
     });
 
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
-                const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleSize;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                resolve(compressedBase64);
-            };
-        };
-        reader.onerror = (error) => reject(error);
-    });
+  const searchFridgeRecipes = () => {
+      if (selectedIngredients.length === 0) {
+          setFridgeResults([]);
+          return;
+      }
+      const results = myRecipes.map(recipe => {
+          let matchCount = 0;
+          selectedIngredients.forEach(selIng => {
+              const aliasesList = aliases[selIng] || [];
+              const termsToCheck = [selIng, ...aliasesList];
+              
+              // Comparaison intelligente (compatible vieux format String et nouveau format Objet)
+              const found = recipe.ingredients.some(recipeIng => {
+                  if (typeof recipeIng === 'string') {
+                       return termsToCheck.some(term => recipeIng.toLowerCase().includes(term.toLowerCase()));
+                  }
+                  return termsToCheck.some(term => recipeIng.name.toLowerCase().includes(term.toLowerCase()));
+              });
+
+              if (found) matchCount++;
+          });
+          return { recipe, matchCount, missing: selectedIngredients.length - matchCount };
+      });
+      const sortedResults = results.filter(r => r.matchCount > 0).sort((a, b) => b.matchCount - a.matchCount);
+      setFridgeResults(sortedResults);
+      setHasSearchedFridge(true);
   };
 
-  // --- LOGIQUE FRIGO ---
   const toggleIngredient = (ing: string) => {
       if (isDeleteMode) return;
       if (selectedIngredients.includes(ing)) {
@@ -163,6 +190,23 @@ export default function CuisinePage() {
           setSelectedIngredients(prev => [...prev, ing]);
       }
   };
+
+  // Fonction pour supprimer définitivement un ingrédient
+  const deleteIngredient = (ingToDelete: string) => {
+    if(!window.confirm(`Veux-tu vraiment supprimer "${ingToDelete}" de la liste ?`)) return;
+
+    // 1. On l'enlève des catégories
+    const newCategories = categories.map(cat => ({
+        ...cat,
+        items: cat.items.filter(item => item !== ingToDelete)
+    }));
+
+    // 2. On sauvegarde la nouvelle liste dans la base de données
+    saveCategoriesToDb(newCategories);
+
+    // 3. On l'enlève aussi des ingrédients sélectionnés si il y était
+    setSelectedIngredients(prev => prev.filter(i => i !== ingToDelete));
+};
 
   const initiateAddIngredient = () => {
       const ing = newIngredientInput.trim();
@@ -179,7 +223,27 @@ export default function CuisinePage() {
       }
   };
 
+  const resetFridge = () => {
+      setSelectedIngredients([]);
+      setFridgeResults([]);
+      setHasSearchedFridge(false);
+  };
+
+  // --- 3. LOGIQUE RÉSOLUTION & SAUVEGARDE INTELLIGENTE ---
+
+  // Helper pour mettre à jour le nom dans la recette en attente (nettoyage)
+  const updateCurrentRecipeIngredientName = (oldName: string, newName: string) => {
+      if(!pendingRecipeToSave) return;
+      const updatedIngredients = pendingRecipeToSave.ingredients.map((ing: IngredientItem) => {
+          if (ing.name === oldName) return { ...ing, name: newName };
+          return ing;
+      });
+      setPendingRecipeToSave({ ...pendingRecipeToSave, ingredients: updatedIngredients });
+  };
+
+  // Ajoute à une catégorie (Manuel ou Résolution)
   const addToCategory = (categoryName: string) => {
+      // Cas A: Ajout manuel depuis le frigo
       if (pendingIngredient && isCategoryModalOpen) {
           const newCategories = categories.map(cat => {
               if (cat.name === categoryName) return { ...cat, items: [...cat.items, pendingIngredient] };
@@ -192,65 +256,130 @@ export default function CuisinePage() {
           setIsCategoryModalOpen(false);
           return;
       }
+      
+      // Cas B: Résolution d'un ingrédient inconnu
       if (currentUnknown) {
+          const finalName = cleanNameInput.trim(); 
+          if (!finalName) return;
+
           const newCategories = categories.map(cat => {
-              if (cat.name === categoryName) return { ...cat, items: [...cat.items, currentUnknown] };
+              if (cat.name === categoryName) return { ...cat, items: [...cat.items, finalName] };
               return cat;
           });
           saveCategoriesToDb(newCategories);
+          
+          // On met à jour la recette avec le nom propre
+          updateCurrentRecipeIngredientName(currentUnknown.name, finalName);
           processNextUnknown();
       }
   };
 
+  // Crée une catégorie (Manuel ou Résolution)
   const createCategoryAndAdd = () => {
-      const targetIng = pendingIngredient || currentUnknown;
+      const targetIng = pendingIngredient || cleanNameInput.trim();
       if (!targetIng || !newCategoryName.trim()) return;
+      
       const newCat = { name: newCategoryName.trim(), items: [targetIng] };
       const newCategories = [...categories, newCat];
       saveCategoriesToDb(newCategories);
+      
       if (pendingIngredient) {
           setSelectedIngredients(prev => [...prev, pendingIngredient]);
           setPendingIngredient(null);
           setNewIngredientInput("");
           setIsCategoryModalOpen(false);
       } else {
-          processNextUnknown();
+           if (currentUnknown) updateCurrentRecipeIngredientName(currentUnknown.name, targetIng);
+           processNextUnknown();
       }
   };
 
-  const handleSmartSave = async (recipe: any) => {
-      setPendingRecipeToSave(recipe);
-      setSaving(true);
-      const unknowns: string[] = [];
-      recipe.ingredients.forEach((fullIng: string) => {
-          const lowerIng = fullIng.toLowerCase();
-          let found = false;
-          categories.forEach(cat => { if (cat.items.some(item => lowerIng.includes(item.toLowerCase()))) found = true; });
-          if (!found) {
-              Object.entries(aliases).forEach(([key, values]) => {
-                  if (lowerIng.includes(key.toLowerCase())) found = true;
-                  if (values.some(v => lowerIng.includes(v.toLowerCase()))) found = true;
-              });
-          }
-          if (!found) unknowns.push(fullIng);
-      });
-      if (unknowns.length > 0) {
-          setUnknownQueue(unknowns);
-          setCurrentUnknown(unknowns[0]);
-          setScannedRecipe(null);
-          setResolveType(null);
-      } else {
-          await executeSave(recipe);
+  // Lie comme Alias (Résolution)
+  const linkAsAlias = (masterIngredient: string) => {
+      if (!currentUnknown) return;
+      const finalName = cleanNameInput.trim(); 
+      if (!finalName) return;
+
+      const newAliases = { ...aliases };
+      if (!newAliases[masterIngredient]) newAliases[masterIngredient] = [];
+      if (!newAliases[masterIngredient].includes(finalName)) {
+          newAliases[masterIngredient].push(finalName);
       }
+      saveAliasesToDb(newAliases);
+      
+      updateCurrentRecipeIngredientName(currentUnknown.name, finalName);
+      processNextUnknown();
   };
+
+  // Point d'entrée de la sauvegarde
+  // --- LOGIQUE INTELLIGENTE DE SAUVEGARDE (Version Corrigée) ---
+  const handleSmartSave = async (recipe: any) => {
+    setPendingRecipeToSave(recipe);
+    setSaving(true);
+    const unknowns: IngredientItem[] = [];
+
+    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+        recipe.ingredients.forEach((ing: any) => {
+            // 1. DÉTECTION DU FORMAT : Est-ce un texte ou un objet ?
+            let ingredientName = "";
+            
+            if (typeof ing === 'string') {
+                ingredientName = ing;
+            } else if (ing && ing.name) {
+                ingredientName = ing.name;
+            }
+
+            // Si pas de nom trouvé, on passe au suivant
+            if (!ingredientName) return;
+
+            const lowerName = ingredientName.toLowerCase();
+            let found = false;
+
+            // Check Catégories
+            categories.forEach(cat => { 
+                if (cat.items.some(item => lowerName.includes(item.toLowerCase()))) found = true; 
+            });
+
+            // Check Alias
+            if (!found) {
+                Object.entries(aliases).forEach(([key, values]) => {
+                    if (lowerName.includes(key.toLowerCase())) found = true;
+                    if (values.some(v => lowerName.includes(v.toLowerCase()))) found = true;
+                });
+            }
+
+            // Si inconnu, on l'ajoute à la liste (en s'assurant que c'est bien un objet)
+            if (!found) {
+                if (typeof ing === 'string') {
+                    unknowns.push({ name: ing, quantity: "" });
+                } else {
+                    unknowns.push(ing);
+                }
+            }
+        });
+    }
+
+    if (unknowns.length > 0) {
+        // On lance le wizard de résolution
+        setUnknownQueue(unknowns);
+        setCurrentUnknown(unknowns[0]);
+        setScannedRecipe(null); // On cache la preview
+        setResolveType(null);
+    } else {
+        // Tout est connu, on sauvegarde
+        await executeSave(recipe);
+    }
+};
 
   const processNextUnknown = () => {
+      setCleanNameInput(""); 
       const remaining = unknownQueue.slice(1);
       if (remaining.length > 0) {
           setUnknownQueue(remaining);
           setCurrentUnknown(remaining[0]);
           setResolveType(null);
       } else {
+          // Plus d'inconnus, on sauvegarde la recette finale
           setUnknownQueue([]);
           setCurrentUnknown(null);
           executeSave(pendingRecipeToSave);
@@ -258,15 +387,6 @@ export default function CuisinePage() {
   };
 
   const skipUnknown = () => { processNextUnknown(); };
-
-  const linkAsAlias = (masterIngredient: string) => {
-      if (!currentUnknown) return;
-      const newAliases = { ...aliases };
-      if (!newAliases[masterIngredient]) newAliases[masterIngredient] = [];
-      newAliases[masterIngredient].push(currentUnknown);
-      saveAliasesToDb(newAliases);
-      processNextUnknown();
-  };
 
   const executeSave = async (recipe: any) => {
       try {
@@ -282,7 +402,7 @@ export default function CuisinePage() {
       } catch (e) { alert("Erreur sauvegarde"); } finally { setSaving(false); }
   };
 
-  // --- LOGIQUE SCANNER ---
+  // --- 4. SCAN & IMPORT ---
   const handleScanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -308,12 +428,11 @@ export default function CuisinePage() {
     } catch (error) { alert("Erreur analyse"); } finally { setAnalyzing(false); }
   };
 
-  // --- LOGIQUE IMPORT TEXTE (INSTAGRAM) ---
   const handleTextImport = async () => {
       if (!importText.trim()) return;
       setAnalyzing(true);
       setScannedRecipe(null);
-      setIsImportModalOpen(false); // Ferme la modale
+      setIsImportModalOpen(false);
       try {
           const res = await fetch('/api/cuisine/import-text', {
               method: 'POST',
@@ -323,7 +442,7 @@ export default function CuisinePage() {
           const data = await res.json();
           if (data.error) alert(data.error);
           else setScannedRecipe(data);
-          setImportText(""); // Vide le champ
+          setImportText("");
       } catch (error) { alert("Erreur importation"); } finally { setAnalyzing(false); }
   };
 
@@ -339,45 +458,46 @@ export default function CuisinePage() {
     } catch (e) { alert("Erreur modification"); return false; }
   };
 
-  const searchFridgeRecipes = () => {
-      if (selectedIngredients.length === 0) {
-          setFridgeResults([]);
-          return;
-      }
-      const results = myRecipes.map(recipe => {
-          let matchCount = 0;
-          selectedIngredients.forEach(selIng => {
-              const aliasesList = aliases[selIng] || [];
-              const termsToCheck = [selIng, ...aliasesList];
-              const found = recipe.ingredients.some(recipeIng => termsToCheck.some(term => recipeIng.toLowerCase().includes(term.toLowerCase())));
-              if (found) matchCount++;
-          });
-          return { recipe, matchCount, missing: selectedIngredients.length - matchCount };
-      });
-      const sortedResults = results.filter(r => r.matchCount > 0).sort((a, b) => b.matchCount - a.matchCount);
-      setFridgeResults(sortedResults);
-      setHasSearchedFridge(true);
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(compressedBase64);
+            };
+        };
+        reader.onerror = (error) => reject(error);
+    });
   };
 
-  const resetFridge = () => {
-      setSelectedIngredients([]);
-      setFridgeResults([]);
-      setHasSearchedFridge(false);
-  };
-
-  // --- COMPOSANT FICHE RECETTE ---
+  // --- 5. COMPOSANT FICHE RECETTE ---
   const RecipeCardFull = ({ recipe, isPreview = false, onClose, onUpdate }: { recipe: any, isPreview?: boolean, onClose: () => void, onUpdate?: (r: Recipe) => Promise<boolean> }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<Recipe>(recipe);
     const [savingEdit, setSavingEdit] = useState(false);
-    const [ingredientsText, setIngredientsText] = useState(recipe.ingredients?.join('\n') || "");
+    
+    // Pour l'édition simple, on transforme les objets en texte (quantité + nom)
+    const initialIngText = recipe.ingredients?.map((i: any) => typeof i === 'string' ? i : `${i.quantity ? i.quantity + ' ' : ''}${i.name}`).join('\n') || "";
+    
+    const [ingredientsText, setIngredientsText] = useState(initialIngText);
     const [stepsText, setStepsText] = useState(recipe.steps?.join('\n') || "");
     const imageInputRef = useRef<HTMLInputElement>(null);
 
     const toggleEdit = () => {
         if (isEditing) {
             setFormData(recipe);
-            setIngredientsText(recipe.ingredients?.join('\n') || "");
+            setIngredientsText(initialIngText);
             setStepsText(recipe.steps?.join('\n') || "");
         }
         setIsEditing(!isEditing);
@@ -392,9 +512,14 @@ export default function CuisinePage() {
 
     const saveChanges = async () => {
         setSavingEdit(true);
+        // Fallback: Si on édite à la main, on recrée des objets simples (sans quantité distincte pour simplifier l'UI d'édit)
+        const newIngredients = ingredientsText.split('\n').filter((line: string) => line.trim() !== "").map((line: string) => {
+             return { quantity: "", name: line }; 
+        });
+
         const updatedRecipe = {
             ...formData,
-            ingredients: ingredientsText.split('\n').filter((line: string) => line.trim() !== ""),
+            ingredients: newIngredients,
             steps: stepsText.split('\n').filter((line: string) => line.trim() !== "")
         };
         if (onUpdate) {
@@ -408,40 +533,18 @@ export default function CuisinePage() {
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
             <div className="bg-slate-900 w-full h-[95vh] sm:h-[85vh] sm:w-[600px] sm:rounded-2xl rounded-t-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col relative animate-in slide-in-from-bottom-10 duration-300">
                 <div className="relative h-48 sm:h-56 w-full shrink-0 bg-slate-800 group overflow-hidden">
-                    {formData.image ? (
-                        <img src={formData.image} alt="Plat" className="w-full h-full object-cover transition duration-500 hover:scale-105" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-slate-800 text-orange-500/50">
-                            <ImageIcon size={48} />
-                        </div>
-                    )}
-                    {isEditing && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={() => imageInputRef.current?.click()}>
-                            <div className="flex flex-col items-center text-white"><Camera size={32} /><span className="text-xs font-bold mt-2">Changer la photo</span></div>
-                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                        </div>
-                    )}
+                    {formData.image ? <img src={formData.image} alt="Plat" className="w-full h-full object-cover transition duration-500 hover:scale-105" /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-slate-800 text-orange-500/50"><ImageIcon size={48} /></div>}
+                    {isEditing && <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={() => imageInputRef.current?.click()}><div className="flex flex-col items-center text-white"><Camera size={32} /><span className="text-xs font-bold mt-2">Changer la photo</span></div><input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageChange} /></div>}
                     <button onClick={onClose} className="absolute top-4 right-4 bg-black/40 text-white p-2 rounded-full hover:bg-black/60 transition backdrop-blur-sm border border-white/10 z-10"><X size={20} /></button>
                 </div>
                 <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
-                    {isEditing ? (
-                         <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-800 border border-slate-700 text-white font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none"/>
-                    ) : (
-                        <h2 className="text-2xl font-black text-white truncate pr-4">{formData.title}</h2>
-                    )}
+                    {isEditing ? <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-800 border border-slate-700 text-white font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none"/> : <h2 className="text-2xl font-black text-white truncate pr-4">{formData.title}</h2>}
                     {!isPreview && !isEditing && (<button onClick={toggleEdit} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white shrink-0"><Pencil size={20} /></button>)}
                 </div>
                 <div className="p-6 overflow-y-auto flex-1 pb-24">
                     <div className="flex gap-4 mb-6 text-sm font-medium text-slate-300 justify-center">
-                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl">
-                            <Clock size={16} className="text-orange-500"/> 
-                            {isEditing ? <input value={formData.prepTime} onChange={e => setFormData({...formData, prepTime: e.target.value})} className="bg-transparent w-20 text-center outline-none border-b border-slate-600 focus:border-orange-500"/> : (formData.prepTime || "?")}
-                        </div>
-                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl">
-                            <Users size={16} className="text-orange-500"/> 
-                            {isEditing ? <input value={formData.servings} onChange={e => setFormData({...formData, servings: e.target.value})} className="bg-transparent w-10 text-center outline-none border-b border-slate-600 focus:border-orange-500"/> : (formData.servings || "?")}
-                            {!isEditing && " pers."}
-                        </div>
+                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl"><Clock size={16} className="text-orange-500"/> {isEditing ? <input value={formData.prepTime} onChange={e => setFormData({...formData, prepTime: e.target.value})} className="bg-transparent w-20 text-center outline-none border-b border-slate-600 focus:border-orange-500"/> : (formData.prepTime || "?")}</div>
+                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl"><Users size={16} className="text-orange-500"/> {isEditing ? <input value={formData.servings} onChange={e => setFormData({...formData, servings: e.target.value})} className="bg-transparent w-10 text-center outline-none border-b border-slate-600 focus:border-orange-500"/> : (formData.servings || "?")} {!isEditing && " pers."}</div>
                     </div>
                     <div className="mb-8">
                         <h3 className="font-bold text-white uppercase tracking-wider text-xs mb-4 flex items-center gap-2"><Search size={14}/> Ingrédients</h3>
@@ -449,51 +552,40 @@ export default function CuisinePage() {
                             <textarea value={ingredientsText} onChange={e => setIngredientsText(e.target.value)} className="w-full h-40 bg-slate-800 text-slate-300 p-3 rounded-lg border border-slate-700 text-sm focus:border-orange-500 outline-none leading-relaxed" placeholder="Un ingrédient par ligne..."/>
                         ) : (
                             <ul className="grid grid-cols-1 gap-2">
-                                {formData.ingredients?.map((ing: string, i: number) => (
-                                    <li key={i} className="flex items-start gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-800">
-                                        <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mt-1.5"></span><span className="text-slate-300 text-sm leading-relaxed">{ing}</span>
-                                    </li>
-                                ))}
+                                {formData.ingredients?.map((ing: any, i: number) => {
+                                    // GESTION DOUBLE FORMAT (String / Objet)
+                                    const isObj = typeof ing !== 'string';
+                                    const quantity = isObj ? ing.quantity : "";
+                                    const name = isObj ? ing.name : ing;
+
+                                    return (
+                                        <li key={i} className="flex items-start gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-800">
+                                            <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mt-1.5"></span>
+                                            <span className="text-slate-300 text-sm leading-relaxed">
+                                                {quantity && <span className="font-bold text-white mr-1">{quantity}</span>}
+                                                {name}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         )}
                     </div>
                     <div>
                         <h3 className="font-bold text-white uppercase tracking-wider text-xs mb-4 flex items-center gap-2"><UtensilsCrossed size={14}/> Préparation</h3>
-                        {isEditing ? (
-                            <textarea value={stepsText} onChange={e => setStepsText(e.target.value)} className="w-full h-60 bg-slate-800 text-slate-300 p-3 rounded-lg border border-slate-700 text-sm focus:border-orange-500 outline-none leading-relaxed" placeholder="Une étape par ligne..."/>
-                        ) : (
-                            <div className="space-y-6">
-                                {formData.steps?.map((step: string, i: number) => (
-                                    <div key={i} className="flex gap-4">
-                                        <div className="flex-col flex items-center">
-                                            <span className="w-8 h-8 rounded-full bg-orange-500 text-slate-900 flex items-center justify-center text-sm font-bold shadow-lg shadow-orange-500/20">{i + 1}</span>
-                                            {i !== formData.steps.length - 1 && <div className="w-0.5 h-full bg-slate-800 mt-2"></div>}
-                                        </div>
-                                        <p className="text-slate-300 text-sm leading-relaxed pt-1 pb-4">{step}</p>
-                                    </div>
-                                ))}
-                            </div>
+                        {isEditing ? <textarea value={stepsText} onChange={e => setStepsText(e.target.value)} className="w-full h-60 bg-slate-800 text-slate-300 p-3 rounded-lg border border-slate-700 text-sm focus:border-orange-500 outline-none leading-relaxed" placeholder="Une étape par ligne..."/> : (
+                            <div className="space-y-6">{formData.steps?.map((step: string, i: number) => (<div key={i} className="flex gap-4"><div className="flex-col flex items-center"><span className="w-8 h-8 rounded-full bg-orange-500 text-slate-900 flex items-center justify-center text-sm font-bold shadow-lg shadow-orange-500/20">{i + 1}</span>{i !== formData.steps.length - 1 && <div className="w-0.5 h-full bg-slate-800 mt-2"></div>}</div><p className="text-slate-300 text-sm leading-relaxed pt-1 pb-4">{step}</p></div>))}</div>
                         )}
                     </div>
                 </div>
-                {isPreview && (
-                    <div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 flex gap-3">
-                        <button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-700">Annuler</button>
-                        <button onClick={() => handleSmartSave(formData)} disabled={saving} className="flex-1 py-3 bg-orange-500 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition">{saving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Sauvegarder</button>
-                    </div>
-                )}
-                {isEditing && !isPreview && (
-                    <div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 flex gap-3">
-                        <button onClick={toggleEdit} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-700">Annuler</button>
-                        <button onClick={saveChanges} disabled={savingEdit} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-95 transition">{savingEdit ? <Loader2 className="animate-spin"/> : <Check size={18}/>} Valider</button>
-                    </div>
-                )}
+                {isPreview && (<div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 flex gap-3"><button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-700">Annuler</button><button onClick={() => handleSmartSave(formData)} disabled={saving} className="flex-1 py-3 bg-orange-500 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition">{saving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Sauvegarder</button></div>)}
+                {isEditing && !isPreview && (<div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 flex gap-3"><button onClick={toggleEdit} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-700">Annuler</button><button onClick={saveChanges} disabled={savingEdit} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-95 transition">{savingEdit ? <Loader2 className="animate-spin"/> : <Check size={18}/>} Valider</button></div>)}
             </div>
         </div>
     );
   };
 
-  // --- RENDU PRINCIPAL ---
+  // --- RENDU UI PRINCIPAL ---
   return (
     <main className="min-h-screen bg-slate-900 text-white pb-20">
       <div className="p-4 flex items-center justify-between bg-slate-900 sticky top-0 z-10 border-b border-slate-800">
@@ -518,12 +610,10 @@ export default function CuisinePage() {
             </div>
             <div className="text-center w-full max-w-sm">
                 <h2 className="text-xl font-bold mb-2">Ajouter une recette</h2>
-                <p className="text-slate-400 text-sm mb-6">Scan une photo OU colle un texte d'Insta/TikTok.</p>
-                
+                <p className="text-slate-400 text-sm mb-6">Scan une photo OU colle un texte d&apos;Insta/TikTok.</p>
                 <div className="flex flex-col gap-3">
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleScanUpload} />
                     <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} className="bg-orange-500 text-white w-full py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 active:scale-95 transition flex items-center justify-center gap-2">{analyzing ? <Loader2 className="animate-spin" /> : <Camera />} Scanner Photos</button>
-                    
                     <button onClick={() => setIsImportModalOpen(true)} disabled={analyzing} className="bg-slate-700 text-white w-full py-4 rounded-xl font-bold hover:bg-slate-600 active:scale-95 transition flex items-center justify-center gap-2"><Instagram size={20} className="text-pink-400"/> Importer Texte / Insta</button>
                 </div>
             </div>
@@ -532,13 +622,11 @@ export default function CuisinePage() {
 
       {/* FRIGO */}
       {activeTab === 'fridge' && (
-        // ... (Le code du frigo est identique à avant, pas de changement nécessaire ici) ...
-        // Je remets le bloc complet pour être sûr
         <div className="px-4 pb-20 animate-in slide-in-from-right-10 duration-300">
             {!hasSearchedFridge ? (
                 <>
                     <div className="text-center py-6">
-                         <h2 className="text-xl font-bold mb-2">Qu'est-ce que tu as ?</h2>
+                         <h2 className="text-xl font-bold mb-2">Qu&apos;est-ce que tu as ?</h2>
                          <p className="text-slate-400 text-xs">Sélectionne tes ingrédients ou ajoutes-en un.</p>
                     </div>
                     <div className="flex gap-2 mb-8 max-w-md mx-auto relative z-0 items-center">
@@ -554,9 +642,13 @@ export default function CuisinePage() {
                                     <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1 flex items-center gap-2">{category.name.startsWith("✨") ? <Sparkles size={14}/> : <Tag size={14}/>} {category.name}</h3>
                                     <div className="flex flex-wrap gap-2">
                                         {category.items.map(ing => (
-                                            <button key={ing} onClick={isDeleteMode ? () => {} : () => toggleIngredient(ing)} className={`px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1 ${isDeleteMode ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' : selectedIngredients.includes(ing) ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'}`}>
-                                                {isDeleteMode && <X size={12}/>} {ing}
-                                            </button>
+                                            <button 
+                                            key={ing} 
+                                            onClick={() => isDeleteMode ? deleteIngredient(ing) : toggleIngredient(ing)} 
+                                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1 ${isDeleteMode ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' : selectedIngredients.includes(ing) ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'}`}
+                                        >
+                                            {isDeleteMode && <X size={12}/>} {ing}
+                                        </button>
                                         ))}
                                     </div>
                                 </div>
@@ -568,7 +660,7 @@ export default function CuisinePage() {
             ) : (
                 <>
                     <div className="flex items-center justify-between mb-6 pt-4"><button onClick={resetFridge} className="text-slate-400 hover:text-white flex items-center gap-1 text-sm"><ArrowLeft size={16}/> Changer les ingrédients</button><span className="text-orange-500 font-bold text-sm">{fridgeResults.length} recettes trouvées</span></div>
-                    {fridgeResults.length === 0 ? <div className="text-center py-10 opacity-50"><UtensilsCrossed size={48} className="mx-auto mb-4 text-slate-600"/><p>Aucune recette ne correspond.</p><p className="text-xs mt-2">Essaie avec moins d'ingrédients.</p></div> : (
+                    {fridgeResults.length === 0 ? <div className="text-center py-10 opacity-50"><UtensilsCrossed size={48} className="mx-auto mb-4 text-slate-600"/><p>Aucune recette ne correspond.</p><p className="text-xs mt-2">Essaie avec moins d&apos;ingrédients.</p></div> : (
                         <div className="grid grid-cols-1 gap-4">
                             {fridgeResults.map(({ recipe, matchCount }, index) => (
                                 <div key={index} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800 rounded-xl border border-slate-700 cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-24">
@@ -580,6 +672,78 @@ export default function CuisinePage() {
                     )}
                 </>
             )}
+        </div>
+      )}
+
+        {/* --- BLOC MANQUANT : LE LIVRE DE RECETTES --- */}
+      {activeTab === 'book' && (
+        <div className="px-4 pb-24 animate-in slide-in-from-right-10 duration-300">
+           {/* Barre de recherche */}
+           <div className="sticky top-0 bg-slate-900 z-10 py-4 -mx-4 px-4 border-b border-slate-800 mb-6 shadow-xl">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20}/>
+                    <input 
+                        type="text" 
+                        placeholder="Chercher une recette, un ingrédient..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-orange-500 outline-none transition placeholder:text-slate-600"
+                    />
+                </div>
+           </div>
+
+           {loadingRecipes ? (
+               <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                   <Loader2 className="animate-spin mb-4 text-orange-500" size={32}/>
+                   <p>Ouverture du livre...</p>
+               </div>
+           ) : filteredBookRecipes.length === 0 ? (
+               <div className="text-center py-20 opacity-50">
+                   <BookOpen size={48} className="mx-auto mb-4 text-slate-600"/>
+                   <p>Aucune recette trouvée.</p>
+                   {searchTerm && <p className="text-sm mt-2">Essaie une autre recherche ?</p>}
+               </div>
+           ) : (
+               <div className="grid grid-cols-1 gap-4">
+                   {filteredBookRecipes.map((recipe) => (
+                       <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800 rounded-xl border border-slate-700 cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-28 group">
+                           {/* Image */}
+                           <div className="w-28 bg-slate-700 relative shrink-0 overflow-hidden">
+                               {recipe.image ? (
+                                   <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500"/>
+                               ) : (
+                                   <div className="w-full h-full flex items-center justify-center opacity-20"><ChefHat size={32}/></div>
+                               )}
+                           </div>
+                           
+                           {/* Contenu */}
+                           <div className="p-3 flex flex-col justify-between w-full overflow-hidden">
+                               <div>
+                                   <h3 className="font-bold text-base mb-1 line-clamp-1 group-hover:text-orange-500 transition">{recipe.title}</h3>
+                                   <div className="flex items-center gap-3 text-xs text-slate-400 mb-2">
+                                       <span className="flex items-center gap-1"><Clock size={12}/> {recipe.prepTime}</span>
+                                       <span className="flex items-center gap-1"><Users size={12}/> {recipe.servings} p.</span>
+                                   </div>
+                               </div>
+
+                               {/* Aperçu Ingrédients (Gère le format TEXTE et le format OBJET) */}
+                               <div className="flex flex-wrap gap-1">
+                                   {recipe.ingredients.slice(0, 3).map((ing, i) => {
+                                       // Petite astuce pour afficher le nom qu'il soit objet ou texte
+                                       const name = typeof ing === 'string' ? ing : ing.name;
+                                       return (
+                                           <span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-700/50 rounded text-slate-300 truncate max-w-[80px]">
+                                               {name}
+                                           </span>
+                                       );
+                                   })}
+                                   {recipe.ingredients.length > 3 && <span className="text-[10px] text-slate-500 px-1">+{recipe.ingredients.length - 3}</span>}
+                               </div>
+                           </div>
+                       </div>
+                   ))}
+               </div>
+           )}
         </div>
       )}
 
@@ -595,21 +759,13 @@ export default function CuisinePage() {
                   <button onClick={() => setIsImportModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>
                   <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Instagram className="text-pink-500"/> Import Rapide</h3>
                   <p className="text-slate-400 text-sm mb-4">Copie la description de la vidéo (Insta/TikTok) et colle-la ici :</p>
-                  <textarea 
-                    value={importText} 
-                    onChange={e => setImportText(e.target.value)} 
-                    placeholder="Ingrédients: 200g de pâtes..." 
-                    className="w-full h-40 bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:border-orange-500 outline-none mb-4 resize-none text-sm"
-                  />
-                  <button onClick={handleTextImport} disabled={!importText.trim()} className="w-full bg-orange-500 text-slate-900 font-bold py-3 rounded-lg flex justify-center gap-2 items-center disabled:opacity-50">
-                      <Sparkles size={18}/> Analyser le texte
-                  </button>
+                  <textarea value={importText} onChange={e => setImportText(e.target.value)} placeholder="Ingrédients: 200g de pâtes..." className="w-full h-40 bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:border-orange-500 outline-none mb-4 resize-none text-sm"/>
+                  <button onClick={handleTextImport} disabled={!importText.trim()} className="w-full bg-orange-500 text-slate-900 font-bold py-3 rounded-lg flex justify-center gap-2 items-center disabled:opacity-50"><Sparkles size={18}/> Analyser le texte</button>
               </div>
           </div>
       )}
 
-      {/* MODALE RESOLUTION INCONNUS & CHOIX CATÉGORIE (Identique au code précédent) */}
-       {/* Je remets le bloc complet de résolution ci-dessous pour être sûr */}
+      {/* MODALE RESOLUTION INCONNUS & CHOIX CATÉGORIE */}
       {(isCategoryModalOpen || currentUnknown) && !isImportModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
             <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
@@ -618,12 +774,24 @@ export default function CuisinePage() {
                 {currentUnknown ? (
                     <div className="text-center mb-4">
                          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500"><HelpCircle size={32}/></div>
-                         <h3 className="text-xl font-bold">Nouvel ingrédient !</h3>
-                         <p className="text-white font-black text-lg bg-slate-800 py-2 px-4 rounded-lg mt-2 border border-slate-700 italic">"{currentUnknown}"</p>
+                         <h3 className="text-xl font-bold mb-1">Nouvel ingrédient !</h3>
+                         <p className="text-slate-400 text-sm">Je ne connais pas encore :</p>
+                         
+                         {/* CHAMP D'ÉDITION POUR NETTOYER LE NOM */}
+                         <div className="relative mt-3">
+                            <input 
+                                type="text" 
+                                value={cleanNameInput} 
+                                onChange={(e) => setCleanNameInput(e.target.value)}
+                                className="w-full bg-slate-800 border border-slate-600 text-white font-bold text-center py-3 px-4 rounded-xl focus:border-orange-500 outline-none shadow-inner"
+                            />
+                            <Edit3 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"/>
+                         </div>
+                         <p className="text-xs text-slate-500 mt-2 mb-4">Modifie le nom pour enlever les quantités (ex: &quot;200g de Farine&quot; → &quot;Farine&quot;)</p>
                     </div>
                 ) : (
                     <>
-                        <h3 className="text-xl font-bold mb-2">Où ranger "{pendingIngredient}" ?</h3>
+                        <h3 className="text-xl font-bold mb-2">Où ranger &quot;{pendingIngredient}&quot; ?</h3>
                         <p className="text-slate-400 text-sm mb-6">Choisis une catégorie.</p>
                     </>
                 )}
@@ -632,17 +800,17 @@ export default function CuisinePage() {
                      <div className="grid grid-cols-1 gap-3 mt-4">
                           <button onClick={() => setResolveType('alias')} className="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-left border border-slate-700 flex items-center gap-3 transition group">
                               <LinkIcon size={24} className="text-blue-400 group-hover:scale-110 transition"/>
-                              <div><div className="font-bold">C'est une variante</div><div className="text-xs text-slate-400">Ex: Cèpes → Champignon</div></div>
+                              <div><div className="font-bold">C&apos;est une variante</div><div className="text-xs text-slate-400">Ex: &quot;{cleanNameInput}&quot; → Champignon</div></div>
                           </button>
                           <button onClick={() => setResolveType('new')} className="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-left border border-slate-700 flex items-center gap-3 transition group">
                               <Plus size={24} className="text-green-400 group-hover:scale-110 transition"/>
-                              <div><div className="font-bold">C'est nouveau</div><div className="text-xs text-slate-400">Ajouter aux catégories</div></div>
+                              <div><div className="font-bold">C&apos;est nouveau</div><div className="text-xs text-slate-400">Ajouter &quot;{cleanNameInput}&quot; aux catégories</div></div>
                           </button>
                           <button onClick={skipUnknown} className="p-3 text-slate-500 hover:text-white text-sm font-medium">Ignorer</button>
                      </div>
                 ) : resolveType === 'alias' ? (
                      <div className="space-y-3 mt-2 animate-in slide-in-from-right-10">
-                          <p className="text-sm text-slate-400">C'est une variante de quoi ?</p>
+                          <p className="text-sm text-slate-400">C&apos;est une variante de quoi ?</p>
                           <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
                              {categories.flatMap(c => c.items).sort().map(ing => (
                                  <button key={ing} onClick={() => linkAsAlias(ing)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition font-medium">{ing}</button>
@@ -651,7 +819,6 @@ export default function CuisinePage() {
                           <button onClick={() => setResolveType(null)} className="w-full py-3 text-slate-400 font-bold">Retour</button>
                       </div>
                 ) : (
-                    // Choix catégorie (utilisé pour pendingIngredient OU currentUnknown en mode 'new')
                      !isCreatingCategory ? (
                         <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
                             {categories.map((cat, idx) => (
@@ -670,7 +837,6 @@ export default function CuisinePage() {
             </div>
         </div>
       )}
-
     </main>
   );
 }

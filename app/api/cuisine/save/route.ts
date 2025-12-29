@@ -6,26 +6,26 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { recipe, userId } = body;
 
-    if (!recipe) return NextResponse.json({ error: "Pas de recette" }, { status: 400 });
+    if (!recipe) {
+      return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
+    }
 
-    // On génère un ID unique basé sur l'heure (simple et efficace)
-    const recipeId = Date.now().toString();
-    
+    // On ajoute un ID unique et la date si ils n'existent pas
     const newRecipe = {
-        id: recipeId,
-        ...recipe,
-        addedBy: userId || 'Inconnu',
-        createdAt: new Date().toISOString()
+      ...recipe,
+      id: recipe.id || Date.now().toString(),
+      addedAt: new Date().toISOString(),
+      addedBy: userId || 'Anonyme'
     };
 
-    // On stocke dans une liste "recipes"
-    // On utilise LPUSH pour mettre les nouvelles en premier
-    await kv.lpush('cuistot:recipes_list', recipe);
+    // IMPORTANT : On utilise le préfixe 'cuistot:' pour ne pas mélanger avec les films
+    // On ajoute la recette au début de la liste (lpush)
+    await kv.lpush('cuistot:recipes_list', newRecipe);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, recipe: newRecipe });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Erreur sauvegarde" }, { status: 500 });
+    console.error("Erreur sauvegarde:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
