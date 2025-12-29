@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, X, UtensilsCrossed, Pencil, Check, Image as ImageIcon, Refrigerator, Sparkles, Plus, FolderPlus, Tag, Trash2, Link as LinkIcon, HelpCircle, FileText, Instagram, Edit3 } from 'lucide-react';
 
 // --- TYPES ---
-// Structure avancée : on sépare quantité et nom
 interface IngredientItem {
     quantity: string;
     name: string;
@@ -17,7 +16,6 @@ interface Recipe {
     prepTime: string;
     cookTime: string;
     servings: string;
-    // Accepte les deux formats pour ne pas casser tes vieilles recettes
     ingredients: (IngredientItem | string)[]; 
     steps: string[];
     addedBy: string;
@@ -50,7 +48,7 @@ export default function CuisinePage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false); 
   const [importText, setImportText] = useState("");
 
-  // DONNÉES GLOBALES (Cache)
+  // DONNÉES GLOBALES
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [aliases, setAliases] = useState<Record<string, string[]>>({});
   const [loadingData, setLoadingData] = useState(true);
@@ -62,16 +60,20 @@ export default function CuisinePage() {
   const [hasSearchedFridge, setHasSearchedFridge] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
 
-  // RÉSOLUTION INCONNUS (Le coeur de l'intelligence)
+  // RÉSOLUTION INCONNUS
   const [unknownQueue, setUnknownQueue] = useState<IngredientItem[]>([]); 
   const [currentUnknown, setCurrentUnknown] = useState<IngredientItem | null>(null);
-  const [cleanNameInput, setCleanNameInput] = useState(""); // Champ pour renommer/nettoyer
+  const [cleanNameInput, setCleanNameInput] = useState(""); 
   const [pendingRecipeToSave, setPendingRecipeToSave] = useState<any>(null);
   const [resolveType, setResolveType] = useState<'alias' | 'new' | null>(null);
 
+  // CRÉATION DE GROUPE (NOUVEAU ✨)
+  const [isCreatingMaster, setIsCreatingMaster] = useState(false);
+  const [newMasterName, setNewMasterName] = useState("");
+
   // MODALES UI
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [pendingIngredient, setPendingIngredient] = useState<string | null>(null); // Pour l'ajout manuel frigo
+  const [pendingIngredient, setPendingIngredient] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
@@ -88,7 +90,6 @@ export default function CuisinePage() {
       fetchCategoriesAndAliases();
   }, []);
 
-  // Dès qu'on a un nouvel inconnu, on remplit le champ d'édition avec son nom
   useEffect(() => {
       if (currentUnknown) {
           setCleanNameInput(currentUnknown.name); 
@@ -139,9 +140,7 @@ export default function CuisinePage() {
   // --- 2. LOGIQUE FRIGO & RECHERCHE ---
   const filteredBookRecipes = myRecipes
     .filter(recipe => {
-        // Recherche texte simple dans titre
         if (recipe.title.toLowerCase().includes(searchTerm.toLowerCase())) return true;
-        // Recherche dans ingrédients (compatible String et Objet)
         return recipe.ingredients.some(ing => {
             if (typeof ing === 'string') return ing.toLowerCase().includes(searchTerm.toLowerCase());
             return ing.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -164,15 +163,12 @@ export default function CuisinePage() {
           selectedIngredients.forEach(selIng => {
               const aliasesList = aliases[selIng] || [];
               const termsToCheck = [selIng, ...aliasesList];
-              
-              // Comparaison intelligente (compatible vieux format String et nouveau format Objet)
               const found = recipe.ingredients.some(recipeIng => {
                   if (typeof recipeIng === 'string') {
                        return termsToCheck.some(term => recipeIng.toLowerCase().includes(term.toLowerCase()));
                   }
                   return termsToCheck.some(term => recipeIng.name.toLowerCase().includes(term.toLowerCase()));
               });
-
               if (found) matchCount++;
           });
           return { recipe, matchCount, missing: selectedIngredients.length - matchCount };
@@ -191,22 +187,15 @@ export default function CuisinePage() {
       }
   };
 
-  // Fonction pour supprimer définitivement un ingrédient
   const deleteIngredient = (ingToDelete: string) => {
-    if(!window.confirm(`Veux-tu vraiment supprimer "${ingToDelete}" de la liste ?`)) return;
-
-    // 1. On l'enlève des catégories
-    const newCategories = categories.map(cat => ({
-        ...cat,
-        items: cat.items.filter(item => item !== ingToDelete)
-    }));
-
-    // 2. On sauvegarde la nouvelle liste dans la base de données
-    saveCategoriesToDb(newCategories);
-
-    // 3. On l'enlève aussi des ingrédients sélectionnés si il y était
-    setSelectedIngredients(prev => prev.filter(i => i !== ingToDelete));
-};
+      if(!window.confirm(`Veux-tu vraiment supprimer "${ingToDelete}" de la liste ?`)) return;
+      const newCategories = categories.map(cat => ({
+          ...cat,
+          items: cat.items.filter(item => item !== ingToDelete)
+      }));
+      saveCategoriesToDb(newCategories);
+      setSelectedIngredients(prev => prev.filter(i => i !== ingToDelete));
+  };
 
   const initiateAddIngredient = () => {
       const ing = newIngredientInput.trim();
@@ -231,7 +220,6 @@ export default function CuisinePage() {
 
   // --- 3. LOGIQUE RÉSOLUTION & SAUVEGARDE INTELLIGENTE ---
 
-  // Helper pour mettre à jour le nom dans la recette en attente (nettoyage)
   const updateCurrentRecipeIngredientName = (oldName: string, newName: string) => {
       if(!pendingRecipeToSave) return;
       const updatedIngredients = pendingRecipeToSave.ingredients.map((ing: IngredientItem) => {
@@ -241,9 +229,8 @@ export default function CuisinePage() {
       setPendingRecipeToSave({ ...pendingRecipeToSave, ingredients: updatedIngredients });
   };
 
-  // Ajoute à une catégorie (Manuel ou Résolution)
   const addToCategory = (categoryName: string) => {
-      // Cas A: Ajout manuel depuis le frigo
+      // Cas A: Ajout manuel
       if (pendingIngredient && isCategoryModalOpen) {
           const newCategories = categories.map(cat => {
               if (cat.name === categoryName) return { ...cat, items: [...cat.items, pendingIngredient] };
@@ -257,7 +244,7 @@ export default function CuisinePage() {
           return;
       }
       
-      // Cas B: Résolution d'un ingrédient inconnu
+      // Cas B: Résolution Inconnu + Apprentissage
       if (currentUnknown) {
           const finalName = cleanNameInput.trim(); 
           if (!finalName) return;
@@ -268,13 +255,20 @@ export default function CuisinePage() {
           });
           saveCategoriesToDb(newCategories);
           
-          // On met à jour la recette avec le nom propre
+          if (finalName.toLowerCase() !== currentUnknown.name.toLowerCase()) {
+              const newAliases = { ...aliases };
+              if (!newAliases[finalName]) newAliases[finalName] = [];
+              if (!newAliases[finalName].includes(currentUnknown.name)) {
+                  newAliases[finalName].push(currentUnknown.name);
+              }
+              saveAliasesToDb(newAliases);
+          }
+
           updateCurrentRecipeIngredientName(currentUnknown.name, finalName);
           processNextUnknown();
       }
   };
 
-  // Crée une catégorie (Manuel ou Résolution)
   const createCategoryAndAdd = () => {
       const targetIng = pendingIngredient || cleanNameInput.trim();
       if (!targetIng || !newCategoryName.trim()) return;
@@ -289,12 +283,19 @@ export default function CuisinePage() {
           setNewIngredientInput("");
           setIsCategoryModalOpen(false);
       } else {
+           if (currentUnknown && targetIng.toLowerCase() !== currentUnknown.name.toLowerCase()) {
+              const newAliases = { ...aliases };
+              if (!newAliases[targetIng]) newAliases[targetIng] = [];
+              if (!newAliases[targetIng].includes(currentUnknown.name)) {
+                  newAliases[targetIng].push(currentUnknown.name);
+              }
+              saveAliasesToDb(newAliases);
+           }
            if (currentUnknown) updateCurrentRecipeIngredientName(currentUnknown.name, targetIng);
            processNextUnknown();
       }
   };
 
-  // Lie comme Alias (Résolution)
   const linkAsAlias = (masterIngredient: string) => {
       if (!currentUnknown) return;
       const finalName = cleanNameInput.trim(); 
@@ -311,65 +312,79 @@ export default function CuisinePage() {
       processNextUnknown();
   };
 
-  // Point d'entrée de la sauvegarde
-  // --- LOGIQUE INTELLIGENTE DE SAUVEGARDE (Version Corrigée) ---
+  // NOUVEAU : CRÉER UN GROUPE PARENT (Ex: Épices) ✨
+  const createMasterAndLink = (categoryName: string) => {
+      const masterName = newMasterName.trim();
+      const aliasName = currentUnknown?.name;
+
+      if (!masterName || !aliasName || !currentUnknown) return;
+
+      const newCategories = categories.map(cat => {
+          if (cat.name === categoryName) return { ...cat, items: [...cat.items, masterName] };
+          return cat;
+      });
+      saveCategoriesToDb(newCategories);
+
+      const newAliases = { ...aliases };
+      if (!newAliases[masterName]) newAliases[masterName] = [];
+      if (!newAliases[masterName].includes(aliasName)) {
+          newAliases[masterName].push(aliasName);
+      }
+      const cleanedName = cleanNameInput.trim();
+      if(cleanedName && cleanedName !== masterName && !newAliases[masterName].includes(cleanedName)) {
+           newAliases[masterName].push(cleanedName);
+      }
+      saveAliasesToDb(newAliases);
+
+      updateCurrentRecipeIngredientName(currentUnknown.name, masterName);
+      setIsCreatingMaster(false);
+      setNewMasterName("");
+      processNextUnknown();
+  };
+
   const handleSmartSave = async (recipe: any) => {
-    setPendingRecipeToSave(recipe);
-    setSaving(true);
-    const unknowns: IngredientItem[] = [];
+      setPendingRecipeToSave(recipe);
+      setSaving(true);
+      const unknowns: IngredientItem[] = [];
 
-    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
-        recipe.ingredients.forEach((ing: any) => {
-            // 1. DÉTECTION DU FORMAT : Est-ce un texte ou un objet ?
-            let ingredientName = "";
-            
-            if (typeof ing === 'string') {
-                ingredientName = ing;
-            } else if (ing && ing.name) {
-                ingredientName = ing.name;
-            }
+      if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+          recipe.ingredients.forEach((ing: any) => {
+              let ingredientName = "";
+              if (typeof ing === 'string') {
+                  ingredientName = ing;
+              } else if (ing && ing.name) {
+                  ingredientName = ing.name;
+              }
+              if (!ingredientName) return;
 
-            // Si pas de nom trouvé, on passe au suivant
-            if (!ingredientName) return;
+              const lowerName = ingredientName.toLowerCase();
+              let found = false;
+              categories.forEach(cat => { if (cat.items.some(item => lowerName.includes(item.toLowerCase()))) found = true; });
+              if (!found) {
+                  Object.entries(aliases).forEach(([key, values]) => {
+                      if (lowerName.includes(key.toLowerCase())) found = true;
+                      if (values.some(v => lowerName.includes(v.toLowerCase()))) found = true;
+                  });
+              }
+              if (!found) {
+                  if (typeof ing === 'string') {
+                      unknowns.push({ name: ing, quantity: "" });
+                  } else {
+                      unknowns.push(ing);
+                  }
+              }
+          });
+      }
 
-            const lowerName = ingredientName.toLowerCase();
-            let found = false;
-
-            // Check Catégories
-            categories.forEach(cat => { 
-                if (cat.items.some(item => lowerName.includes(item.toLowerCase()))) found = true; 
-            });
-
-            // Check Alias
-            if (!found) {
-                Object.entries(aliases).forEach(([key, values]) => {
-                    if (lowerName.includes(key.toLowerCase())) found = true;
-                    if (values.some(v => lowerName.includes(v.toLowerCase()))) found = true;
-                });
-            }
-
-            // Si inconnu, on l'ajoute à la liste (en s'assurant que c'est bien un objet)
-            if (!found) {
-                if (typeof ing === 'string') {
-                    unknowns.push({ name: ing, quantity: "" });
-                } else {
-                    unknowns.push(ing);
-                }
-            }
-        });
-    }
-
-    if (unknowns.length > 0) {
-        // On lance le wizard de résolution
-        setUnknownQueue(unknowns);
-        setCurrentUnknown(unknowns[0]);
-        setScannedRecipe(null); // On cache la preview
-        setResolveType(null);
-    } else {
-        // Tout est connu, on sauvegarde
-        await executeSave(recipe);
-    }
-};
+      if (unknowns.length > 0) {
+          setUnknownQueue(unknowns);
+          setCurrentUnknown(unknowns[0]);
+          setScannedRecipe(null); 
+          setResolveType(null);
+      } else {
+          await executeSave(recipe);
+      }
+  };
 
   const processNextUnknown = () => {
       setCleanNameInput(""); 
@@ -379,7 +394,6 @@ export default function CuisinePage() {
           setCurrentUnknown(remaining[0]);
           setResolveType(null);
       } else {
-          // Plus d'inconnus, on sauvegarde la recette finale
           setUnknownQueue([]);
           setCurrentUnknown(null);
           executeSave(pendingRecipeToSave);
@@ -458,6 +472,27 @@ export default function CuisinePage() {
     } catch (e) { alert("Erreur modification"); return false; }
   };
 
+  const deleteRecipe = async (id: string) => {
+    if(!window.confirm("Tu es sûr de vouloir supprimer cette recette ? C'est définitif ! 🗑️")) return;
+    
+    try {
+        await fetch('/api/cuisine/delete-recipe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        
+        // Mise à jour immédiate de l'affichage (pas besoin de recharger)
+        setMyRecipes(prev => prev.filter(r => r.id !== id));
+        // Si on est dans le frigo, on met à jour les résultats aussi
+        setFridgeResults(prev => prev.filter(item => item.recipe.id !== id));
+        
+        setSelectedRecipe(null); // On ferme la fiche recette
+    } catch(e) {
+        alert("Erreur lors de la suppression");
+    }
+};
+
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -482,12 +517,11 @@ export default function CuisinePage() {
   };
 
   // --- 5. COMPOSANT FICHE RECETTE ---
-  const RecipeCardFull = ({ recipe, isPreview = false, onClose, onUpdate }: { recipe: any, isPreview?: boolean, onClose: () => void, onUpdate?: (r: Recipe) => Promise<boolean> }) => {
+  const RecipeCardFull = ({ recipe, isPreview = false, onClose, onUpdate, onDelete }: { recipe: any, isPreview?: boolean, onClose: () => void, onUpdate?: (r: Recipe) => Promise<boolean>, onDelete?: (id: string) => void }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<Recipe>(recipe);
     const [savingEdit, setSavingEdit] = useState(false);
     
-    // Pour l'édition simple, on transforme les objets en texte (quantité + nom)
     const initialIngText = recipe.ingredients?.map((i: any) => typeof i === 'string' ? i : `${i.quantity ? i.quantity + ' ' : ''}${i.name}`).join('\n') || "";
     
     const [ingredientsText, setIngredientsText] = useState(initialIngText);
@@ -512,11 +546,9 @@ export default function CuisinePage() {
 
     const saveChanges = async () => {
         setSavingEdit(true);
-        // Fallback: Si on édite à la main, on recrée des objets simples (sans quantité distincte pour simplifier l'UI d'édit)
         const newIngredients = ingredientsText.split('\n').filter((line: string) => line.trim() !== "").map((line: string) => {
              return { quantity: "", name: line }; 
         });
-
         const updatedRecipe = {
             ...formData,
             ingredients: newIngredients,
@@ -537,10 +569,27 @@ export default function CuisinePage() {
                     {isEditing && <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={() => imageInputRef.current?.click()}><div className="flex flex-col items-center text-white"><Camera size={32} /><span className="text-xs font-bold mt-2">Changer la photo</span></div><input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageChange} /></div>}
                     <button onClick={onClose} className="absolute top-4 right-4 bg-black/40 text-white p-2 rounded-full hover:bg-black/60 transition backdrop-blur-sm border border-white/10 z-10"><X size={20} /></button>
                 </div>
+                
+                {/* --- MODIFICATION ICI : Entête avec bouton supprimer --- */}
                 <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
-                    {isEditing ? <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-800 border border-slate-700 text-white font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none"/> : <h2 className="text-2xl font-black text-white truncate pr-4">{formData.title}</h2>}
-                    {!isPreview && !isEditing && (<button onClick={toggleEdit} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white shrink-0"><Pencil size={20} /></button>)}
+                    {isEditing ? (
+                         <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-800 border border-slate-700 text-white font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none"/>
+                    ) : (
+                        <h2 className="text-2xl font-black text-white truncate pr-4">{formData.title}</h2>
+                    )}
+                    {!isPreview && !isEditing && (
+                        <div className="flex gap-2 shrink-0">
+                            {/* BOUTON POUBELLE AJOUTÉ 👇 */}
+                            <button onClick={() => onDelete?.(recipe.id)} className="p-2 bg-slate-800 rounded-full hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition border border-transparent hover:border-red-500/30">
+                                <Trash2 size={20} />
+                            </button>
+                            <button onClick={toggleEdit} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white shrink-0">
+                                <Pencil size={20} />
+                            </button>
+                        </div>
+                    )}
                 </div>
+
                 <div className="p-6 overflow-y-auto flex-1 pb-24">
                     <div className="flex gap-4 mb-6 text-sm font-medium text-slate-300 justify-center">
                         <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl"><Clock size={16} className="text-orange-500"/> {isEditing ? <input value={formData.prepTime} onChange={e => setFormData({...formData, prepTime: e.target.value})} className="bg-transparent w-20 text-center outline-none border-b border-slate-600 focus:border-orange-500"/> : (formData.prepTime || "?")}</div>
@@ -553,11 +602,9 @@ export default function CuisinePage() {
                         ) : (
                             <ul className="grid grid-cols-1 gap-2">
                                 {formData.ingredients?.map((ing: any, i: number) => {
-                                    // GESTION DOUBLE FORMAT (String / Objet)
                                     const isObj = typeof ing !== 'string';
                                     const quantity = isObj ? ing.quantity : "";
                                     const name = isObj ? ing.name : ing;
-
                                     return (
                                         <li key={i} className="flex items-start gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-800">
                                             <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mt-1.5"></span>
@@ -641,14 +688,14 @@ export default function CuisinePage() {
                                 <div key={idx}>
                                     <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1 flex items-center gap-2">{category.name.startsWith("✨") ? <Sparkles size={14}/> : <Tag size={14}/>} {category.name}</h3>
                                     <div className="flex flex-wrap gap-2">
-                                        {category.items.map(ing => (
-                                            <button 
-                                            key={ing} 
-                                            onClick={() => isDeleteMode ? deleteIngredient(ing) : toggleIngredient(ing)} 
-                                            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1 ${isDeleteMode ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' : selectedIngredients.includes(ing) ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'}`}
-                                        >
-                                            {isDeleteMode && <X size={12}/>} {ing}
-                                        </button>
+                                        {/* AJOUT DU TRI ICI : .slice().sort(...) */}
+                                        {category.items
+                                            .slice()
+                                            .sort((a, b) => a.localeCompare(b))
+                                            .map(ing => (
+                                            <button key={ing} onClick={() => isDeleteMode ? deleteIngredient(ing) : toggleIngredient(ing)} className={`px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1 ${isDeleteMode ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' : selectedIngredients.includes(ing) ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'}`}>
+                                                {isDeleteMode && <X size={12}/>} {ing}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -675,10 +722,9 @@ export default function CuisinePage() {
         </div>
       )}
 
-        {/* --- BLOC MANQUANT : LE LIVRE DE RECETTES --- */}
+      {/* LIVRE RECETTES (Le bloc manquant est là) */}
       {activeTab === 'book' && (
         <div className="px-4 pb-24 animate-in slide-in-from-right-10 duration-300">
-           {/* Barre de recherche */}
            <div className="sticky top-0 bg-slate-900 z-10 py-4 -mx-4 px-4 border-b border-slate-800 mb-6 shadow-xl">
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20}/>
@@ -691,51 +737,21 @@ export default function CuisinePage() {
                     />
                 </div>
            </div>
-
            {loadingRecipes ? (
-               <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-                   <Loader2 className="animate-spin mb-4 text-orange-500" size={32}/>
-                   <p>Ouverture du livre...</p>
-               </div>
+               <div className="flex flex-col items-center justify-center py-20 text-slate-500"><Loader2 className="animate-spin mb-4 text-orange-500" size={32}/><p>Ouverture du livre...</p></div>
            ) : filteredBookRecipes.length === 0 ? (
-               <div className="text-center py-20 opacity-50">
-                   <BookOpen size={48} className="mx-auto mb-4 text-slate-600"/>
-                   <p>Aucune recette trouvée.</p>
-                   {searchTerm && <p className="text-sm mt-2">Essaie une autre recherche ?</p>}
-               </div>
+               <div className="text-center py-20 opacity-50"><BookOpen size={48} className="mx-auto mb-4 text-slate-600"/><p>Aucune recette trouvée.</p>{searchTerm && <p className="text-sm mt-2">Essaie une autre recherche ?</p>}</div>
            ) : (
                <div className="grid grid-cols-1 gap-4">
                    {filteredBookRecipes.map((recipe) => (
                        <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800 rounded-xl border border-slate-700 cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-28 group">
-                           {/* Image */}
-                           <div className="w-28 bg-slate-700 relative shrink-0 overflow-hidden">
-                               {recipe.image ? (
-                                   <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500"/>
-                               ) : (
-                                   <div className="w-full h-full flex items-center justify-center opacity-20"><ChefHat size={32}/></div>
-                               )}
-                           </div>
-                           
-                           {/* Contenu */}
+                           <div className="w-28 bg-slate-700 relative shrink-0 overflow-hidden">{recipe.image ? <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500"/> : <div className="w-full h-full flex items-center justify-center opacity-20"><ChefHat size={32}/></div>}</div>
                            <div className="p-3 flex flex-col justify-between w-full overflow-hidden">
-                               <div>
-                                   <h3 className="font-bold text-base mb-1 line-clamp-1 group-hover:text-orange-500 transition">{recipe.title}</h3>
-                                   <div className="flex items-center gap-3 text-xs text-slate-400 mb-2">
-                                       <span className="flex items-center gap-1"><Clock size={12}/> {recipe.prepTime}</span>
-                                       <span className="flex items-center gap-1"><Users size={12}/> {recipe.servings} p.</span>
-                                   </div>
-                               </div>
-
-                               {/* Aperçu Ingrédients (Gère le format TEXTE et le format OBJET) */}
+                               <div><h3 className="font-bold text-base mb-1 line-clamp-1 group-hover:text-orange-500 transition">{recipe.title}</h3><div className="flex items-center gap-3 text-xs text-slate-400 mb-2"><span className="flex items-center gap-1"><Clock size={12}/> {recipe.prepTime}</span><span className="flex items-center gap-1"><Users size={12}/> {recipe.servings} p.</span></div></div>
                                <div className="flex flex-wrap gap-1">
                                    {recipe.ingredients.slice(0, 3).map((ing, i) => {
-                                       // Petite astuce pour afficher le nom qu'il soit objet ou texte
                                        const name = typeof ing === 'string' ? ing : ing.name;
-                                       return (
-                                           <span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-700/50 rounded text-slate-300 truncate max-w-[80px]">
-                                               {name}
-                                           </span>
-                                       );
+                                       return (<span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-700/50 rounded text-slate-300 truncate max-w-[80px]">{name}</span>);
                                    })}
                                    {recipe.ingredients.length > 3 && <span className="text-[10px] text-slate-500 px-1">+{recipe.ingredients.length - 3}</span>}
                                </div>
@@ -748,11 +764,18 @@ export default function CuisinePage() {
       )}
 
       {scannedRecipe && <RecipeCardFull recipe={scannedRecipe} isPreview={true} onClose={() => setScannedRecipe(null)} />}
-      {selectedRecipe && <RecipeCardFull recipe={selectedRecipe} isPreview={false} onClose={() => setSelectedRecipe(null)} onUpdate={handleUpdateRecipe} />}
+      {selectedRecipe && (
+    <RecipeCardFull 
+        recipe={selectedRecipe} 
+        isPreview={false} 
+        onClose={() => setSelectedRecipe(null)} 
+        onUpdate={handleUpdateRecipe} 
+        onDelete={deleteRecipe}   // <--- Vérifie que cette ligne est bien là !
+    />
+)}
 
       {/* --- MODALES --- */}
 
-      {/* MODALE IMPORT TEXTE */}
       {isImportModalOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
               <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
@@ -765,7 +788,6 @@ export default function CuisinePage() {
           </div>
       )}
 
-      {/* MODALE RESOLUTION INCONNUS & CHOIX CATÉGORIE */}
       {(isCategoryModalOpen || currentUnknown) && !isImportModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
             <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
@@ -776,15 +798,8 @@ export default function CuisinePage() {
                          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500"><HelpCircle size={32}/></div>
                          <h3 className="text-xl font-bold mb-1">Nouvel ingrédient !</h3>
                          <p className="text-slate-400 text-sm">Je ne connais pas encore :</p>
-                         
-                         {/* CHAMP D'ÉDITION POUR NETTOYER LE NOM */}
                          <div className="relative mt-3">
-                            <input 
-                                type="text" 
-                                value={cleanNameInput} 
-                                onChange={(e) => setCleanNameInput(e.target.value)}
-                                className="w-full bg-slate-800 border border-slate-600 text-white font-bold text-center py-3 px-4 rounded-xl focus:border-orange-500 outline-none shadow-inner"
-                            />
+                            <input type="text" value={cleanNameInput} onChange={(e) => setCleanNameInput(e.target.value)} className="w-full bg-slate-800 border border-slate-600 text-white font-bold text-center py-3 px-4 rounded-xl focus:border-orange-500 outline-none shadow-inner"/>
                             <Edit3 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"/>
                          </div>
                          <p className="text-xs text-slate-500 mt-2 mb-4">Modifie le nom pour enlever les quantités (ex: &quot;200g de Farine&quot; → &quot;Farine&quot;)</p>
@@ -810,13 +825,31 @@ export default function CuisinePage() {
                      </div>
                 ) : resolveType === 'alias' ? (
                      <div className="space-y-3 mt-2 animate-in slide-in-from-right-10">
-                          <p className="text-sm text-slate-400">C&apos;est une variante de quoi ?</p>
-                          <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
-                             {categories.flatMap(c => c.items).sort().map(ing => (
-                                 <button key={ing} onClick={() => linkAsAlias(ing)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition font-medium">{ing}</button>
-                             ))}
-                          </div>
-                          <button onClick={() => setResolveType(null)} className="w-full py-3 text-slate-400 font-bold">Retour</button>
+                          {!isCreatingMaster ? (
+                              <>
+                                <p className="text-sm text-slate-400">C&apos;est une variante de quoi ?</p>
+                                <button onClick={() => { setIsCreatingMaster(true); setNewMasterName(""); }} className="w-full text-left p-3 rounded-xl border-2 border-dashed border-slate-600 text-orange-400 hover:border-orange-500 hover:text-orange-500 transition flex items-center gap-2 mb-2 font-bold"><Plus size={18} /> Créer un nouveau groupe (ex: Épices)</button>
+                                <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2 border-t border-slate-800 pt-2">
+                                   {categories.flatMap(c => c.items).sort().map(ing => (
+                                       <button key={ing} onClick={() => linkAsAlias(ing)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition font-medium">{ing}</button>
+                                   ))}
+                                </div>
+                                <button onClick={() => setResolveType(null)} className="w-full py-3 text-slate-400 font-bold">Retour</button>
+                              </>
+                          ) : (
+                              <div className="animate-in slide-in-from-right-10">
+                                  <h4 className="font-bold text-lg mb-1">Créer un nouveau groupe</h4>
+                                  <p className="text-xs text-slate-400 mb-4">&quot;{currentUnknown?.name}&quot; sera rangé dedans.</p>
+                                  <div className="space-y-2 mb-4"><label className="text-xs font-bold uppercase text-slate-500">Nom du groupe</label><input autoFocus type="text" placeholder="Ex: Épices, Agrumes..." value={newMasterName} onChange={(e) => setNewMasterName(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"/></div>
+                                  <p className="text-xs font-bold uppercase text-slate-500 mb-2">Dans quelle catégorie ?</p>
+                                  <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2">
+                                      {categories.map((cat, idx) => (
+                                          <button key={idx} onClick={() => createMasterAndLink(cat.name)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center justify-between group border border-slate-700/50"><span className="font-medium">{cat.name}</span></button>
+                                      ))}
+                                  </div>
+                                  <button onClick={() => setIsCreatingMaster(false)} className="w-full py-3 text-slate-400 font-bold mt-2">Annuler</button>
+                              </div>
+                          )}
                       </div>
                 ) : (
                      !isCreatingCategory ? (

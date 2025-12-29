@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 export async function POST(request: Request) {
-  // On initialise l'IA DANS la fonction pour éviter l'erreur de build Vercel
+  // On initialise l'IA DANS la fonction
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
@@ -11,25 +11,35 @@ export async function POST(request: Request) {
     if (!text) return NextResponse.json({ error: "Aucun texte fourni" }, { status: 400 });
 
     const prompt = `
-      Tu es un expert culinaire. Analyse ce texte de recette (issu d'Instagram/TikTok) :
+      Tu es un chef étoilé expert. J'ai copié la description d'une vidéo de cuisine (Instagram/TikTok) :
       "${text}"
       
-      Extrais les données au format JSON strict suivant.
-      IMPORTANT : Pour les ingrédients, sépare bien la quantité (nombre + unité) du nom de l'ingrédient.
-      Si l'ingrédient est "2 belles tomates", quantity="2", name="tomates".
-      Si l'ingrédient est "Sel", quantity="", name="Sel".
+      Ta mission est de structurer cette recette.
+      
+      IMPORTANT - LES ÉTAPES :
+      Souvent, les descriptions Instagram ne contiennent QUE les ingrédients.
+      1. Si les étapes sont écrites dans le texte, reformule-les clairement.
+      2. **SI LES ÉTAPES SONT ABSENTES : TU DOIS LES DÉDUIRE/GÉNÉRER TOI-MÊME** de façon logique et professionnelle, en te basant sur la liste des ingrédients et le titre supposé du plat. Ne laisse JAMAIS le champ "steps" vide.
+      
+      IMPORTANT - LES INGRÉDIENTS :
+      Sépare bien la quantité du nom.
+      - "200g de Farine" -> quantity: "200g", name: "Farine"
+      - "Sel" -> quantity: "", name: "Sel"
 
-      Format attendu :
+      Renvoie UNIQUEMENT un JSON strict respectant ce format :
       {
-        "title": "Titre",
-        "prepTime": "XX min",
-        "cookTime": "XX min",
-        "servings": "X pers",
+        "title": "Nom du plat (déduis-le si nécessaire)",
+        "prepTime": "XX min (estimation si absent)",
+        "cookTime": "XX min (estimation si absent)",
+        "servings": "X pers (par défaut 2 si absent)",
         "ingredients": [
-          { "quantity": "200g", "name": "Farine" },
-          { "quantity": "1 c.à.s", "name": "Huile d'olive" }
+          { "quantity": "...", "name": "..." }
         ],
-        "steps": ["Étape 1", "Étape 2"]
+        "steps": [
+          "Étape 1...",
+          "Étape 2...",
+          "Étape 3..."
+        ]
       }
     `;
 
