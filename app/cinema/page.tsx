@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Library, Popcorn, Flame, X, Loader2, Info, Calendar, Clock, Clapperboard, Users, Trash2, Eye, ChevronRight, LayoutGrid, Star, StarHalf, SlidersHorizontal, ArrowDownWideNarrow, ArrowUpNarrowWide, Trophy, EyeOff, Heart, FileUp } from 'lucide-react';
+import { ArrowLeft, Library, Popcorn, Flame, X, Loader2, Info, Calendar, Clock, Clapperboard, Users, Trash2, Eye, ChevronRight, LayoutGrid, Star, StarHalf, SlidersHorizontal, ArrowDownWideNarrow, ArrowUpNarrowWide, Trophy, EyeOff, Heart, FileUp, Search } from 'lucide-react';
 import TinderCard from 'react-tinder-card';
 import Papa from 'papaparse'; 
 
@@ -83,7 +83,7 @@ export default function CinemaPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [cataloguePage, setCataloguePage] = useState(1);
   const [sortOption, setSortOption] = useState('newest'); 
-
+  const [searchQuery, setSearchQuery] = useState('');
   // ETATS POUR L'IMPORT LETTERBOXD
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
@@ -116,6 +116,16 @@ export default function CinemaPage() {
   useEffect(() => {
     if (activeTab === 'catalogue') fetchCatalogueMovies(1, true);
   }, [sortOption]);
+
+  useEffect(() => {
+    if (activeTab === 'catalogue') {
+        const delayDebounceFn = setTimeout(() => {
+            fetchCatalogueMovies(1, true);
+        }, 500); // Attend 500ms après la dernière frappe
+
+        return () => clearTimeout(delayDebounceFn);
+        }
+}, [searchQuery]);
 
   // --- LOGIQUE IMPORTATION CSV ---
   const handleFileClick = () => {
@@ -203,22 +213,54 @@ export default function CinemaPage() {
   const fetchDiscoverMovies = async () => {
     setLoading(true);
     try {
+      // 1. Construire l'URL pour TMDB
       let url = '/api/cinema/discover?mode=cinematch';
       if (filters.genre) url += `&genre=${filters.genre}`;
       if (filters.minYear) url += `&minYear=${filters.minYear}`;
       if (filters.maxYear) url += `&maxYear=${filters.maxYear}`;
       if (filters.minVote > 0) url += `&minVote=${filters.minVote}`;
 
-      const res = await fetch(url);
-      const data = await res.json();
-      if (Array.isArray(data)) setMovies(data);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+      // 2. Lancer les 3 requêtes en parallèle (TMDB + Wishlist + History)
+      // C'est beaucoup plus rapide que de les faire l'une après l'autre
+      const [resTmdb, resWishlist, resHistory] = await Promise.all([
+          fetch(url),
+          fetch(`/api/cinema/get-lists?type=wishlist&userId=${currentUser}`),
+          fetch(`/api/cinema/get-lists?type=history&userId=${currentUser}`)
+      ]);
+
+      const tmdbData = await resTmdb.json();
+      const wishlistData = await resWishlist.json();
+      const historyData = await resHistory.json();
+
+      if (Array.isArray(tmdbData)) {
+          // 3. Créer une liste de tous les IDs à exclure (ceux que tu as déjà)
+          const excludedIds = new Set([
+              ...wishlistData.map((m: any) => m.id),
+              ...historyData.map((m: any) => m.id)
+          ]);
+
+          // 4. Garder uniquement les films qui ne sont PAS dans la liste d'exclusion
+          const filteredMovies = tmdbData.filter((movie: MovieBasic) => !excludedIds.has(movie.id));
+
+          setMovies(filteredMovies);
+      }
+    } catch (error) { 
+        console.error("Erreur lors du chargement des films :", error); 
+    } finally { 
+        setLoading(false); 
+    }
   };
 
   const fetchCatalogueMovies = async (page: number, reset = false) => {
     setLoading(true);
     try {
       let url = `/api/cinema/discover?mode=catalogue&page=${page}&sortBy=${sortOption}`;
+      
+      // SI ON A UNE RECHERCHE, ON L'AJOUTE
+      if (searchQuery.trim() !== '') {
+          url += `&query=${encodeURIComponent(searchQuery)}`;
+      }
+
       if (filters.genre) url += `&genre=${filters.genre}`;
       if (filters.minYear) url += `&minYear=${filters.minYear}`;
       if (filters.maxYear) url += `&maxYear=${filters.maxYear}`;
@@ -623,6 +665,25 @@ export default function CinemaPage() {
         {activeTab === 'catalogue' && (
              <div className="absolute inset-0 overflow-y-auto px-4 pb-24 scrollbar-hide">
                  <div className="py-4">
+
+                    {/* --- DÉBUT DE LA BARRE DE RECHERCHE (A COLLER ICI) --- */}
+                    <div className="relative mb-4">
+                        <input 
+                            type="text" 
+                            placeholder="Rechercher un film..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 text-white pl-10 pr-4 py-3 rounded-xl text-sm focus:outline-none focus:border-purple-500 transition placeholder:text-slate-500"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                    {/* --- FIN DE LA BARRE DE RECHERCHE --- */}
+                    
                     <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide py-1">
                         <button onClick={() => setSortOption('newest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'newest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowDownWideNarrow size={14}/> Récents</button>
                         <button onClick={() => setSortOption('oldest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'oldest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowUpNarrowWide size={14}/> Anciens</button>
