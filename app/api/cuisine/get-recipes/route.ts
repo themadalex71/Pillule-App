@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'; // Important pour ne pas mettre en cache
 export async function GET() {
   try {
     // On récupère toute la liste 'recipes_list'
-    const recipes = await kv.lrange('recipes_list', 0, -1);
+    const recipes = await kv.lrange('cuistot:recipes_list', 0, -1);
     
     return NextResponse.json(recipes || []);
 

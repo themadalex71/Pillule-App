@@ -20,7 +20,7 @@ const DEFAULT_ALIASES: Record<string, string[]> = {
 
 export async function GET() {
   try {
-    const saved = await kv.get('aliases_config');
+    const saved = await kv.get('cuistot:aliases_config');
     // On fusionne les sauvegardes avec les défauts pour être sûr de tout avoir
     return NextResponse.json(saved || DEFAULT_ALIASES);
   } catch (error) {

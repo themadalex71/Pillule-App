@@ -10,7 +10,8 @@ export async function POST(request: Request) {
     }
 
     // 1. On récupère toutes les recettes pour trouver la bonne position
-    const allRecipes: any[] = await kv.lrange('recipes_list', 0, -1);
+    const allRecipes : any[] = await kv.lrange('cuistot:recipes_list', 0, -1);
+
     
     // 2. On trouve l'index de la recette à modifier
     const index = allRecipes.findIndex((r) => r.id === recipe.id);
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     // 3. On écrase l'ancienne version avec la nouvelle (LSET)
-    await kv.lset('recipes_list', index, recipe);
+    await kv.lset('cuistot:recipes_list', index, recipe);
 
     return NextResponse.json({ success: true });
 

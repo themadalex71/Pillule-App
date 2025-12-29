@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     // On stocke dans une liste "recipes"
     // On utilise LPUSH pour mettre les nouvelles en premier
-    await kv.lpush('recipes_list', newRecipe);
+    await kv.lpush('cuistot:recipes_list', recipe);
 
     return NextResponse.json({ success: true });
 

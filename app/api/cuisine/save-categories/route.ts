@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     if (!categories) return NextResponse.json({ error: "Données invalides" }, { status: 400 });
 
     // On écrase la configuration existante avec la nouvelle
-    await kv.set('categories_config', categories);
+    await kv.set('cuistot:categories_config', categories);
 
     return NextResponse.json({ success: true });
 

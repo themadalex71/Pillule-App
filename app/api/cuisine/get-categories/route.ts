@@ -30,7 +30,7 @@ const DEFAULT_CATEGORIES = [
 export async function GET() {
   try {
     // On essaie de récupérer la liste personnalisée dans Redis
-    const savedCategories = await kv.get('categories_config');
+    const savedCategories = await kv.get('cuistot:categories_config');
     
     // Si on a trouvé quelque chose, on le renvoie, sinon on renvoie la liste par défaut
     return NextResponse.json(savedCategories || DEFAULT_CATEGORIES);
