@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Pill, Clapperboard, ShoppingCart, Plus } from 'lucide-react'; // J'ai remplacé Wallet par Clapperboard
+import { Pill, Clapperboard, ChefHat, Plus } from 'lucide-react'; // Ajout de ChefHat
 
 export default function Home() {
   return (
@@ -34,14 +34,15 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* CARTE 3 : COURSES (Exemple futur) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 opacity-60 flex flex-col items-center gap-3 h-full grayscale relative">
-          <div className="absolute top-2 right-2 bg-gray-200 text-xs px-2 py-1 rounded-full text-gray-500">Bientôt</div>
-          <div className="bg-green-100 p-3 rounded-full">
-            <ShoppingCart className="text-green-600" size={32} />
+        {/* CARTE 3 : CUISINE (Active - NOUVEAU) */}
+        <Link href="/cuisine" className="group">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 hover:shadow-md hover:border-orange-300 transition-all flex flex-col items-center gap-3 cursor-pointer h-full">
+            <div className="bg-orange-100 p-3 rounded-full group-hover:bg-orange-200 transition">
+              <ChefHat className="text-orange-600" size={32} />
+            </div>
+            <span className="font-bold text-gray-700">Cuistot</span>
           </div>
-          <span className="font-bold text-gray-400">Courses</span>
-        </div>
+        </Link>
 
         {/* CARTE 4 : AJOUTER */}
         <button className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 text-gray-400 hover:bg-gray-50 transition h-full">
