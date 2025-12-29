@@ -98,6 +98,8 @@ export default function CinemaPage() {
 
   const currentYear = new Date().getFullYear();
   const cardRefs = useRef<any[]>([]);
+  // AJOUTER CECI : Pour pouvoir annuler les vieilles requêtes
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // --- EFFETS ---
   useEffect(() => {
@@ -119,12 +121,21 @@ export default function CinemaPage() {
 
   useEffect(() => {
     if (activeTab === 'catalogue') {
+        // Si vide, on recharge le catalogue normal tout de suite
+        if (searchQuery === '') {
+            fetchCatalogueMovies(1, true, ''); // On force une chaine vide
+            return;
+        }
+
         const delayDebounceFn = setTimeout(() => {
-            fetchCatalogueMovies(1, true);
-        }, 500); // Attend 500ms après la dernière frappe
+            // C'EST LA CORRECTION CLEF :
+            // On envoie la valeur 'searchQuery' telle qu'elle est MAINTENANT
+            fetchCatalogueMovies(1, true, searchQuery);
+        }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-        }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [searchQuery]);
 
   // --- LOGIQUE IMPORTATION CSV ---
@@ -251,14 +262,35 @@ export default function CinemaPage() {
     }
   };
 
-  const fetchCatalogueMovies = async (page: number, reset = false) => {
+  const fetchCatalogueMovies = async (page: number, reset = false, queryOverride?: string) => {
+    // 1. Annulation de la requête précédente si elle tourne encore
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+    }
+    
+    const newController = new AbortController();
+    abortControllerRef.current = newController;
+
+    // --- CORRECTION ICI ---
+    // Si c'est une nouvelle recherche (reset = true), on vide l'écran IMMÉDIATEMENT.
+    // On n'attend pas la réponse du serveur pour effacer les vieux films (ex: "Ava").
+    if (reset) {
+        setCatalogueMovies([]);
+    }
+    // ---------------------
+    
     setLoading(true);
+    
+    
     try {
       let url = `/api/cinema/discover?mode=catalogue&page=${page}&sortBy=${sortOption}`;
       
-      // SI ON A UNE RECHERCHE, ON L'AJOUTE
-      if (searchQuery.trim() !== '') {
-          url += `&query=${encodeURIComponent(searchQuery)}`;
+      // 2. UTILISATION BLINDÉE DE LA RECHERCHE
+      // Si on passe un override (depuis le useEffect), on l'utilise. Sinon on prend le state.
+      const queryToUse = queryOverride !== undefined ? queryOverride : searchQuery;
+
+      if (queryToUse.trim() !== '') {
+          url += `&query=${encodeURIComponent(queryToUse)}`;
       }
 
       if (filters.genre) url += `&genre=${filters.genre}`;
@@ -266,13 +298,27 @@ export default function CinemaPage() {
       if (filters.maxYear) url += `&maxYear=${filters.maxYear}`;
       if (filters.minVote > 0) url += `&minVote=${filters.minVote}`;
 
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: newController.signal });
       const data = await res.json();
+      
       if (Array.isArray(data)) {
-          if (reset) { setCatalogueMovies(data); setCataloguePage(1); } 
-          else { setCatalogueMovies(prev => [...prev, ...data]); setCataloguePage(page); }
+          if (reset) { 
+              setCatalogueMovies(data); 
+              setCataloguePage(1); 
+          } else { 
+              setCatalogueMovies(prev => [...prev, ...data]); 
+              setCataloguePage(page); 
+          }
       }
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+    } catch (error: any) { 
+        if (error.name === 'AbortError') return; // Ignorer les annulations
+        console.error(error); 
+    } finally { 
+        if (abortControllerRef.current === newController) {
+             setLoading(false); 
+             abortControllerRef.current = null;
+        }
+    }
   };
 
   const applyFilters = () => {
@@ -683,7 +729,7 @@ export default function CinemaPage() {
                         )}
                     </div>
                     {/* --- FIN DE LA BARRE DE RECHERCHE --- */}
-                    
+
                     <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide py-1">
                         <button onClick={() => setSortOption('newest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'newest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowDownWideNarrow size={14}/> Récents</button>
                         <button onClick={() => setSortOption('oldest')} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${sortOption === 'oldest' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowUpNarrowWide size={14}/> Anciens</button>
