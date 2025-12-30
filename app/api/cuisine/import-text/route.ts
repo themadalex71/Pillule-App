@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 export async function POST(request: Request) {
-  // On initialise l'IA DANS la fonction
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   try {
@@ -11,34 +10,37 @@ export async function POST(request: Request) {
     if (!text) return NextResponse.json({ error: "Aucun texte fourni" }, { status: 400 });
 
     const prompt = `
-      Tu es un chef étoilé expert. J'ai copié la description d'une vidéo de cuisine (Instagram/TikTok) :
-      "${text}"
+      Tu es un chef étoilé français expert. J'ai copié la description d'une vidéo de cuisine (Instagram/TikTok).
       
-      Ta mission est de structurer cette recette.
+      CONTENU À ANALYSER : "${text}"
       
-      IMPORTANT - LES ÉTAPES :
-      Souvent, les descriptions Instagram ne contiennent QUE les ingrédients.
-      1. Si les étapes sont écrites dans le texte, reformule-les clairement.
-      2. **SI LES ÉTAPES SONT ABSENTES : TU DOIS LES DÉDUIRE/GÉNÉRER TOI-MÊME** de façon logique et professionnelle, en te basant sur la liste des ingrédients et le titre supposé du plat. Ne laisse JAMAIS le champ "steps" vide.
+      🔎 MISSION PRINCIPALE : 
+      1. Analyse le texte.
+      2. **TRADUCTION : Si le texte est dans une autre langue (Anglais, Espagnol, etc.), TRADUIS TOUT EN FRANÇAIS.** Le titre, les ingrédients et les étapes doivent être en français impeccable.
       
-      IMPORTANT - LES INGRÉDIENTS :
-      Sépare bien la quantité du nom.
-      - "200g de Farine" -> quantity: "200g", name: "Farine"
-      - "Sel" -> quantity: "", name: "Sel"
+      📦 FORMAT DES DONNÉES :
+      Extrais les données au format JSON strict suivant :
+      
+      - INGRÉDIENTS : Sépare bien la quantité du nom.
+        Ex: "200g Flour" devient -> { "quantity": "200g", "name": "Farine" }
+        Ex: "Salt" -> { "quantity": "", "name": "Sel" }
+      
+      - ÉTAPES :
+        Si elles sont présentes : Traduis-les.
+        Si elles sont ABSENTES : **DÉDUIS-LES** logiquement à partir des ingrédients et du titre. Ne laisse jamais ce champ vide.
 
-      Renvoie UNIQUEMENT un JSON strict respectant ce format :
+      Format attendu (JSON) :
       {
-        "title": "Nom du plat (déduis-le si nécessaire)",
-        "prepTime": "XX min (estimation si absent)",
-        "cookTime": "XX min (estimation si absent)",
-        "servings": "X pers (par défaut 2 si absent)",
+        "title": "Nom du plat en Français",
+        "prepTime": "XX min (estimation)",
+        "cookTime": "XX min (estimation)",
+        "servings": "X pers (défaut 2)",
         "ingredients": [
           { "quantity": "...", "name": "..." }
         ],
         "steps": [
-          "Étape 1...",
-          "Étape 2...",
-          "Étape 3..."
+          "Étape 1 en français...",
+          "Étape 2 en français..."
         ]
       }
     `;

@@ -1,39 +1,40 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-
-
 export async function POST(request: Request) {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
   try {
-    // On reçoit maintenant un TABLEAU d'images
     const { imagesBase64 } = await request.json();
 
     if (!imagesBase64 || imagesBase64.length === 0) {
       return NextResponse.json({ error: "Aucune image fournie" }, { status: 400 });
     }
 
-    // On prépare le contenu pour GPT (Texte + Liste d'images)
     const contentMessage: any[] = [
       { 
         type: "text", 
-        text: `Tu es un assistant culinaire. J'ai pris plusieurs captures d'écran d'une MÊME recette. 
-        Analyse toutes les images pour reconstituer la recette complète.
-        Si des infos se répètent sur les images, ne les mets qu'une fois.
+        text: `Tu es un assistant culinaire français. J'ai pris des photos d'une recette.
         
-        Extrais les infos au format JSON strict :
-        - title: Nom de la recette
+        🔎 MISSION :
+        1. Analyse les images pour reconstituer la recette.
+        2. **TRADUCTION OBLIGATOIRE : Quelle que soit la langue sur la photo, fournis le résultat EN FRANÇAIS.**
+        
+        📦 FORMAT JSON STRICT :
+        - title: Nom de la recette (en Français)
         - prepTime: Temps prépa (ex: "15 min")
         - cookTime: Temps cuisson (ex: "20 min")
-        - servings: Nombre de personnes (ex: "4")
-        - ingredients: Tableau de strings
-        - steps: Tableau d'étapes.
+        - servings: Nombre de personnes
+        
+        - ingredients: Tableau d'objets. TRADUIS les noms en français.
+          Ex: "1 cup Sugar" -> { "quantity": "200g", "name": "Sucre" } (Convertis les unités si possible, sinon garde l'unité d'origine mais traduis le nom).
+        
+        - steps: Tableau d'étapes (en Français). Si elles manquent, déduis-les.
         
         Si ce n'est pas une recette, renvoie { error: "Pas une recette" }.` 
       }
     ];
 
-    // On ajoute chaque image au message
     imagesBase64.forEach((img: string) => {
         contentMessage.push({
             type: "image_url",
