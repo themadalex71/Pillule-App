@@ -87,37 +87,20 @@ export default function ZoomGame({ onFinish, currentUser }: ZoomGameProps) {
   const checkGameState = async () => {
     try {
       const res = await fetch('/api/game-turn');
-      const data = await res.json();
-
-      if (!data.hasPendingGame) {
+      const fullData = await res.json();
+      
+      // On extrait la partie Zoom de l'objet centralisé
+      const data = fullData.zoom; 
+  
+      if (!data || !data.hasPendingGame) {
         setMode('camera');
         return;
       }
-
-      // IL Y A UNE PARTIE EN COURS
+  
+      // Le reste du code utilise 'data', donc il n'y a rien d'autre à changer ici
       setImageSrc(data.image);
       setOpponentGuess(data.currentGuess);
-
-      const amIAuthor = data.author === currentUser;
-
-      // LOGIQUE DU TESTEUR (Il joue les 2 rôles à la suite)
-      if (isTester) {
-          if (!data.currentGuess) setMode('guessing'); // Si pas de réponse, je deviens le chercheur
-          else setMode('validating'); // Si réponse, je deviens le validateur
-          return;
-      }
-
-      // LOGIQUE JOUEURS RÉELS
-      if (amIAuthor) {
-          // JE SUIS LE CRÉATEUR (A)
-          if (data.currentGuess) setMode('validating'); // B a répondu !
-          else setMode('waiting_opponent'); // J'attends B
-      } else {
-          // JE SUIS LE CHERCHEUR (B)
-          if (data.currentGuess) setMode('waiting_validation'); // J'ai déjà répondu
-          else setMode('guessing'); // À moi de jouer
-      }
-
+      // ... la suite de ton code existant ...
     } catch (e) {
       console.error(e);
     }
