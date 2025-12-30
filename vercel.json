@@ -1,0 +1,8 @@
+{
+    "crons": [
+      {
+        "path": "/api/notify-game",
+        "schedule": "*/30 9-22 * * *"
+      }
+    ]
+  }

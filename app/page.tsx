@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Pill, Clapperboard, ChefHat, Plus } from 'lucide-react'; // Ajout de ChefHat
+import { Pill, Clapperboard, ChefHat, Plus, PartyPopper } from 'lucide-react'; // Ajout de ChefHat
 
 export default function Home() {
   return (
@@ -44,11 +44,15 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* CARTE 4 : AJOUTER */}
-        <button className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center gap-2 text-gray-400 hover:bg-gray-50 transition h-full">
-          <Plus size={32} />
-          <span className="text-sm font-medium">Ajouter</span>
-        </button>
+        {/* CARTE 4 : ON S'AMUSE (Nouveau) */}
+        <Link href="/onsamuse" className="group">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100 hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center gap-3 cursor-pointer h-full">
+            <div className="bg-purple-100 p-3 rounded-full group-hover:bg-purple-200 transition">
+              <PartyPopper className="text-purple-600" size={32} />
+            </div>
+            <span className="font-bold text-gray-700">On S'aMuSe</span>
+          </div>
+        </Link>
 
       </div>
     </main>
