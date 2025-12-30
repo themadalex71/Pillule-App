@@ -5,31 +5,27 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    // 1. On regarde si l'URL contient un ID forcé (ex: /api/onsamuse?id=zoom)
     const { searchParams } = new URL(request.url);
-    const forcedId = searchParams.get('id');
+    const forcedId = searchParams.get('id'); // L'ID envoyé par le menu Testeur
 
-    let gameData;
     const now = new Date();
-    // Utiliser l'heure locale ou force Europe/Paris
     const dateKey = now.toISOString().split('T')[0];
 
+    let gameData;
     if (forcedId) {
-      // MODE TRICHE : On récupère le jeu demandé
-      gameData = getGameById(forcedId);
+      // Pour le testeur : on va chercher le jeu demandé par son ID
+      gameData = getGameById(forcedId); 
     } else {
-      // MODE NORMAL : On récupère le jeu du jour
-      gameData = getGameOfTheDay(dateKey);
+      // Pour les joueurs : on suit la logique aléatoire du jour
+      gameData = getGameOfTheDay(dateKey); 
     }
 
     return NextResponse.json({
       date: dateKey,
       game: gameData,
-      isTestMode: !!forcedId // Petit flag pour dire au front qu'on triche
+      isTestMode: !!forcedId
     });
-
   } catch (error) {
-    console.error("Erreur API:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -87,20 +87,22 @@ export default function ZoomGame({ onFinish, currentUser }: ZoomGameProps) {
   const checkGameState = async () => {
     try {
       const res = await fetch('/api/game-turn');
-      const fullData = await res.json();
-      
-      // On extrait la partie Zoom de l'objet centralisé
-      const data = fullData.zoom; 
+      const data = await res.json();
   
-      if (!data || !data.hasPendingGame) {
+      // On récupère la partie Zoom de l'objet centralisé
+      const zoomData = data.zoom; 
+  
+      if (!zoomData || !zoomData.hasPendingGame) {
         setMode('camera');
         return;
       }
   
-      // Le reste du code utilise 'data', donc il n'y a rien d'autre à changer ici
-      setImageSrc(data.image);
-      setOpponentGuess(data.currentGuess);
-      // ... la suite de ton code existant ...
+      // On met à jour les états avec les données de 'zoomData'
+      setImageSrc(zoomData.image);
+      setOpponentGuess(zoomData.currentGuess);
+  
+      const amIAuthor = zoomData.author === currentUser;
+      // ... reste de ta logique de mode (validating, guessing, etc.)
     } catch (e) {
       console.error(e);
     }
