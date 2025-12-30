@@ -35,15 +35,28 @@ export default function MemeGame({ onFinish, currentUser }: any) {
 
   // FONCTION POUR RELANCER UN SEUL MEME
   const handleReroll = (idx: number) => {
+    // 1. Vérifications de base (s'il reste des rerolls et si on a des templates)
     if (myMemes[idx].rerollsLeft <= 0 || allTemplates.length === 0) return;
-
-    const newTemplate = allTemplates[Math.floor(Math.random() * allTemplates.length)];
-    const next = [...myMemes];
+  
+    // 2. On récupère les IDs des memes actuellement affichés pour les exclure
+    // On exclut l'ID du meme 1 ET l'ID du meme 2
+    const currentIds = myMemes.map(m => m.id);
+  
+    // 3. On crée une liste de choix possibles qui ne sont pas dans les IDs actuels
+    const availableTemplates = allTemplates.filter(t => !currentIds.includes(t.id));
+  
+    // 4. Sécurité : si on a vraiment très peu de templates dans la base, 
+    // on prend dans la liste complète s'il n'y a plus d'exclusivité possible
+    const sourceList = availableTemplates.length > 0 ? availableTemplates : allTemplates;
+  
+    // 5. On pioche au hasard dans les templates filtrés
+    const newTemplate = sourceList[Math.floor(Math.random() * sourceList.length)];
     
+    const next = [...myMemes];
     next[idx] = {
       ...newTemplate,
       instanceId: `meme_${idx}_${Date.now()}`,
-      inputs: {}, // On réinitialise le texte car le template change
+      inputs: {}, // On réinitialise les textes pour le nouveau template
       rerollsLeft: myMemes[idx].rerollsLeft - 1
     };
     
