@@ -5,10 +5,45 @@ import { Camera, Check, X, Send, RotateCcw, Shuffle, Loader2, Hourglass } from '
 
 // 🎯 LISTE DES MISSIONS
 const MISSIONS = [
-  "Une fourchette", "Une télécommande", "Ton œil", "Une brosse à dents",
-  "Un fruit", "Une chaussure", "Un truc bleu", "Une pièce de monnaie",
-  "Un clavier", "Une poignée de porte", "Un verre d'eau", "Une plante",
-  "Ton oreille", "Une clé", "Un stylo", "Du papier toilette"
+  // --- LES MATIÈRES (Le rendu est dingue en zoom) ---
+  "Un truc tout doux",
+  "Un truc qui gratte",
+  "Quelque chose en bois",
+  "Quelque chose en métal",
+  "Un tissu avec des motifs",
+  "Une matière plastique",
+  "Un truc transparent (verre, eau...)",
+  "Un truc rugueux ou abîmé",
+
+  // --- LES COULEURS (Piégeux en zoom) ---
+  "Un objet tout rouge",
+  "Un objet tout bleu",
+  "Un objet noir",
+  "Un truc multicolore",
+  "Quelque chose de jaune",
+
+  // --- LA MAISON (Facile à trouver autour de soi) ---
+  "Un truc qui se mange",
+  "Un truc qui se boit",
+  "Un objet de la salle de bain",
+  "Un truc qui traîne sur ton bureau",
+  "Un vêtement que tu portes",
+  "Un truc qui s'allume",
+  "Une plante ou une fleur",
+  "Un truc qui sent fort",
+
+  // --- LE CORPS (Simple et efficace) ---
+  "Un morceau de ta main",
+  "Un morceau de ton visage",
+  "Ta peau (de très près)",
+  "Tes cheveux ou poils",
+
+  // --- LES DÉFIS ---
+  "Un truc rond",
+  "Un truc avec des écritures",
+  "Un truc sale ou poussiéreux",
+  "Ton objet préféré",
+  "Le truc le plus moche de la pièce"
 ];
 
 interface ZoomGameProps {
