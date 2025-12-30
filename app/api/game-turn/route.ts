@@ -36,24 +36,50 @@ export async function POST(req: Request) {
   const redis = getRedis();
   try {
     const body = await req.json();
-    const { type, ...data } = body;
+    const { type, action, ...data } = body;
+
+    // --- 1. GESTION DES ACTIONS SPÉCIFIQUES (ZOOM) ---
+    
+    // Action : Soumettre une réponse (Guess)
+    if (action === 'submit_guess') {
+      await redis.set('zoom_current_guess', data.guess, 'EX', 86400);
+      await redis.quit();
+      return NextResponse.json({ success: true });
+    }
+
+    // Action : Rejeter une réponse (Correction de l'auteur)
+    if (action === 'reject_guess') {
+      await redis.del('zoom_current_guess');
+      await redis.quit();
+      return NextResponse.json({ success: true });
+    }
+
+    // --- 2. GESTION DE LA CRÉATION DES TOURS (INITIALISATION) ---
 
     if (type === 'meme') {
       // Sauvegarde du tour de meme (Expiration 24h)
       // data contient : { player, memes: [...] }
       await redis.lpush('meme_current_turns', JSON.stringify(data));
       await redis.expire('meme_current_turns', 86400);
-    } else {
-      // Logique Zoom classique
+    } 
+    
+    else if (type === 'zoom') {
+      // Initialisation d'une nouvelle partie Zoom
+      // data contient : { image, author }
       await redis.set('zoom_current_image', data.image, 'EX', 172800);
       await redis.set('zoom_current_author', data.author, 'EX', 172800);
+      // On s'assure qu'aucun ancien guess ne traîne
       await redis.del('zoom_current_guess');
     }
 
     await redis.quit();
     return NextResponse.json({ success: true });
+
   } catch (error) {
-    return NextResponse.json({ error: "Erreur POST" }, { status: 500 });
+    console.error("Erreur API POST:", error);
+    // En cas d'erreur, on essaie quand même de fermer la connexion Redis
+    try { await redis.quit(); } catch { }
+    return NextResponse.json({ error: "Erreur serveur lors de l'enregistrement" }, { status: 500 });
   }
 }
 
