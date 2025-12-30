@@ -8,30 +8,35 @@ const getRedis = () => new Redis(process.env.REDIS_URL || '');
 export async function GET() {
   const redis = getRedis();
   try {
-    // Récupération des clés Zoom
-    const zoomImage = await redis.get('zoom_current_image');
-    const zoomAuthor = await redis.get('zoom_current_author');
-    const zoomGuess = await redis.get('zoom_current_guess');
+    // Récupération de toutes les clés Zoom en parallèle
+    const [zoomImage, zoomAuthor, zoomGuess] = await Promise.all([
+      redis.get('zoom_current_image'),
+      redis.get('zoom_current_author'),
+      redis.get('zoom_current_guess')
+    ]);
 
-    // Récupération des clés Meme
+    // Récupération des Memes
     const memeTurns = await redis.lrange('meme_current_turns', 0, -1);
     const parsedMemes = memeTurns.map(m => JSON.parse(m));
 
     await redis.quit();
     
     return NextResponse.json({ 
-      zoom: { // Cette structure est CRUCIALE pour ZoomGame
-        hasPendingGame: !!zoomImage,
+      zoom: {
+        // hasPendingGame est VRAI si une image existe
+        hasPendingGame: !!zoomImage, 
         image: zoomImage,
         author: zoomAuthor,
-        currentGuess: zoomGuess
+        currentGuess: zoomGuess // S'assurer que cette clé est bien renvoyée
       },
       memes: parsedMemes
     });
   } catch (error) {
+    console.error("Erreur GET Redis:", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
+
 export async function POST(req: Request) {
   const redis = getRedis();
   try {
