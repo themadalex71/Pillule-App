@@ -65,25 +65,26 @@ export default function MemeGame({ onFinish, currentUser }: any) {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center gap-4 py-12">
-      <Loader2 className="animate-spin text-purple-600" size={40} />
-      <p className="text-sm font-bold text-gray-400">Génération de tes memes...</p>
+    <div className="flex flex-col items-center justify-center py-20">
+      <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Préparation du studio...</p>
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-10 w-full max-w-md mx-auto pb-10">
+    <div className="flex flex-col gap-6 w-full max-w-lg mx-auto pb-10 px-2">
       {step === 'editing' ? (
         <>
-          <div className="text-center">
-             <h3 className="text-lg font-black text-gray-800 uppercase italic tracking-tighter">Écris tes légendes ✍️</h3>
+          <div className="text-center space-y-1">
+             <h3 className="text-xl font-bold text-gray-900">Meme Maker</h3>
+             <p className="text-xs text-gray-500 font-medium">Laisse parler ton génie (ou ta bêtise).</p>
           </div>
 
           {myMemes.map((meme, mIdx) => (
-            <div key={mIdx} className="bg-white rounded-3xl shadow-xl border border-gray-100 p-5 space-y-5">
-              {/* APERÇU DU MEME */}
-              <div className="relative aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-inner border-4 border-white">
-                <img src={meme.url} className="w-full h-full object-contain" alt="Template" />
+            <div key={mIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* RENDU DU MEME (MAXIMISÉ) */}
+              <div className="relative w-full bg-gray-50 flex items-center justify-center border-b">
+                <img src={meme.url} className="w-full h-auto block" alt="Template" />
                 
                 {meme.zones?.map((zone: any) => (
                   <div 
@@ -95,33 +96,41 @@ export default function MemeGame({ onFinish, currentUser }: any) {
                       height: `${zone.height}%`,
                       fontSize: `${zone.fontSize}px`,
                       color: zone.color || '#ffffff',
-                      WebkitTextStroke: '1.2px black',
-                      fontFamily: 'Impact, sans-serif',
-                      lineHeight: '1.1',
+                      fontFamily: 'Inter, system-ui, sans-serif', // Police propre
+                      fontWeight: '700',
+                      lineHeight: '1.2',
                       display: 'flex',
                       alignItems: 'flex-start',
                       justifyContent: 'flex-start',
                       textAlign: 'left',
-                      overflow: 'hidden',        // BLOQUE LE TEXTE
-                      wordBreak: 'break-word',   // CASSE LES MOTS
-                      whiteSpace: 'pre-wrap',    // REVIENT À LA LIGNE
-                      padding: '2px'
+                      overflow: 'hidden',
+                      wordBreak: 'break-word',
+                      whiteSpace: 'pre-wrap',
+                      textShadow: zone.color === '#ffffff' || zone.color === '#FFFFFF' 
+                        ? '0px 1px 3px rgba(0,0,0,0.8)' 
+                        : 'none' // Ombre légère pour le blanc, sinon rien
                     }}
-                    className="absolute uppercase font-black pointer-events-none drop-shadow-lg"
+                    className="absolute pointer-events-none p-1"
                   >
                     {meme.inputs[zone.id] || ""}
                   </div>
                 ))}
               </div>
 
-              <div className="space-y-3">
+              {/* CHAMPS DE SAISIE ÉPURÉS */}
+              <div className="p-4 bg-white space-y-3">
                 {meme.zones?.map((zone: any, zIdx: number) => (
-                  <input
-                    key={zone.id}
-                    placeholder={`Texte de la zone ${zIdx + 1}...`}
-                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-purple-500 focus:bg-white outline-none transition-all text-sm font-medium"
-                    onChange={(e) => updateInput(mIdx, zone.id, e.target.value)}
-                  />
+                  <div key={zone.id}>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">
+                      Zone de texte {zIdx + 1}
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Tape ton texte ici..."
+                      className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold resize-none"
+                      onChange={(e) => updateInput(mIdx, zone.id, e.target.value)}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -129,15 +138,18 @@ export default function MemeGame({ onFinish, currentUser }: any) {
 
           <button 
             onClick={submitToJudge}
-            className="w-full bg-gray-900 text-white font-black py-5 rounded-3xl shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-transform"
+            className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-[0.98] transition-all"
           >
-            <Send size={22}/> ENVOYER MES MEMES
+            Valider mes memes 🚀
           </button>
         </>
       ) : (
-        <div className="text-center py-20">
-           <h3 className="text-2xl font-black text-gray-800">C'est envoyé ! 🚀</h3>
-           <p className="text-gray-500 mt-2">En attente de l'autre joueur...</p>
+        <div className="text-center py-20 animate-in fade-in slide-in-from-bottom-4">
+           <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Send className="text-blue-600" size={24} />
+           </div>
+           <h3 className="text-lg font-bold text-gray-900">C'est dans la boîte !</h3>
+           <p className="text-sm text-gray-500">Tes memes sont partis en salle de notation.</p>
         </div>
       )}
     </div>
