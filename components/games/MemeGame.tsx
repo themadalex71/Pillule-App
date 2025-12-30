@@ -111,22 +111,38 @@ export default function MemeGame({ onFinish, currentUser }: any) {
   };
 
   const submitToJudge = async () => {
-    setStep('waiting');
+    // 1. On prépare les données du tour
+    const turnData = {
+      type: 'meme',
+      player: currentUser,
+      memes: myMemes.map(m => ({ 
+        url: m.url, 
+        zones: m.zones, 
+        inputs: m.inputs, 
+        instanceId: m.instanceId 
+      }))
+    };
+  
     try {
+      // 2. On sauvegarde normalement dans Redis
       await fetch('/api/game-turn', {
         method: 'POST',
-        body: JSON.stringify({
-          type: 'meme', // On précise que c'est pour le jeu de meme
-          player: currentUser,
-          memes: myMemes.map(m => ({ 
-            url: m.url, 
-            zones: m.zones, 
-            inputs: m.inputs, 
-            instanceId: m.instanceId 
-          }))
-        })
+        body: JSON.stringify(turnData)
       });
-    } catch (e) { console.error(e); }
+  
+      // 3. LOGIQUE SPÉCIALE TESTEUR
+      if (currentUser === 'Testeur 🛠️') {
+        // Au lieu d'attendre, on simule la réception des memes pour voter
+        // On met ses propres memes dans 'othersMemes' pour pouvoir tester l'interface
+        setOthersMemes(turnData.memes); 
+        setStep('voting');
+      } else {
+        // Joueur normal : on passe en attente
+        setStep('waiting');
+      }
+    } catch (e) { 
+      console.error("Erreur lors de la validation:", e); 
+    }
   };
 
   if (loading) return (
