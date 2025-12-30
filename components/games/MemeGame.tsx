@@ -22,7 +22,6 @@ export default function MemeGame({ onFinish, currentUser }: any) {
         const shuffled = [...allTemplates].sort(() => 0.5 - Math.random());
         const selection = shuffled.slice(0, 2);
         
-        // Correction TypeScript : On vérifie que les templates sont des objets
         setMyMemes(selection.map((t: any, idx: number) => {
           if (!t || typeof t !== 'object') return null;
           return {
@@ -82,6 +81,7 @@ export default function MemeGame({ onFinish, currentUser }: any) {
 
           {myMemes.map((meme, mIdx) => (
             <div key={mIdx} className="bg-white rounded-3xl shadow-xl border border-gray-100 p-5 space-y-5">
+              {/* APERÇU DU MEME */}
               <div className="relative aspect-square bg-gray-900 rounded-2xl overflow-hidden shadow-inner border-4 border-white">
                 <img src={meme.url} className="w-full h-full object-contain" alt="Template" />
                 
@@ -101,9 +101,13 @@ export default function MemeGame({ onFinish, currentUser }: any) {
                       display: 'flex',
                       alignItems: 'flex-start',
                       justifyContent: 'flex-start',
-                      textAlign: 'left'
+                      textAlign: 'left',
+                      overflow: 'hidden',        // BLOQUE LE TEXTE
+                      wordBreak: 'break-word',   // CASSE LES MOTS
+                      whiteSpace: 'pre-wrap',    // REVIENT À LA LIGNE
+                      padding: '2px'
                     }}
-                    className="absolute uppercase font-black break-words pointer-events-none drop-shadow-lg p-1 overflow-hidden"
+                    className="absolute uppercase font-black pointer-events-none drop-shadow-lg"
                   >
                     {meme.inputs[zone.id] || ""}
                   </div>
