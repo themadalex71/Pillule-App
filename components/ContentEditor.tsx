@@ -1,136 +1,160 @@
 'use client';
 import { useState, useRef } from 'react';
-import { Plus, Trash2, Save, MousePointer2, Type } from 'lucide-react';
+import { Plus, Trash2, Save, Type } from 'lucide-react';
+
+interface Zone {
+  id: number;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  color: string;
+}
 
 export default function ContentEditor() {
-  const [newMeme, setNewMeme] = useState({ 
-    name: '', 
-    url: '', 
-    zones: [] as { id: number, top: number, left: number, fontSize: number, color: string, width: number }[] 
-  });
-  const [selectedZone, setSelectedZone] = useState<number | null>(null);
+  const [newMeme, setNewMeme] = useState({ name: '', url: '', zones: [] as Zone[] });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const imageRef = useRef<HTMLDivElement>(null);
 
   const addZone = () => {
     const id = Date.now();
-    const newZone = { id, top: 50, left: 50, fontSize: 30, color: '#ffffff', width: 80 };
-    setNewMeme({ ...newMeme, zones: [...newMeme.zones, newZone] });
-    setSelectedZone(id);
+    const zone: Zone = { id, top: 10, left: 10, width: 40, height: 20, fontSize: 30, color: '#ffffff' };
+    setNewMeme({ ...newMeme, zones: [...newMeme.zones, zone] });
+    setSelectedId(id);
   };
 
-  const updateZone = (id: number, field: string, value: any) => {
+  const updateZone = (id: number | null, fields: Partial<Zone>) => {
+    if (id === null) return;
     setNewMeme({
       ...newMeme,
-      zones: newMeme.zones.map(z => z.id === id ? { ...z, [field]: value } : z)
+      zones: newMeme.zones.map(z => z.id === id ? { ...z, ...fields } : z)
     });
   };
 
-  return (
-    <div className="bg-white rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-gray-800 w-full max-w-2xl">
-      <h2 className="text-2xl font-black mb-4 tracking-tight flex items-center gap-2">
-        <Type className="text-purple-600" /> Meme Studio Pro
-      </h2>
+  const handleImageClick = (e: React.MouseEvent) => {
+    if (selectedId === null || !imageRef.current) return;
+    const rect = imageRef.current.getBoundingClientRect();
+    const left = ((e.clientX - rect.left) / rect.width) * 100;
+    const top = ((e.clientY - rect.top) / rect.height) * 100;
+    updateZone(selectedId, { left: Math.min(left, 90), top: Math.min(top, 90) });
+  };
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <input 
-          placeholder="Nom du meme..." 
-          className="p-3 bg-gray-50 border-2 rounded-xl focus:border-purple-500 outline-none"
-          onChange={e => setNewMeme({...newMeme, name: e.target.value})}
-        />
-        <input 
-          placeholder="URL de l'image..." 
-          className="p-3 bg-gray-50 border-2 rounded-xl focus:border-purple-500 outline-none"
-          onChange={e => setNewMeme({...newMeme, url: e.target.value})}
-        />
+  const currentZone = newMeme.zones.find(z => z.id === selectedId);
+
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto text-gray-800 w-full max-w-4xl border border-purple-100">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-black flex items-center gap-2 tracking-tighter">
+          <Type className="text-purple-600" /> MEME STUDIO PRO
+        </h2>
+        <button onClick={addZone} className="bg-purple-600 text-white px-5 py-2.5 rounded-2xl font-bold flex items-center gap-2 hover:bg-purple-700 transition-all shadow-lg shadow-purple-200">
+          <Plus size={20}/> Nouvelle Zone
+        </button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* PREVIEW + PLACEMENT */}
-        <div className="flex-1">
-          {newMeme.url && (
-            <div 
-              ref={imageRef}
-              onClick={(e) => {
-                if(!selectedZone || !imageRef.current) return;
-                const rect = imageRef.current.getBoundingClientRect();
-                updateZone(selectedZone, 'left', ((e.clientX - rect.left) / rect.width) * 100);
-                updateZone(selectedZone, 'top', ((e.clientY - rect.top) / rect.height) * 100);
-              }}
-              className="relative w-full aspect-square bg-gray-100 rounded-2xl overflow-hidden cursor-crosshair border-4 border-gray-100 shadow-inner"
-            >
-              <img src={newMeme.url} className="w-full h-full object-contain pointer-events-none" />
-              {newMeme.zones.map((zone) => (
-                <div 
-                  key={zone.id}
-                  onClick={(e) => { e.stopPropagation(); setSelectedZone(zone.id); }}
-                  style={{ 
-                    top: `${zone.top}%`, 
-                    left: `${zone.left}%`, 
-                    width: `${zone.width}%`,
-                    fontSize: `${zone.fontSize}px`,
-                    color: zone.color,
-                    WebkitTextStroke: '1px black',
-                    fontFamily: 'Impact, sans-serif'
-                  }}
-                  className={`absolute transform -translate-x-1/2 -translate-y-1/2 text-center font-black uppercase leading-tight break-words p-1
-                    ${selectedZone === zone.id ? 'border-2 border-dashed border-blue-400' : ''}`}
-                >
-                  TEXTE
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-4">
+          <input 
+            placeholder="URL de l'image (direct link)..." 
+            className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-500 transition-all"
+            onChange={e => setNewMeme({...newMeme, url: e.target.value})}
+          />
+          
+          <div 
+            ref={imageRef}
+            onClick={handleImageClick}
+            className="relative w-full aspect-square bg-gray-100 rounded-3xl border-4 border-dashed border-gray-200 overflow-hidden cursor-crosshair shadow-inner"
+          >
+            {newMeme.url && <img src={newMeme.url} className="w-full h-full object-contain pointer-events-none" alt="Preview" />}
+            
+            {newMeme.zones.map((zone) => (
+              <div
+                key={zone.id}
+                onClick={(e) => { e.stopPropagation(); setSelectedId(zone.id); }}
+                style={{
+                  top: `${zone.top}%`,
+                  left: `${zone.left}%`,
+                  width: `${zone.width}%`,
+                  height: `${zone.height}%`,
+                  fontSize: `${zone.fontSize}px`,
+                  color: zone.color,
+                  WebkitTextStroke: '1px black',
+                  fontFamily: 'Impact, sans-serif',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'flex-start'
+                }}
+                className={`absolute border-2 overflow-hidden transition-all uppercase font-black p-1 leading-none
+                  ${selectedId === zone.id ? 'border-purple-500 bg-purple-500/20 z-20 ring-4 ring-purple-500/10' : 'border-white/50 bg-black/10 z-10'}`}
+              >
+                TEXTE
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase text-center italic">Clique sur l'image pour placer le coin haut-gauche de la zone active</p>
         </div>
 
-        {/* CONTRÔLES DE PERSONNALISATION */}
-        <div className="w-full md:w-64 space-y-4">
-          <button onClick={addZone} className="w-full py-3 bg-purple-100 text-purple-700 rounded-xl font-bold flex items-center justify-center gap-2">
-            <Plus size={18}/> Nouvelle Zone
-          </button>
+        <div className="bg-gray-50 p-6 rounded-[2rem] space-y-6 border border-gray-100">
+          <input 
+            placeholder="Nom du meme..." 
+            className="w-full p-3 bg-white border border-gray-200 rounded-xl font-bold outline-none focus:border-purple-400"
+            onChange={e => setNewMeme({...newMeme, name: e.target.value})}
+          />
 
-          {selectedZone && (
-            <div className="p-4 bg-gray-50 rounded-2xl border-2 border-purple-100 animate-in slide-in-from-right-5">
-              <p className="text-xs font-black text-purple-600 mb-3 uppercase tracking-wider">Réglages Zone</p>
-              
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="text-[10px] font-bold text-gray-400">TAILLE POLICE</span>
-                  <input type="range" min="10" max="80" className="w-full" 
-                    onChange={e => updateZone(selectedZone, 'fontSize', parseInt(e.target.value))} />
-                </label>
-
-                <label className="block">
-                  <span className="text-[10px] font-bold text-gray-400">LARGEUR CADRE</span>
-                  <input type="range" min="20" max="100" className="w-full" 
-                    onChange={e => updateZone(selectedZone, 'width', parseInt(e.target.value))} />
-                </label>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-400">COULEUR</span>
-                  <input type="color" className="w-8 h-8 rounded cursor-pointer" 
-                    onChange={e => updateZone(selectedZone, 'color', e.target.value)} />
-                </div>
-
+          {currentZone ? (
+            <div className="space-y-5 animate-in fade-in slide-in-from-right-2">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-xs font-black text-purple-600 uppercase tracking-widest">Réglages</span>
                 <button onClick={() => {
-                  setNewMeme({...newMeme, zones: newMeme.zones.filter(z => z.id !== selectedZone)});
-                  setSelectedZone(null);
-                }} className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-xs font-bold">
-                  Supprimer la zone
-                </button>
+                  setNewMeme({...newMeme, zones: newMeme.zones.filter(z => z.id !== selectedId)});
+                  setSelectedId(null);
+                }} className="text-red-500 hover:scale-110 transition-transform"><Trash2 size={18}/></button>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-gray-400 block mb-2 uppercase">Police : {currentZone.fontSize}px</label>
+                <input type="range" min="10" max="100" className="w-full accent-purple-600" value={currentZone.fontSize}
+                  onChange={e => updateZone(selectedId, { fontSize: parseInt(e.target.value) })} />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-gray-400 block mb-2 uppercase">Largeur : {currentZone.width}%</label>
+                <input type="range" min="5" max="100" className="w-full accent-purple-600" value={currentZone.width}
+                  onChange={e => updateZone(selectedId, { width: parseInt(e.target.value) })} />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-gray-400 block mb-2 uppercase">Hauteur : {currentZone.height}%</label>
+                <input type="range" min="5" max="100" className="w-full accent-purple-600" value={currentZone.height}
+                  onChange={e => updateZone(selectedId, { height: parseInt(e.target.value) })} />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <span className="text-xs font-bold">Couleur</span>
+                <input type="color" value={currentZone.color} className="w-10 h-10 cursor-pointer rounded-lg overflow-hidden border-none"
+                  onChange={e => updateZone(selectedId, { color: e.target.value })} />
               </div>
             </div>
+          ) : (
+            <div className="py-12 text-center space-y-2 opacity-30">
+               <Type className="mx-auto" size={32} />
+               <p className="text-xs font-bold uppercase">Sélectionne une zone</p>
+            </div>
           )}
+
+          <button 
+            onClick={async () => {
+              if(!newMeme.name || !newMeme.url) return alert("Nom et URL requis !");
+              await fetch('/api/content', { method: 'POST', body: JSON.stringify({ gameId: 'meme', item: newMeme }) });
+              alert("Meme ajouté à la Fabrique ! 🚀");
+            }}
+            className="w-full bg-gray-900 text-white font-black py-5 rounded-[1.5rem] shadow-xl hover:bg-black active:scale-95 transition-all"
+          >
+            <Save size={20}/> ENREGISTRER
+          </button>
         </div>
       </div>
-
-      <button onClick={async () => {
-          await fetch('/api/content', { method: 'POST', body: JSON.stringify({ gameId: 'meme', item: newMeme }) });
-          alert("Meme Sauvegardé ! 🚀");
-        }} 
-        className="w-full mt-6 bg-gray-900 text-white font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2 active:scale-95 transition"
-      >
-        <Save size={20}/> ENREGISTRER LE TEMPLATE
-      </button>
     </div>
   );
 }
