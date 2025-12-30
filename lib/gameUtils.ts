@@ -22,14 +22,8 @@ export const GAMES_CATALOG = [
   { id: 'couple', title: 'Ni Ange Ni Démon', description: 'Question vérité couple !' }
 ];
 
-export const MEME_TEMPLATES = [
-  { id: 1, url: 'https://api.memegen.link/images/distracted.png', name: 'Le mec distrait' },
-  { id: 2, url: 'https://api.memegen.link/images/drake.png', name: 'Drake Hotline Bling' },
-  { id: 3, url: 'https://api.memegen.link/images/two-buttons.png', name: 'Les deux boutons' },
-  { id: 4, url: 'https://api.memegen.link/images/doge.png', name: 'Doge' },
-  { id: 5, url: 'https://api.memegen.link/images/fine.png', name: 'This is fine' },
-  { id: 6, url: 'https://api.memegen.link/images/pika.png', name: 'Pikachu surpris' },
-];
+export const MEME_TEMPLATES = []
+  
 
 export function getGameOfTheDay(dateString: string) {
   // ... (ton code existant ne change pas) ...
