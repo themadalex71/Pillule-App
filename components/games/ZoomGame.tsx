@@ -159,6 +159,7 @@ export default function ZoomGame({ onFinish, currentUser }: ZoomGameProps) {
         </>
       )}
 
+      
       {mode === 'waiting_opponent' && (
          <div className="text-center py-10">
              <Loader2 size={48} className="animate-spin text-purple-300 mx-auto mb-4"/>
