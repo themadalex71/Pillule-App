@@ -63,7 +63,7 @@ export default function CalendrierView() {
 
     // 👇 AJOUT : On prévient le serveur tout de suite !
     try {
-      await fetch('/api/save-settings', {
+      await fetch('/api/pilule/save-cycle', { // <--- Nouvelle adresse
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cycleStart: newDate.toISOString() }),
