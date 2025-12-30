@@ -1,29 +1,53 @@
 'use client';
+
 import { useState, useEffect } from 'react';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, RotateCcw } from 'lucide-react';
 
 export default function MemeGame({ onFinish, currentUser }: any) {
   const [loading, setLoading] = useState(true);
+  const [allTemplates, setAllTemplates] = useState<any[]>([]); // On garde la liste complète
   const [step, setStep] = useState<'editing' | 'waiting'>('editing');
   const [myMemes, setMyMemes] = useState<any[]>([]);
 
   useEffect(() => {
-    loadRandomTemplates();
+    loadInitialData();
   }, []);
 
-  const loadRandomTemplates = async () => {
+  const loadInitialData = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/content?gameId=meme');
-      const allTemplates = await res.json();
-      if (allTemplates && allTemplates.length >= 2) {
-        const selection = [...allTemplates].sort(() => 0.5 - Math.random()).slice(0, 2);
+      const data = await res.json();
+      setAllTemplates(data);
+      
+      if (data && data.length >= 2) {
+        const selection = [...data].sort(() => 0.5 - Math.random()).slice(0, 2);
         setMyMemes(selection.map((t: any, idx: number) => ({
-          ...t, instanceId: `meme_${idx}_${Date.now()}`, inputs: {} 
+          ...t, 
+          instanceId: `meme_${idx}_${Date.now()}`, 
+          inputs: {},
+          rerollsLeft: 2 // 2 relances par meme
         })));
       }
     } catch (e) { console.error(e); }
     setLoading(false);
+  };
+
+  // FONCTION POUR RELANCER UN SEUL MEME
+  const handleReroll = (idx: number) => {
+    if (myMemes[idx].rerollsLeft <= 0 || allTemplates.length === 0) return;
+
+    const newTemplate = allTemplates[Math.floor(Math.random() * allTemplates.length)];
+    const next = [...myMemes];
+    
+    next[idx] = {
+      ...newTemplate,
+      instanceId: `meme_${idx}_${Date.now()}`,
+      inputs: {}, // On réinitialise le texte car le template change
+      rerollsLeft: myMemes[idx].rerollsLeft - 1
+    };
+    
+    setMyMemes(next);
   };
 
   const updateInput = (memeIdx: number, zoneId: number, val: string) => {
@@ -63,9 +87,23 @@ export default function MemeGame({ onFinish, currentUser }: any) {
           </div>
 
           {myMemes.map((meme, mIdx) => (
-            <div key={mIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="relative w-full bg-gray-50 flex items-center justify-center border-b">
+            <div key={mIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
+              
+              {/* RENDU DU MEME */}
+              <div className="relative w-full bg-gray-50 flex items-center justify-center border-b min-h-[250px]">
                 <img src={meme.url} className="w-full h-auto block" alt="Template" />
+                
+                {/* BOUTON REROLL INDIVIDUEL */}
+                <button 
+                  onClick={() => handleReroll(mIdx)}
+                  disabled={meme.rerollsLeft === 0}
+                  className={`absolute top-2 right-2 p-2 rounded-full shadow-md transition-all flex items-center gap-1 text-[10px] font-bold
+                    ${meme.rerollsLeft > 0 ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                >
+                  <RotateCcw size={14} className={meme.rerollsLeft > 0 ? "" : "opacity-50"} />
+                  {meme.rerollsLeft}
+                </button>
+
                 {meme.zones?.map((zone: any) => (
                   <div key={zone.id}
                     style={{ 
@@ -83,11 +121,16 @@ export default function MemeGame({ onFinish, currentUser }: any) {
                 ))}
               </div>
 
+              {/* CHAMPS DE SAISIE */}
               <div className="p-4 bg-white space-y-3">
                 {meme.zones?.map((zone: any, zIdx: number) => (
                   <div key={zone.id}>
                     <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Zone {zIdx + 1}</label>
-                    <textarea rows={2} placeholder="Ton texte ici..." className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold resize-none"
+                    <textarea 
+                      rows={2} 
+                      value={meme.inputs[zone.id] || ''}
+                      placeholder="Ton texte ici..." 
+                      className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold resize-none"
                       onChange={(e) => updateInput(mIdx, zone.id, e.target.value)}
                     />
                   </div>
