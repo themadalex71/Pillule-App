@@ -90,17 +90,22 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const redis = getRedis();
-  const { searchParams } = new URL(req.url);
-  const game = searchParams.get('game');
+  try {
+    const { searchParams } = new URL(req.url);
+    const game = searchParams.get('game');
 
-  if (game === 'meme') {
-    await redis.del('meme_current_turns');
-  } else {
-    await redis.del('zoom_current_image');
-    await redis.del('zoom_current_author');
-    await redis.del('zoom_current_guess');
+    if (game === 'zoom') {
+      // On supprime TOUT ce qui concerne le zoom en cours
+      await redis.del('zoom_current_image');
+      await redis.del('zoom_current_author');
+      await redis.del('zoom_current_guess');
+    } else if (game === 'meme') {
+      await redis.del('meme_current_turns');
+    }
+    
+    await redis.quit();
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Erreur DELETE" }, { status: 500 });
   }
-  
-  await redis.quit();
-  return NextResponse.json({ success: true });
 }
