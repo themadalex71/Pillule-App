@@ -22,6 +22,15 @@ export const GAMES_CATALOG = [
   { id: 'couple', title: 'Ni Ange Ni Démon', description: 'Question vérité couple !' }
 ];
 
+export const MEME_TEMPLATES = [
+  { id: 1, url: 'https://api.memegen.link/images/distracted.png', name: 'Le mec distrait' },
+  { id: 2, url: 'https://api.memegen.link/images/drake.png', name: 'Drake Hotline Bling' },
+  { id: 3, url: 'https://api.memegen.link/images/two-buttons.png', name: 'Les deux boutons' },
+  { id: 4, url: 'https://api.memegen.link/images/doge.png', name: 'Doge' },
+  { id: 5, url: 'https://api.memegen.link/images/fine.png', name: 'This is fine' },
+  { id: 6, url: 'https://api.memegen.link/images/pika.png', name: 'Pikachu surpris' },
+];
+
 export function getGameOfTheDay(dateString: string) {
   // ... (ton code existant ne change pas) ...
   let hash = 0;
@@ -34,6 +43,14 @@ export function getGameOfTheDay(dateString: string) {
 
 export function getGameById(id: string) {
   return GAMES_CATALOG.find(game => game.id === id) || GAMES_CATALOG[0];
+}
+
+async function getMissions() {
+  const defaultMissions = ["Un truc doux", "Un truc en bois"]; // Ta liste actuelle
+  const res = await fetch('/api/content?gameId=zoom');
+  const customMissions = await res.json();
+  
+  return [...defaultMissions, ...customMissions];
 }
 
 export function getAllGames() {

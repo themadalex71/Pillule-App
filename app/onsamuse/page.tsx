@@ -2,11 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Info, CheckCircle, Loader2, Users, LogOut, RotateCcw, LayoutGrid } from 'lucide-react';
+import { 
+  ArrowLeft, CheckCircle, Loader2, Users, LogOut, 
+  RotateCcw, LayoutGrid, Hammer, X 
+} from 'lucide-react';
 
 // Import des jeux
 import ZoomGame from '@/components/games/ZoomGame';
 import MixGame from '@/components/games/MixGame';
+import MemeGame from '@/components/games/MemeGame'; // Nouveau
+import ContentEditor from '@/components/ContentEditor'; // Le nouveau composant Fabrique
 
 // Liste des profils
 const PROFILES = ['Moi', 'Chéri(e)', 'Invité', 'Testeur 🛠️'];
@@ -16,39 +21,32 @@ export default function OnSamusePage() {
   const [gameData, setGameData] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [hasPlayed, setHasPlayed] = useState(false);
-  const [showRules, setShowRules] = useState(false);
+  const [showFabrique, setShowFabrique] = useState(false); // État pour la modal
   
-  // NOUVEAU : Un compteur pour forcer le composant à se recharger (Re-roll)
   const [gameKey, setGameKey] = useState(0);
 
   useEffect(() => {
-    // On récupère le user en mémoire
     const savedUser = localStorage.getItem('onsamuse_current_user');
     if (savedUser) handleUserSelect(savedUser);
-    else fetchGame(); // Si pas de user, on charge le jeu du jour par défaut
+    else fetchGame();
   }, []);
 
-  // Fonction unifiée pour charger un jeu
   const fetchGame = async (forcedId?: string) => {
     setLoading(true);
     try {
-      // Si forcedId existe, on appelle l'API avec ?id=zoom
       const url = forcedId ? `/api/onsamuse?id=${forcedId}` : '/api/onsamuse';
       const res = await fetch(url);
       const data = await res.json();
       
       setGameData(data);
       
-      // On vérifie si joué SEULEMENT si on n'est pas en mode Testeur
       if (currentUser && currentUser !== 'Testeur 🛠️') {
         checkIfPlayed(currentUser, data.date);
       } else {
-        setHasPlayed(false); // Le testeur peut toujours jouer
+        setHasPlayed(false);
       }
       
-      // On incrémente la clé pour forcer le reset du composant jeu
       setGameKey(prev => prev + 1);
-      
       setLoading(false);
     } catch (error) {
       console.error("Erreur", error);
@@ -59,8 +57,6 @@ export default function OnSamusePage() {
   const handleUserSelect = (user: string) => {
     setCurrentUser(user);
     localStorage.setItem('onsamuse_current_user', user);
-    // Si c'est le testeur, on ne charge rien de spécial, il choisira
-    // Si c'est un user normal, on charge le jeu du jour
     if (user !== 'Testeur 🛠️') fetchGame();
     else setLoading(false);
   };
@@ -70,7 +66,7 @@ export default function OnSamusePage() {
     localStorage.removeItem('onsamuse_current_user');
     setHasPlayed(false);
     setGameData(null);
-    fetchGame(); // Retour au jeu du jour par défaut en arrière-plan
+    fetchGame();
   };
 
   const checkIfPlayed = (user: string, date: string) => {
@@ -82,7 +78,6 @@ export default function OnSamusePage() {
   const handleGameSubmit = () => {
     if (currentUser === 'Testeur 🛠️') {
       alert("✅ Victoire simulée (Mode Testeur)");
-      // On ne sauvegarde pas dans le localStorage pour le testeur
       return;
     }
 
@@ -99,17 +94,17 @@ export default function OnSamusePage() {
     if (!gameData) return null;
     const { id, data } = gameData.game;
 
-    // La prop 'key' est magique : si elle change, React détruit et recrée le composant (Reset complet)
     const commonProps = { 
         key: gameKey, 
         data, 
         onFinish: handleGameSubmit,
-        currentUser: currentUser || 'Anonyme' // 👈 AJOUTE ÇA
+        currentUser: currentUser || 'Anonyme'
     };
 
     switch (id) {
       case 'zoom': return <ZoomGame {...commonProps} />;
       case 'mix': return <MixGame {...commonProps} />;
+      case 'meme': return <MemeGame {...commonProps} />; // Prêt pour Meme Maker
       default:
         return (
           <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300 w-full">
@@ -119,9 +114,7 @@ export default function OnSamusePage() {
     }
   };
 
-  // --- RENDU ---
-
-  // 1. SÉLECTION UTILISATEUR
+  // --- RENDU SÉLECTION UTILISATEUR ---
   if (!currentUser) {
     return (
       <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
@@ -150,10 +143,24 @@ export default function OnSamusePage() {
     );
   }
 
-  // 2. INTERFACE PRINCIPALE
   return (
     <main className="min-h-screen bg-gray-50 flex flex-col relative pb-20">
       
+      {/* MODAL LA FABRIQUE */}
+      {showFabrique && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-md">
+                <button 
+                    onClick={() => setShowFabrique(false)}
+                    className="absolute -top-12 right-0 text-white bg-white/20 p-2 rounded-full hover:bg-white/40"
+                >
+                    <X size={24} />
+                </button>
+                <ContentEditor />
+            </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className={`p-4 shadow-sm flex items-center justify-between sticky top-0 z-20 
         ${currentUser === 'Testeur 🛠️' ? 'bg-gray-800 text-white' : 'bg-white'}`}>
@@ -168,7 +175,16 @@ export default function OnSamusePage() {
         </div>
         
         <div className="flex gap-2">
-            <button onClick={handleLogout} className="p-2 bg-white/10 rounded-full hover:bg-red-500 hover:text-white transition">
+            {/* BOUTON FABRIQUE */}
+            <button 
+              onClick={() => setShowFabrique(true)}
+              className={`p-2 rounded-full transition ${currentUser === 'Testeur 🛠️' ? 'bg-white/10 hover:bg-white/20' : 'bg-purple-100 text-purple-600 hover:bg-purple-200'}`}
+              title="La Fabrique"
+            >
+                <Hammer size={20} />
+            </button>
+            
+            <button onClick={handleLogout} className="p-2 bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition">
                 <LogOut size={20} />
             </button>
         </div>
@@ -198,12 +214,7 @@ export default function OnSamusePage() {
         
         {loading ? (
            <Loader2 className="animate-spin text-purple-600" size={48} />
-        ) : !gameData && currentUser === 'Testeur 🛠️' ? (
-          <div className="text-center text-gray-400 mt-10">
-            <p>👈 Choisis un jeu dans le menu du haut</p>
-          </div>
         ) : hasPlayed ? (
-          // ÉCRAN DE VICTOIRE (User normal)
           <div className="text-center animate-in fade-in zoom-in duration-500">
             <CheckCircle className="text-green-500 w-24 h-24 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Bravo {currentUser} !</h2>
@@ -211,22 +222,16 @@ export default function OnSamusePage() {
             <button onClick={handleLogout} className="text-purple-600 font-bold hover:underline">Changer de joueur</button>
           </div>
         ) : (
-          // ZONE DE JEU
           <div className="w-full bg-white rounded-3xl shadow-lg border border-purple-100 overflow-hidden flex flex-col">
-            {/* Header Jeu */}
             <div className={`p-6 text-white text-center relative ${currentUser === 'Testeur 🛠️' ? 'bg-gray-700' : 'bg-purple-600'}`}>
-               
-               {/* BOUTON RE-ROLL (Uniquement pour le testeur) */}
                {currentUser === 'Testeur 🛠️' && (
                  <button 
                    onClick={() => fetchGame(gameData.game.id)}
                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 hover:bg-white/40 rounded-full transition"
-                   title="Relancer / Reset"
                  >
                    <RotateCcw size={20} />
                  </button>
                )}
-
               <span className="text-xs font-bold uppercase tracking-widest opacity-80">
                 {currentUser === 'Testeur 🛠️' ? 'Mode Debug' : 'Défi du jour'}
               </span>
