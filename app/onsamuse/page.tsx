@@ -94,24 +94,22 @@ export default function OnSamusePage() {
   };
 
   const handleGameSubmit = async (points: number = 1) => {
-  const winner = currentUser === 'Testeur 🛠️' ? testSubUser : (currentUser || 'Anonyme');
-  setLastWin({ user: winner, points });
-
-  if (currentUser && currentUser !== 'Testeur 🛠️') {
-    await fetch('/api/score', {
-      method: 'POST',
-      body: JSON.stringify({ user: winner, points })
-    });
-    localStorage.setItem(`onsamuse_last_played_${currentUser}`, gameData.date);
-    setHasPlayed(true); // On ne bloque l'écran QUE pour les vrais utilisateurs
-  } else if (currentUser === 'Testeur 🛠️') {
-    // En mode testeur, on rafraîchit juste les données sans bloquer l'écran
-    fetchGame(gameData?.game.id);
-    fetchLeaderboard();
-  }
-
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+    const winner = currentUser === 'Testeur 🛠️' ? testSubUser : (currentUser || 'Anonyme');
+    setLastWin({ user: winner, points });
+  
+    if (currentUser && currentUser !== 'Testeur 🛠️') {
+      await fetch('/api/score', {
+        method: 'POST',
+        body: JSON.stringify({ user: winner, points })
+      });
+      localStorage.setItem(`onsamuse_last_played_${currentUser}`, gameData.date);
+    }
+  
+    // On affiche l'écran de fin pour tout le monde (Testeur inclus)
+    setHasPlayed(true);
+    await fetchLeaderboard();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const renderGameComponent = () => {
     if (!gameData || !gameData.game) return null;
