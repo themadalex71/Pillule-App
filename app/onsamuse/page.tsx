@@ -102,17 +102,28 @@ export default function OnSamusePage() {
   };
 
   const renderGameComponent = () => {
-    if (!gameData) return null;
-      // On définit l'utilisateur effectif (soit le profil choisi, soit le sous-profil testeur)
-      const effectiveUser = currentUser === 'Testeur 🛠️' ? testSubUser : currentUser;
+    if (!gameData || !gameData.game) return null; // Sécurité sur l'existence du jeu
     
-      return (
-        <MemeGame 
-          key={`${gameData.game.id}-${gameKey}`} // On garde la même instance pour les deux joueurs en test
-          currentUser={effectiveUser}
-          onFinish={handleGameSubmit}
-        />
-      );
+    const effectiveUser = currentUser === 'Testeur 🛠️' ? testSubUser : (currentUser || 'Anonyme');
+  
+    const commonProps = { 
+        // Important : la key doit changer quand on change d'ID de jeu
+        key: `${gameKey}-${gameData.game.id}`, 
+        currentUser: effectiveUser,
+        onFinish: handleGameSubmit
+    };
+  
+    // VÉRIFICATION STRICTE DE L'ID DU JEU
+    switch (gameData.game.id) {
+      case 'zoom': 
+        return <ZoomGame {...commonProps} />;
+      case 'meme': 
+        return <MemeGame {...commonProps} />;
+      case 'cadavre': 
+        return <div className="p-8 text-center">Cadavre Exquis arrive bientôt...</div>;
+      default:
+        return <div className="p-8 text-center text-gray-400 italic text-sm">Jeu non reconnu ({gameData.game.id})</div>;
+    }
   };
 
   if (!currentUser) {
