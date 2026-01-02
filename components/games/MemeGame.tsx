@@ -242,30 +242,52 @@ export default function MemeGame({ onFinish, currentUser }: any) {
         </div>
       )}
 
+      {/* 3. ÉTAPE VOTE (Modifiée pour éviter les coupures) */}
       {step === 'voting' && othersMemes[currentVoteIdx] && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 animate-in slide-in-from-right-8 duration-500">
           <div className="text-center">
-            <h3 className="text-2xl font-black italic uppercase">Notation ({currentVoteIdx + 1}/{othersMemes.length})</h3>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Note {opponentName}</p>
+            <h3 className="text-2xl font-black text-gray-900 italic uppercase">Notation ({currentVoteIdx + 1}/{othersMemes.length})</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Note la création de {opponentName}</p>
           </div>
-          <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border">
-            <div className="relative w-full aspect-square bg-gray-900 flex items-center justify-center">
-              <img src={othersMemes[currentVoteIdx].url} className="w-full h-full object-contain" alt="Meme à noter" />
+
+          <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100">
+            {/* Changement ici : On enlève aspect-square et on utilise min-h comme dans l'édition */}
+            <div className="relative w-full bg-gray-50 flex items-center justify-center border-b min-h-[250px]">
+              <img 
+                src={othersMemes[currentVoteIdx].url} 
+                className="w-full h-auto block" // h-auto pour garder les proportions réelles
+                alt="Meme à noter" 
+              />
+              
               {othersMemes[currentVoteIdx].zones.map((zone: any) => (
                 <div key={zone.id} style={{
-                  position: 'absolute', top: `${zone.top}%`, left: `${zone.left}%`,
-                  width: `${zone.width}%`, height: `${zone.height}%`,
-                  fontSize: `${zone.fontSize}px`, color: zone.color,
-                  fontFamily: 'Inter, sans-serif', fontWeight: '900',
-                  textShadow: '0px 2px 8px rgba(0,0,0,0.9)', lineHeight: '1.1'
+                  position: 'absolute', 
+                  top: `${zone.top}%`, 
+                  left: `${zone.left}%`,
+                  width: `${zone.width}%`, 
+                  height: `${zone.height}%`,
+                  fontSize: `${zone.fontSize}px`, 
+                  color: zone.color || '#ffffff',
+                  fontFamily: 'Inter, sans-serif', 
+                  fontWeight: '900',
+                  textShadow: '0px 2px 8px rgba(0,0,0,0.9)', 
+                  lineHeight: '1.1',
+                  display: 'flex', // Pour aligner le texte si besoin
+                  pointerEvents: 'none'
                 }}>
                   {othersMemes[currentVoteIdx].inputs[zone.id]}
                 </div>
               ))}
             </div>
-            <div className="p-6 grid grid-cols-1 gap-2.5">
+
+            {/* Boutons de vote */}
+            <div className="p-6 bg-white grid grid-cols-1 gap-2.5">
               {voteLabels.map((v) => (
-                <button key={v.value} onClick={() => handleVoteClick(v.value)} className={`w-full py-4 rounded-2xl bg-gray-50 font-black text-xs flex items-center justify-between px-6 transition-all ${v.color} hover:text-white group`}>
+                <button
+                  key={v.value}
+                  onClick={() => handleVoteClick(v.value)}
+                  className={`w-full py-4 rounded-2xl bg-gray-50 border border-transparent font-black text-xs transition-all active:scale-95 flex items-center justify-between px-6 ${v.color} hover:text-white group`}
+                >
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{v.emoji}</span>
                     <span className="uppercase tracking-widest">{v.label}</span>
