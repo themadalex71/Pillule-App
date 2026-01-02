@@ -1,253 +1,118 @@
 'use client';
 
-import { useEffect, useRef, useState } from "react";
-import { Camera, Check, X, Loader2, Hourglass } from "lucide-react";
-import type { GameResult, PlayerId } from "@/types/GameResult";
+import { useState, useRef } from 'react';
+import { Camera, Send, Check, X, Loader2, Clock } from 'lucide-react';
 
-export default function ZoomGame({
-  onFinish,
-  currentUser,
-}: {
-  onFinish: (result: GameResult) => void;
-  currentUser: PlayerId;
-}) {
-  const [mode, setMode] = useState<
-    "loading" | "camera" | "waiting_opponent" | "guessing" | "waiting_validation" | "validating"
-  >("loading");
-
+export default function ZoomGame({ session, currentUser, onAction }: { session: any, currentUser: string, onAction: any }) {
+  const { sharedData } = session;
+  const isAuthor = currentUser === sharedData.author;
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [opponentGuess, setOpponentGuess] = useState<string | null>(null);
-  const [myGuess, setMyGuess] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-
+  const [guess, setGuess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const finishedRef = useRef(false);
 
-  const opponentName: PlayerId = currentUser === "Joueur A" ? "Joueur B" : "Joueur A";
-
-  useEffect(() => {
-    checkGameState();
-    const interval = setInterval(checkGameState, 2500);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const checkGameState = async () => {
-    try {
-      const res = await fetch("/api/game-turn");
-      const data = await res.json();
-      const zoom = data.zoom;
-
-      // ✅ Résultat publié -> fin + GameResult
-      if (zoom?.result && !finishedRef.current) {
-        finishedRef.current = true;
-
-        const winner: PlayerId | null = zoom.result.winner;
-        const isValid: boolean = zoom.result.isValid;
-
-        const aScore = winner === "Joueur A" ? 1 : 0;
-        const bScore = winner === "Joueur B" ? 1 : 0;
-
-        const result: GameResult = {
-          gameId: "zoom",
-          label: "Zoom Extrême",
-          status: "completed",
-          resultsByPlayer: {
-            "Joueur A": { score: aScore, detail: isValid && winner === "Joueur A" ? "Trouvé ✅" : (isValid ? "Raté ❌" : "Refusé ❌") },
-            "Joueur B": { score: bScore, detail: isValid && winner === "Joueur B" ? "Trouvé ✅" : (isValid ? "Raté ❌" : "Refusé ❌") },
-          },
-        };
-
-        onFinish(result);
-        return;
-      }
-
-      if (!zoom || !zoom.hasPendingGame) {
-        setMode("camera");
-        return;
-      }
-
-      setImageSrc(zoom.image);
-      setOpponentGuess(zoom.currentGuess);
-
-      const amIAuthor = zoom.author === currentUser;
-
-      if (amIAuthor) {
-        setMode(zoom.currentGuess ? "validating" : "waiting_opponent");
-      } else {
-        setMode(zoom.currentGuess ? "waiting_validation" : "guessing");
-      }
-    } catch (e) {
-      setMode("camera");
+  // ÉTAPE 1 : PHOTO
+  if (sharedData.step === 'PHOTO') {
+    if (!isAuthor) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2.5rem] text-center gap-4 shadow-sm border border-gray-100">
+          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 animate-pulse"><Camera /></div>
+          <h3 className="font-black text-xl text-gray-800">Attente de la photo...</h3>
+          <p className="text-gray-500 font-medium tracking-tight">C'est au tour de <span className="text-purple-600 font-bold">{sharedData.author}</span> de jouer.</p>
+        </div>
+      );
     }
-  };
-
-  const submitPhoto = async () => {
-    if (!imageSrc) return;
-    setIsUploading(true);
-    await fetch("/api/game-turn", {
-      method: "POST",
-      body: JSON.stringify({ type: "zoom", image: imageSrc, author: currentUser }),
-    });
-    setIsUploading(false);
-    setMode("waiting_opponent");
-  };
-
-  const submitGuess = async () => {
-    if (!myGuess.trim()) return;
-    setIsUploading(true);
-    await fetch("/api/game-turn", {
-      method: "POST",
-      body: JSON.stringify({ action: "submit_guess", guess: myGuess }),
-    });
-    setIsUploading(false);
-    setMyGuess("");
-    setMode("waiting_validation");
-  };
-
-  // ✅ L'auteur ne gagne jamais : il envoie juste le verdict
-  const handleValidation = async (isValid: boolean) => {
-    setIsUploading(true);
-    await fetch("/api/game-turn", {
-      method: "POST",
-      body: JSON.stringify({ action: "zoom_validate", isValid, validator: currentUser }),
-    });
-    setIsUploading(false);
-    setMode("loading");
-  };
-
-  if (mode === "loading") {
     return (
-      <div className="p-10 text-center text-purple-600">
-        <Loader2 className="animate-spin mx-auto" />
+      <div className="space-y-6 animate-in fade-in">
+        <div className="bg-purple-600 p-8 rounded-[2.5rem] text-white text-center shadow-lg shadow-purple-100">
+          <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Mission Photo</p>
+          <h3 className="text-2xl font-black leading-tight">{sharedData.mission}</h3>
+        </div>
+        <div className="relative aspect-square bg-gray-100 rounded-[2.5rem] overflow-hidden border-4 border-dashed border-gray-200 flex items-center justify-center">
+          {imageSrc ? <img src={imageSrc} className="w-full h-full object-cover" alt="Preview" /> : (
+            <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 gap-3">
+              <div className="bg-white p-4 rounded-full shadow-sm text-purple-600"><Camera size={32} /></div>
+              <span className="font-bold">Prendre la photo</span>
+            </button>
+          )}
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setImageSrc(reader.result as string);
+            reader.readAsDataURL(file);
+          }
+        }} />
+        {imageSrc && (
+          <button onClick={() => onAction({ action: 'zoom_submit_photo', image: imageSrc })}
+            className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all">
+            <Send size={20} /> ENVOYER LE DÉFI
+          </button>
+        )}
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col items-center gap-6 w-full animate-in fade-in">
-      {mode === "camera" && (
-        <>
-          <div className="bg-purple-50 p-6 rounded-2xl text-center w-full border border-purple-100">
-            <h3 className="text-xl font-black text-gray-800">C'est ton tour ! 📸</h3>
-            <p className="text-[10px] text-gray-500 uppercase mt-2">Prends un objet de très près</p>
-          </div>
-
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="relative w-64 h-64 bg-gray-100 rounded-3xl overflow-hidden border-4 border-dashed border-gray-200 flex items-center justify-center cursor-pointer"
-          >
-            {imageSrc ? (
-              <img src={imageSrc} className="w-full h-full object-cover" alt="zoom" />
-            ) : (
-              <Camera className="text-gray-300" size={48} />
-            )}
-          </div>
-
-          {imageSrc && (
-            <button
-              onClick={submitPhoto}
-              disabled={isUploading}
-              className="w-full bg-purple-600 text-white font-black py-4 rounded-2xl shadow-lg"
-            >
-              {isUploading ? "ENVOI..." : "LANCER LE DÉFI 🚀"}
-            </button>
-          )}
-        </>
-      )}
-
-      {mode === "waiting_opponent" && (
-        <div className="text-center py-10 bg-gray-50 rounded-3xl w-full border border-dashed">
-          <Loader2 size={40} className="animate-spin text-purple-300 mx-auto mb-4" />
-          <p className="font-bold text-gray-600">Photo envoyée !</p>
-          <p className="text-xs text-gray-400 mt-2">
-            En attente que <span className="text-purple-600 font-bold">{opponentName}</span> réponde...
-          </p>
+  // ÉTAPE 2 : DEVINETTE
+  if (sharedData.step === 'GUESS') {
+    if (isAuthor) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2.5rem] text-center gap-4 shadow-sm border border-gray-100">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 animate-bounce"><Clock /></div>
+          <h3 className="font-black text-xl text-gray-800">Photo envoyée !</h3>
+          <p className="text-gray-500 font-medium tracking-tight">On attend la réponse de <span className="text-blue-600 font-bold">{sharedData.guesser}</span>.</p>
         </div>
-      )}
-
-      {mode === "guessing" && (
-        <>
-          <div className="bg-blue-50 p-4 rounded-xl text-center w-full font-bold text-blue-700">
-            🕵️‍♂️ C'est quoi ça ? (Zoom x4)
-          </div>
-
-          <div className="w-64 h-64 rounded-3xl overflow-hidden border-4 border-white shadow-2xl bg-black">
-            <img src={imageSrc!} className="w-full h-full object-cover scale-[4.0]" alt="zoomed" />
-          </div>
-
-          <input
-            type="text"
-            placeholder="Ta réponse..."
-            value={myGuess}
-            onChange={(e) => setMyGuess(e.target.value)}
-            className="w-full p-4 rounded-xl border-2 text-center font-bold outline-none focus:border-blue-500"
-          />
-
-          <button
-            onClick={submitGuess}
-            disabled={!myGuess || isUploading}
-            className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl"
-          >
-            ENVOYER
+      );
+    }
+    return (
+      <div className="space-y-6 animate-in slide-in-from-bottom-4">
+        <div className="aspect-square rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-black relative">
+          <img src={sharedData.image} className="w-full h-full object-cover scale-[5.0] origin-center" alt="Zoomed" />
+          <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Zoom 500%</div>
+        </div>
+        <div className="space-y-3">
+          <input type="text" placeholder="Qu'est-ce que c'est ?" value={guess} onChange={(e) => setGuess(e.target.value)} 
+            className="w-full p-5 rounded-2xl border-2 border-gray-100 text-center font-bold text-xl outline-none shadow-inner" />
+          <button onClick={() => onAction({ action: 'zoom_submit_guess', guess })} disabled={!guess}
+            className="w-full bg-blue-600 text-white font-black py-5 rounded-2xl shadow-lg active:scale-95 transition-all">
+            SOUMETTRE MA RÉPONSE
           </button>
-        </>
-      )}
-
-      {mode === "waiting_validation" && (
-        <div className="text-center py-10 bg-yellow-50 rounded-3xl w-full border border-yellow-100">
-          <Hourglass className="text-yellow-500 animate-bounce mx-auto mb-4" size={40} />
-          <p className="font-bold text-yellow-700">Réponse transmise !</p>
-          <p className="text-xs text-yellow-600 mt-2">
-            Attente de validation par <span className="font-black">{opponentName}</span>
-          </p>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {mode === "validating" && (
-        <>
-          <div className="bg-green-50 p-6 rounded-2xl text-center w-full">
-            <p className="text-[10px] font-black text-green-600 uppercase">Proposition de {opponentName}</p>
-            <h3 className="text-2xl font-black text-gray-800 italic">"{opponentGuess}"</h3>
-          </div>
+  // ÉTAPE 3 : VALIDATION
+  if (sharedData.step === 'VALIDATION') {
+    if (!isAuthor) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2.5rem] text-center gap-4 shadow-sm border border-gray-100">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 animate-pulse"><Send /></div>
+          <h3 className="font-black text-xl italic text-gray-800">"{sharedData.currentGuess}"</h3>
+          <p className="text-gray-500 font-medium tracking-tight">Attente de la validation de {sharedData.author}...</p>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-6 animate-in fade-in">
+        <div className="bg-yellow-50 p-6 rounded-[2rem] text-center border border-yellow-100 shadow-sm">
+          <p className="text-[10px] font-black uppercase text-yellow-600 mb-1 tracking-widest">Proposition de {sharedData.guesser}</p>
+          <h3 className="text-3xl font-black italic text-gray-800">"{sharedData.currentGuess}"</h3>
+        </div>
+        <div className="aspect-square rounded-[2.5rem] overflow-hidden border-4 border-white shadow-xl bg-gray-100">
+          <img src={sharedData.image} className="w-full h-full object-cover" alt="Original" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <button onClick={() => onAction({ action: 'zoom_validate', isValid: false })} className="bg-red-50 text-red-600 font-black py-6 rounded-2xl flex flex-col items-center gap-1 border border-red-100 active:scale-95 transition-all uppercase text-xs">
+            <X size={28} /> C'est faux
+          </button>
+          <button onClick={() => onAction({ action: 'zoom_validate', isValid: true })} className="bg-green-500 text-white font-black py-6 rounded-2xl flex flex-col items-center gap-1 shadow-lg shadow-green-100 active:scale-95 transition-all uppercase text-xs">
+            <Check size={28} /> C'est vrai
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="w-64 h-64 rounded-3xl overflow-hidden border-4 border-green-200 shadow-xl">
-            <img src={imageSrc!} className="w-full h-full object-cover" alt="full" />
-          </div>
-
-          <div className="flex gap-3 w-full">
-            <button
-              onClick={() => handleValidation(false)}
-              disabled={isUploading}
-              className="flex-1 bg-red-100 text-red-600 font-bold py-4 rounded-xl flex items-center justify-center gap-2"
-            >
-              <X size={20} /> Non
-            </button>
-            <button
-              onClick={() => handleValidation(true)}
-              disabled={isUploading}
-              className="flex-1 bg-green-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2"
-            >
-              <Check size={20} /> Oui !
-            </button>
-          </div>
-        </>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onloadend = () => setImageSrc(reader.result as string);
-          reader.readAsDataURL(file);
-        }}
-      />
-    </div>
-  );
+  return null;
 }

@@ -44,13 +44,16 @@ export default function Home() {
           </div>
         </Link>
 
-        {/* CARTE 4 : ON S'AMUSE (Nouveau) */}
-        <Link href="/onsamuse" className="group">
+        {/* CARTE 4 : JEU QUOTIDIEN (Mise à jour vers /daily) */}
+        <Link href="/daily" className="group">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-purple-100 hover:shadow-md hover:border-purple-300 transition-all flex flex-col items-center gap-3 cursor-pointer h-full">
             <div className="bg-purple-100 p-3 rounded-full group-hover:bg-purple-200 transition">
               <PartyPopper className="text-purple-600" size={32} />
             </div>
-            <span className="font-bold text-gray-700">On S'aMuSe</span>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-gray-700 text-center">Défi du Jour</span>
+              <span className="text-[10px] text-purple-500 font-bold uppercase tracking-wider">On S'aMuSe</span>
+            </div>
           </div>
         </Link>
 
