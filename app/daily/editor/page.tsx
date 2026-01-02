@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, Save, Type, MousePointer2, Move } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, Save, Type, MousePointer2 } from 'lucide-react';
 import Link from 'next/link';
 
 const GAMES_CONFIG = [
@@ -19,14 +19,16 @@ export default function EditorPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // États spécifiques
+  // États spécifiques Zoom
   const [newZoomMission, setNewZoomMission] = useState('');
+
+  // États spécifiques Meme Maker
   const [isCreatingMeme, setIsCreatingMeme] = useState(false);
   const [newMeme, setNewMeme] = useState({ name: '', url: '', zones: [] as Zone[] });
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
   const imageRef = useRef<HTMLDivElement>(null);
 
-  // Charger les données (Zoom ou Meme)
+  // Charger les données
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -60,9 +62,10 @@ export default function EditorPage() {
     await saveToRedis(updated);
   };
 
-  // --- LOGIQUE MEME STUDIO ---
+  // --- LOGIQUE MEME STUDIO (Adaptée de ton code) ---
   const addZone = () => {
     const id = Date.now();
+    // Valeurs par défaut
     const zone: Zone = { id, top: 10, left: 10, width: 40, height: 15, fontSize: 24, color: '#ffffff' };
     setNewMeme({ ...newMeme, zones: [...newMeme.zones, zone] });
     setSelectedZoneId(id);
@@ -76,10 +79,14 @@ export default function EditorPage() {
   const handleImageClick = (e: React.MouseEvent) => {
     if (selectedZoneId === null || !imageRef.current) return;
     const rect = imageRef.current.getBoundingClientRect();
+    
+    // Calcul en pourcentage comme dans ta version précédente
     const left = ((e.clientX - rect.left) / rect.width) * 100;
     const top = ((e.clientY - rect.top) / rect.height) * 100;
+    
     const zone = newMeme.zones.find(z => z.id === selectedZoneId);
     if (zone) {
+      // On empêche la zone de sortir de l'image
       updateZone(selectedZoneId, { 
         left: Math.max(0, Math.min(left, 100 - zone.width)), 
         top: Math.max(0, Math.min(top, 100 - zone.height)) 
@@ -88,7 +95,7 @@ export default function EditorPage() {
   };
 
   const saveFullMeme = async () => {
-    if (!newMeme.url || !newMeme.name || newMeme.zones.length === 0) return alert("Complète tout !");
+    if (!newMeme.url || !newMeme.name || newMeme.zones.length === 0) return alert("Image, nom et zones requis !");
     const updated = [{ ...newMeme, id: Date.now() }, ...items];
     setItems(updated);
     await saveToRedis(updated);
@@ -104,6 +111,7 @@ export default function EditorPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 font-sans pb-10">
+      
       {/* HEADER CENTRÉ */}
       <header className="bg-white border-b px-4 h-16 flex items-center sticky top-0 z-40">
         <Link href="/daily" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -114,7 +122,7 @@ export default function EditorPage() {
         </h1>
       </header>
 
-      {/* NAVIGATION BULLS BAR */}
+      {/* NAVIGATION BARRE HORIZONTALE */}
       <nav className="bg-white border-b overflow-x-auto py-4 px-6 flex gap-4 sticky top-16 z-30 no-scrollbar shadow-sm">
         {GAMES_CONFIG.map((game) => (
           <button
@@ -131,7 +139,8 @@ export default function EditorPage() {
       </nav>
 
       <div className="max-w-md mx-auto p-4 space-y-8">
-        {/* --- INTERFACE ZOOM --- */}
+        
+        {/* --- VUE ZOOM --- */}
         {selectedGame === 'zoom' && (
           <div className="space-y-6 animate-in fade-in">
             <section className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100">
@@ -170,16 +179,17 @@ export default function EditorPage() {
           </div>
         )}
 
-        {/* --- INTERFACE MEME --- */}
+        {/* --- VUE MEME --- */}
         {selectedGame === 'meme' && (
           isCreatingMeme ? (
             <div className="space-y-6 animate-in slide-in-from-bottom-4">
-              {/* STUDIO DE CRÉATION (LOGIQUE VISUELLE) */}
+              
+              {/* STUDIO DE VISUALISATION */}
               <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-200">
                 <div 
                   ref={imageRef} 
                   onClick={handleImageClick} 
-                  className="relative aspect-square bg-gray-900 flex items-center justify-center cursor-crosshair"
+                  className="relative aspect-square bg-gray-900 flex items-center justify-center cursor-crosshair overflow-hidden"
                 >
                   {newMeme.url ? (
                     <img src={newMeme.url} className="w-full h-full object-contain pointer-events-none" alt="Meme Template" />
@@ -200,12 +210,12 @@ export default function EditorPage() {
                         height: `${zone.height}%`, 
                         fontSize: `${zone.fontSize / 2}px`, 
                         color: zone.color,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                        textShadow: '0 2px 4px rgba(0,0,0,0.8)'
                       }}
                       className={`absolute border-2 flex items-center justify-center font-black uppercase transition-all shadow-lg
-                        ${selectedZoneId === zone.id ? 'border-blue-500 bg-blue-500/20' : 'border-white/40 bg-black/20'}`}
+                        ${selectedZoneId === zone.id ? 'border-blue-500 bg-blue-500/20 z-50' : 'border-white/40 bg-black/20 z-10'}`}
                     >
-                      <span className="scale-75">Zone {idx + 1}</span>
+                      <span className="scale-75 text-white">Zone {idx + 1}</span>
                     </div>
                   ))}
                 </div>
@@ -225,54 +235,64 @@ export default function EditorPage() {
                   <div 
                     key={zone.id} 
                     onClick={() => setSelectedZoneId(zone.id)}
-                    className={`bg-white p-4 rounded-2xl border-2 transition-all ${selectedZoneId === zone.id ? 'border-blue-500 shadow-md' : 'border-gray-100 opacity-80'}`}
+                    className={`bg-white p-4 rounded-2xl border-2 transition-all ${selectedZoneId === zone.id ? 'border-blue-500 shadow-md ring-1 ring-blue-500/10' : 'border-gray-100 opacity-80'}`}
                   >
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-black bg-gray-900 text-white px-2 py-0.5 rounded uppercase">Zone {idx+1}</span>
-                        {selectedZoneId === zone.id && <MousePointer2 size={12} className="text-blue-500" />}
+                        {selectedZoneId === zone.id && <MousePointer2 size={12} className="text-blue-500 animate-pulse" />}
                       </div>
                       <button 
                         onClick={(e) => { e.stopPropagation(); setNewMeme({...newMeme, zones: newMeme.zones.filter(z => z.id !== zone.id)}); }}
-                        className="text-red-400 p-1"
+                        className="text-red-400 p-1 hover:text-red-600 transition-colors"
                       >
                         <Trash2 size={16}/>
                       </button>
                     </div>
+
+                    {/* --- C'EST ICI QUE J'AI REMIS TES CURSEURS --- */}
                     {selectedZoneId === zone.id && (
-                      <div className="space-y-4 pt-2 animate-in fade-in">
-                        {/* LIGNE 1 : POLICE + COULEUR */}
+                      <div className="space-y-4 pt-2 border-t border-gray-50 animate-in fade-in">
+                        {/* LIGNE 1 : POLICE & COULEUR */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <p className="text-[9px] font-black text-gray-400 uppercase">Taille: {zone.fontSize}px</p>
-                            <input type="range" min="10" max="100" value={zone.fontSize} onChange={e => updateZone(zone.id, { fontSize: parseInt(e.target.value) })} className="w-full accent-blue-600" />
+                            <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase">
+                                <span>Police</span> <span>{zone.fontSize}px</span>
+                            </div>
+                            <input type="range" min="10" max="100" value={zone.fontSize} onChange={e => updateZone(zone.id, { fontSize: parseInt(e.target.value) })} className="w-full accent-blue-600 h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer" />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[9px] font-black text-gray-400 uppercase">Couleur</p>
-                            <input type="color" value={zone.color} onChange={e => updateZone(zone.id, { color: e.target.value })} className="w-full h-8 bg-transparent" />
+                            <span className="text-[9px] font-black text-gray-400 uppercase">Couleur</span>
+                            <input type="color" value={zone.color} onChange={e => updateZone(zone.id, { color: e.target.value })} className="w-full h-6 cursor-pointer bg-transparent" />
                           </div>
                         </div>
-                        {/* LIGNE 2 : LARGEUR + HAUTEUR (Réintégrée) */}
+
+                        {/* LIGNE 2 : LARGEUR & HAUTEUR (RESTAURÉES) */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <p className="text-[9px] font-black text-gray-400 uppercase">Largeur: {zone.width}%</p>
-                            <input type="range" min="10" max="100" value={zone.width} onChange={e => updateZone(zone.id, { width: parseInt(e.target.value) })} className="w-full accent-gray-400" />
+                            <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase">
+                                <span>Largeur</span> <span>{zone.width}%</span>
+                            </div>
+                            <input type="range" min="10" max="100" value={zone.width} onChange={e => updateZone(zone.id, { width: parseInt(e.target.value) })} className="w-full accent-gray-400 h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer" />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[9px] font-black text-gray-400 uppercase">Hauteur: {zone.height}%</p>
-                            <input type="range" min="5" max="100" value={zone.height} onChange={e => updateZone(zone.id, { height: parseInt(e.target.value) })} className="w-full accent-gray-400" />
+                            <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase">
+                                <span>Hauteur</span> <span>{zone.height}%</span>
+                            </div>
+                            <input type="range" min="5" max="100" value={zone.height} onChange={e => updateZone(zone.id, { height: parseInt(e.target.value) })} className="w-full accent-gray-400 h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer" />
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
                 ))}
+
                 <button 
                   onClick={addZone}
-                  className="w-full border-2 border-dashed border-gray-300 rounded-2xl py-6 text-gray-400 font-bold uppercase text-[10px] tracking-widest hover:border-blue-300 hover:text-blue-500 transition-all"
+                  className="w-full border-2 border-dashed border-gray-300 rounded-2xl py-5 text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em] hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all active:scale-95"
                 >
                   <Plus size={20} className="mx-auto mb-1" />
-                  + Ajouter une zone texte
+                  Ajouter une zone texte
                 </button>
               </div>
 
