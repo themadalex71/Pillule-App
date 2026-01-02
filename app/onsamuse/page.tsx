@@ -26,6 +26,15 @@ export default function OnSamusePage() {
   const [gameKey, setGameKey] = useState(0);
 
   useEffect(() => {
+    if (currentUser === 'Testeur 🛠️') {
+      // En mode testeur, on ignore le localStorage pour permettre le switch A/B
+      setHasPlayed(false);
+      // On change la clé du jeu pour forcer React à remonter le composant ZoomGame
+      setGameKey(prev => prev + 1);
+    }
+  }, [testSubUser, currentUser]);
+
+  useEffect(() => {
     const savedUser = localStorage.getItem('onsamuse_current_user');
     if (savedUser) handleUserSelect(savedUser);
     else fetchGame();
@@ -85,31 +94,34 @@ export default function OnSamusePage() {
   };
 
   const handleGameSubmit = async (points: number = 1) => {
-    const winner = currentUser === 'Testeur 🛠️' ? testSubUser : (currentUser || 'Anonyme');
-    setLastWin({ user: winner, points });
+  const winner = currentUser === 'Testeur 🛠️' ? testSubUser : (currentUser || 'Anonyme');
+  setLastWin({ user: winner, points });
 
-    if (currentUser && currentUser !== 'Testeur 🛠️') {
-      await fetch('/api/score', {
-        method: 'POST',
-        body: JSON.stringify({ user: winner, points })
-      });
-      localStorage.setItem(`onsamuse_last_played_${currentUser}`, gameData.date);
-    }
+  if (currentUser && currentUser !== 'Testeur 🛠️') {
+    await fetch('/api/score', {
+      method: 'POST',
+      body: JSON.stringify({ user: winner, points })
+    });
+    localStorage.setItem(`onsamuse_last_played_${currentUser}`, gameData.date);
+    setHasPlayed(true); // On ne bloque l'écran QUE pour les vrais utilisateurs
+  } else if (currentUser === 'Testeur 🛠️') {
+    // En mode testeur, on rafraîchit juste les données sans bloquer l'écran
+    fetchGame(gameData?.game.id);
+    fetchLeaderboard();
+  }
 
-    await fetchLeaderboard();
-    setHasPlayed(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
   const renderGameComponent = () => {
-    if (!gameData || !gameData.game) return null; // Sécurité sur l'existence du jeu
+    if (!gameData || !gameData.game) return null;
     
+    // Utilise bien testSubUser si on est en mode testeur
     const effectiveUser = currentUser === 'Testeur 🛠️' ? testSubUser : (currentUser || 'Anonyme');
-  
+
     const commonProps = { 
-        // Important : la key doit changer quand on change d'ID de jeu
         key: `${gameKey}-${gameData.game.id}`, 
-        currentUser: effectiveUser,
+        currentUser: effectiveUser, // C'est ici que Joueur A ou Joueur B est transmis
         onFinish: handleGameSubmit
     };
   
