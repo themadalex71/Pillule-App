@@ -1,90 +1,112 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, Send, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, Send, RotateCcw, Trophy } from 'lucide-react';
 
 export default function MemeGame({ onFinish, currentUser }: any) {
   const [loading, setLoading] = useState(true);
   const [allTemplates, setAllTemplates] = useState<any[]>([]);
-  const [step, setStep] = useState<'editing' | 'waiting' | 'voting'>('editing'); // Ajout de voting
+  const [step, setStep] = useState<'editing' | 'waiting' | 'voting' | 'waiting_votes' | 'results'>('editing');
+  
   const [myMemes, setMyMemes] = useState<any[]>([]);
   const [othersMemes, setOthersMemes] = useState<any[]>([]);
+  const [results, setResults] = useState<any>(null);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentVoteIdx, setCurrentVoteIdx] = useState(0);
+  const [accumulatedScore, setAccumulatedScore] = useState(0);
+  
+  const opponentName = currentUser === 'Joueur A' ? 'Joueur B' : 'Joueur A';
+  const lastUserRef = useRef(currentUser);
 
   const voteLabels = [
-    { value: 1, label: "Nul", emoji: "🚮", color: "hover:bg-red-500" },
-    { value: 2, label: "Pas très drôle", emoji: "😐", color: "hover:bg-orange-400" },
-    { value: 3, label: "Bof", emoji: "🫤", color: "hover:bg-yellow-400" },
-    { value: 4, label: "Drôle", emoji: "😂", color: "hover:bg-green-400" },
-    { value: 5, label: "MDR", emoji: "💀", color: "hover:bg-purple-500" },
+    { value: 0, label: "Nul", emoji: "🚮", color: "hover:bg-red-500" },
+    { value: 1, label: "Bof", emoji: "😐", color: "hover:bg-orange-400" },
+    { value: 2, label: "Pas mal", emoji: "🙂", color: "hover:bg-yellow-400" },
+    { value: 3, label: "Drôle", emoji: "😂", color: "hover:bg-green-400" },
+    { value: 4, label: "MDR", emoji: "💀", color: "hover:bg-purple-500" },
   ];
 
+  // Initialisation et Reset quand on change de joueur (Mode Testeur)
   useEffect(() => {
-    loadInitialData();
-  }, []);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (step === 'waiting') {
-      interval = setInterval(async () => {
-        try {
-          const res = await fetch('/api/game-turn');
-          const data = await res.json();
-          
-          // On cherche dans data.memes (le nouveau format centralisé)
-          const others = data.memes?.filter((m: any) => m.player !== currentUser);
-          
-          if (others && others.length > 0) {
-            // On aplatit la liste car chaque joueur envoie un tableau de 2 memes
-            const memesToVote = others.flatMap((o: any) => o.memes);
-            setOthersMemes(memesToVote);
-            setStep('voting');
-            clearInterval(interval);
-          }
-        } catch (e) { console.error(e); }
-      }, 3000);
-    }
-    return () => { if (interval) clearInterval(interval); };
-  }, [step, currentUser]);
-
-  const loadInitialData = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/content?gameId=meme');
-      const data = await res.json();
-      setAllTemplates(data);
+    const init = async () => {
+      setLoading(true);
+      setStep('editing');
+      setCurrentVoteIdx(0);
+      setAccumulatedScore(0);
       
-      if (data && data.length >= 2) {
-        const selection = [...data].sort(() => 0.5 - Math.random()).slice(0, 2);
-        setMyMemes(selection.map((t: any, idx: number) => ({
-          ...t, 
-          instanceId: `meme_${idx}_${Date.now()}`, 
-          inputs: {},
-          rerollsLeft: 2 
-        })));
+      try {
+        const res = await fetch('/api/content?gameId=meme');
+        const data = await res.json();
+        setAllTemplates(data);
+        
+        if (data && data.length >= 2) {
+          // Mélange et sélection de 2 memes uniques pour ce joueur
+          const selection = [...data].sort(() => 0.5 - Math.random()).slice(0, 2);
+          setMyMemes(selection.map((t: any, idx: number) => ({
+            ...t, 
+            instanceId: `meme_${currentUser}_${Date.now()}_${idx}`, 
+            inputs: {},
+            rerollsLeft: 2 
+          })));
+        }
+        // Après l'init, on vérifie si une partie est déjà en cours
+        await checkStatus();
+      } catch (e) { console.error(e); }
+      setLoading(false);
+    };
+
+    init();
+    lastUserRef.current = currentUser;
+  }, [currentUser]);
+
+  // Boucle de surveillance
+  useEffect(() => {
+    const interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [currentUser, step]);
+
+  const checkStatus = async () => {
+    try {
+      const res = await fetch('/api/game-turn');
+      const data = await res.json();
+      const turns = data.memes || [];
+      const votes = data.votes || {};
+      
+      const myTurn = turns.find((t: any) => t.player === currentUser);
+      const opponentTurn = turns.find((t: any) => t.player === opponentName);
+      
+      // Points REÇUS par les joueurs
+      const myScoreReceived = votes[currentUser]; 
+      const opponentScoreReceived = votes[opponentName];
+
+      // 1. Si les deux ont reçu des notes -> Résultats
+      if (myScoreReceived !== undefined && opponentScoreReceived !== undefined) {
+        setResults({ myScore: myScoreReceived, opponentScore: opponentScoreReceived });
+        setStep('results');
+        return;
+      }
+
+      // 2. Si j'ai déjà fini de noter l'autre -> Attente de son vote
+      if (opponentScoreReceived !== undefined) {
+        setStep('waiting_votes');
+        return;
+      }
+
+      // 3. Si les deux ont soumis leurs memes -> Phase de Vote
+      if (myTurn && opponentTurn) {
+        setOthersMemes(opponentTurn.memes);
+        setStep('voting');
+        return;
+      } 
+      
+      // 4. Si j'ai soumis mais pas l'autre -> Attente
+      if (myTurn) {
+        setStep('waiting');
+      } else {
+        setStep('editing');
       }
     } catch (e) { console.error(e); }
-    setLoading(false);
-  };
-
-  const submitVote = async (memeInstanceId: string, score: number) => {
-    try {
-      await fetch('/api/meme-vote', {
-        method: 'POST',
-        body: JSON.stringify({
-          memeInstanceId,
-          score,
-          judgeName: currentUser
-        })
-      });
-  
-      setOthersMemes(prev => prev.filter(m => m.instanceId !== memeInstanceId));
-  
-      if (othersMemes.length <= 1) {
-         setStep('waiting'); 
-      }
-    } catch (e) {
-      console.error("Erreur lors du vote", e);
-    }
   };
 
   const handleReroll = (idx: number) => {
@@ -97,21 +119,15 @@ export default function MemeGame({ onFinish, currentUser }: any) {
     const next = [...myMemes];
     next[idx] = {
       ...newTemplate,
-      instanceId: `meme_${idx}_${Date.now()}`,
+      instanceId: `meme_${currentUser}_${Date.now()}_reroll_${idx}`,
       inputs: {}, 
       rerollsLeft: myMemes[idx].rerollsLeft - 1
     };
     setMyMemes(next);
   };
 
-  const updateInput = (memeIdx: number, zoneId: number, val: string) => {
-    const next = [...myMemes];
-    next[memeIdx].inputs[zoneId] = val;
-    setMyMemes(next);
-  };
-
   const submitToJudge = async () => {
-    // 1. On prépare les données du tour
+    setIsSubmitting(true);
     const turnData = {
       type: 'meme',
       player: currentUser,
@@ -122,145 +138,171 @@ export default function MemeGame({ onFinish, currentUser }: any) {
         instanceId: m.instanceId 
       }))
     };
-  
     try {
-      // 2. On sauvegarde normalement dans Redis
+      await fetch('/api/game-turn', { method: 'POST', body: JSON.stringify(turnData) });
+      setStep('waiting');
+    } catch (e) { console.error(e); }
+    setIsSubmitting(false);
+  };
+
+  const handleVoteClick = async (score: number) => {
+    const newTotal = accumulatedScore + score;
+    
+    if (currentVoteIdx < othersMemes.length - 1) {
+      setAccumulatedScore(newTotal);
+      setCurrentVoteIdx(prev => prev + 1);
+    } else {
+      setIsSubmitting(true);
+      // On envoie le score final que l'on donne à l'adversaire
       await fetch('/api/game-turn', {
-        method: 'POST',
-        body: JSON.stringify(turnData)
+        method: 'PATCH',
+        body: JSON.stringify({ voter: currentUser, score: newTotal })
       });
-  
-      // 3. LOGIQUE SPÉCIALE TESTEUR
-      if (currentUser === 'Testeur 🛠️') {
-        // Au lieu d'attendre, on simule la réception des memes pour voter
-        // On met ses propres memes dans 'othersMemes' pour pouvoir tester l'interface
-        setOthersMemes(turnData.memes); 
-        setStep('voting');
-      } else {
-        // Joueur normal : on passe en attente
-        setStep('waiting');
-      }
-    } catch (e) { 
-      console.error("Erreur lors de la validation:", e); 
+      setIsSubmitting(false);
+      setStep('waiting_votes');
     }
   };
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-20">
       <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Préparation du studio...</p>
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Initialisation...</p>
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-lg mx-auto pb-10 px-2">
+    <div className="flex flex-col gap-6 w-full max-w-lg mx-auto pb-6 text-gray-900">
       
-      {/* 1. ÉTAPE ÉDITION */}
       {step === 'editing' && (
-        <>
-          <div className="text-center space-y-1">
-             <h3 className="text-xl font-bold text-gray-900">Meme Maker</h3>
-             <p className="text-xs text-gray-500 font-medium italic">Complète les zones de texte</p>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="text-center mb-6">
+             <h3 className="text-2xl font-black italic tracking-tighter uppercase">Meme Maker</h3>
+             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Crée tes légendes</p>
           </div>
-
           {myMemes.map((meme, mIdx) => (
-            <div key={mIdx} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative mb-4">
+            <div key={mIdx} className="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden mb-6">
               <div className="relative w-full bg-gray-50 flex items-center justify-center border-b min-h-[250px]">
                 <img src={meme.url} className="w-full h-auto block" alt="Template" />
                 <button 
                   onClick={() => handleReroll(mIdx)}
                   disabled={meme.rerollsLeft === 0}
-                  className={`absolute top-2 right-2 p-2 rounded-full shadow-md transition-all flex items-center gap-1 text-[10px] font-bold
-                    ${meme.rerollsLeft > 0 ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                  className={`absolute top-3 right-3 p-2.5 rounded-2xl shadow-lg transition-all flex items-center gap-2 text-[10px] font-black uppercase
+                    ${meme.rerollsLeft > 0 ? 'bg-white text-blue-600 hover:scale-110' : 'bg-gray-100 text-gray-300'}`}
                 >
-                  <RotateCcw size={14} />
-                  {meme.rerollsLeft}
+                  <RotateCcw size={14} /> {meme.rerollsLeft}
                 </button>
-
                 {meme.zones?.map((zone: any) => (
                   <div key={zone.id}
                     style={{ 
                       top: `${zone.top}%`, left: `${zone.left}%`, width: `${zone.width}%`, height: `${zone.height}%`,
                       fontSize: `${zone.fontSize}px`, color: zone.color || '#ffffff',
-                      fontFamily: 'Inter, system-ui, sans-serif', fontWeight: '700', lineHeight: '1.2',
-                      display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
-                      textAlign: 'left', overflow: 'hidden', wordBreak: 'break-word', whiteSpace: 'pre-wrap',
-                      textShadow: '0px 1px 3px rgba(0,0,0,0.8)'
+                      fontFamily: 'Inter, system-ui, sans-serif', fontWeight: '900',
+                      display: 'flex', textShadow: '0px 2px 4px rgba(0,0,0,0.8)', position: 'absolute'
                     }}
-                    className="absolute pointer-events-none p-1"
+                    className="pointer-events-none p-1"
                   >
                     {meme.inputs[zone.id] || ""}
                   </div>
                 ))}
               </div>
-
-              <div className="p-4 bg-white space-y-3">
+              <div className="p-5 bg-white space-y-4">
                 {meme.zones?.map((zone: any, zIdx: number) => (
                   <div key={zone.id}>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Zone {zIdx + 1}</label>
+                    <label className="text-[9px] font-black text-gray-400 uppercase mb-1">Zone {zIdx + 1}</label>
                     <textarea 
                       rows={2} 
                       value={meme.inputs[zone.id] || ''}
-                      className="w-full p-3 bg-gray-50 border border-gray-100 rounded-xl focus:border-blue-500 focus:bg-white outline-none transition-all text-sm font-semibold resize-none"
-                      onChange={(e) => updateInput(mIdx, zone.id, e.target.value)}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl font-bold text-sm resize-none"
+                      onChange={(e) => {
+                        const next = [...myMemes];
+                        next[mIdx].inputs[zone.id] = e.target.value;
+                        setMyMemes(next);
+                      }}
                     />
                   </div>
                 ))}
               </div>
             </div>
           ))}
-
-          <button onClick={submitToJudge} className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition-all active:scale-95">
-            Valider mes memes 🚀
+          <button onClick={submitToJudge} disabled={isSubmitting} className="w-full bg-gray-900 text-white font-black py-5 rounded-[2rem] flex items-center justify-center gap-3 uppercase text-sm tracking-widest">
+            {isSubmitting ? <Loader2 className="animate-spin" /> : <><Send size={18} /> Valider mes memes</>}
           </button>
-        </>
-      )}
-
-      {/* 2. ÉTAPE ATTENTE */}
-      {step === 'waiting' && (
-        <div className="text-center py-20 animate-in fade-in slide-in-from-bottom-4">
-           <h3 className="text-lg font-bold text-gray-900">C'est envoyé ! 🛸</h3>
-           <p className="text-sm text-gray-500 mt-2">Attendons que l'autre joueur termine.</p>
-           {/* Bouton temporaire pour tester le vote manuellement */}
-           <button onClick={() => setStep('voting')} className="mt-8 text-xs text-blue-500 underline">Simuler le début du vote</button>
         </div>
       )}
 
-      {/* 3. ÉTAPE VOTE */}
-      {step === 'voting' && (
-        <div className="flex flex-col gap-6 animate-in fade-in">
-          <h3 className="text-center font-bold text-xl italic uppercase">Le Jury délibère ⚖️</h3>
-          {othersMemes.slice(0, 1).map((meme) => (
-            <div key={meme.instanceId} className="bg-white rounded-3xl shadow-xl overflow-hidden border">
-              <div className="relative w-full aspect-square bg-gray-900">
-                <img src={meme.url} className="w-full h-full object-contain" alt="Meme à noter" />
-                {meme.zones.map((zone: any) => (
-                  <div key={zone.id} style={{
-                    position: 'absolute', top: `${zone.top}%`, left: `${zone.left}%`,
-                    width: `${zone.width}%`, height: `${zone.height}%`,
-                    fontSize: `${zone.fontSize}px`, color: zone.color,
-                    fontFamily: 'Inter, sans-serif', fontWeight: '900',
-                    textShadow: '0px 2px 4px rgba(0,0,0,0.9)'
-                  }}>
-                    {meme.inputs[zone.id]}
-                  </div>
-                ))}
-              </div>
+      {(step === 'waiting' || step === 'waiting_votes') && (
+        <div className="text-center py-20 flex flex-col items-center">
+           <div className="bg-blue-50 p-8 rounded-full mb-6">
+              <Loader2 className="animate-spin text-blue-500" size={48} />
+           </div>
+           <h3 className="text-2xl font-black italic uppercase">
+             {step === 'waiting' ? "Attente de l'adversaire..." : "Attente de son vote..."}
+           </h3>
+           <p className="text-sm text-gray-500 mt-2 font-medium tracking-tight">Laisse {opponentName} finir sa partie.</p>
+        </div>
+      )}
 
-              <div className="p-6 bg-gray-50 space-y-2">
-                {voteLabels.map((v) => (
-                  <button
-                    key={v.value}
-                    onClick={() => submitVote(meme.instanceId, v.value)}
-                    className={`w-full py-3 rounded-xl bg-white border border-gray-100 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-3 ${v.color} hover:text-white group`}
-                  >
-                    <span className="text-xl">{v.emoji}</span>
-                    <span>{v.label}</span>
-                  </button>
-                ))}
-              </div>
+      {step === 'voting' && othersMemes[currentVoteIdx] && (
+        <div className="flex flex-col gap-6">
+          <div className="text-center">
+            <h3 className="text-2xl font-black italic uppercase">Notation ({currentVoteIdx + 1}/{othersMemes.length})</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Note {opponentName}</p>
+          </div>
+          <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border">
+            <div className="relative w-full aspect-square bg-gray-900 flex items-center justify-center">
+              <img src={othersMemes[currentVoteIdx].url} className="w-full h-full object-contain" alt="Meme à noter" />
+              {othersMemes[currentVoteIdx].zones.map((zone: any) => (
+                <div key={zone.id} style={{
+                  position: 'absolute', top: `${zone.top}%`, left: `${zone.left}%`,
+                  width: `${zone.width}%`, height: `${zone.height}%`,
+                  fontSize: `${zone.fontSize}px`, color: zone.color,
+                  fontFamily: 'Inter, sans-serif', fontWeight: '900',
+                  textShadow: '0px 2px 8px rgba(0,0,0,0.9)', lineHeight: '1.1'
+                }}>
+                  {othersMemes[currentVoteIdx].inputs[zone.id]}
+                </div>
+              ))}
             </div>
-          ))}
+            <div className="p-6 grid grid-cols-1 gap-2.5">
+              {voteLabels.map((v) => (
+                <button key={v.value} onClick={() => handleVoteClick(v.value)} className={`w-full py-4 rounded-2xl bg-gray-50 font-black text-xs flex items-center justify-between px-6 transition-all ${v.color} hover:text-white group`}>
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl">{v.emoji}</span>
+                    <span className="uppercase tracking-widest">{v.label}</span>
+                  </div>
+                  <span className="font-bold">+{v.value} PTS</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === 'results' && results && (
+        <div className="flex flex-col items-center">
+          <div className="text-center mb-8">
+            <Trophy className="mx-auto text-yellow-500 mb-2" size={60} />
+            <h3 className="text-3xl font-black italic uppercase">Bilan des Votes</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4 w-full">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-2 border-purple-100 text-center">
+               <p className="text-[10px] font-black uppercase text-gray-400 mb-1">Tes Points</p>
+               <p className="text-5xl font-black text-purple-600">{results.myScore}</p>
+            </div>
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border-2 border-gray-100 text-center">
+               <p className="text-[10px] font-black uppercase text-gray-400 mb-1">{opponentName}</p>
+               <p className="text-5xl font-black text-gray-900">{results.opponentScore}</p>
+            </div>
+          </div>
+          <button 
+            onClick={async () => {
+                await fetch('/api/game-turn?game=meme', { method: 'DELETE' });
+                onFinish(results.myScore);
+            }} 
+            className="w-full mt-10 bg-gray-900 text-white font-black py-5 rounded-[2rem] uppercase text-sm tracking-widest"
+          >
+            Clôturer le duel
+          </button>
         </div>
       )}
     </div>
