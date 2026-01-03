@@ -40,29 +40,43 @@ export const GAMES_LIST = [
     id: 'zoom', 
     title: 'Zoom Extrême', 
     description: "Devine l'objet pris en photo de très très près !",
+    emoji: '🔍',
+    color: 'bg-purple-500',
     type: 'asynchronous' 
   },
   { 
     id: 'meme', 
     title: 'Meme Maker', 
     description: "Légende une image drôle le plus efficacement possible.",
+    emoji: '🎭',
+    color: 'bg-blue-500',
     type: 'simultaneous' 
   },
   {
     id: 'cadavre',
     title: 'Cadavre Exquis',
     description: "Chacun écrit une suite sans voir le début.",
+    emoji: '✍️',
+    color: 'bg-green-500',
     type: 'sequential' 
+  },
+  {
+    id: 'poet',
+    title: 'Poète du Dimanche',
+    description: "Des rimes riches pour des idées pauvres.",
+    emoji: '🪶',
+    color: 'bg-pink-500',
+    type: 'simultaneous'
   }
 ];
 
 // 📅 GÉNÉRATEUR DE SEED QUOTIDIENNE
 export function getDailySeed() {
   const now = new Date();
-  return now.toISOString().split('T')[0]; // Retourne "2026-01-02"
+  return now.toISOString().split('T')[0]; // Retourne "YYYY-MM-DD"
 }
 
-// 🎲 LOGIQUE DE SÉLECTION DE MISSION
+// 🎲 LOGIQUE DE SÉLECTION DE MISSION ZOOM
 export function getRandomZoomMission() {
   const randomIndex = Math.floor(Math.random() * ZOOM_MISSIONS.length);
   return ZOOM_MISSIONS[randomIndex];

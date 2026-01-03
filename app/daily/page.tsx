@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Trophy, Play, Users, ArrowLeft, RefreshCw, Trash2, Star, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Trophy, Users, ArrowLeft, RefreshCw, Trash2, Star, Clock } from 'lucide-react';
 import Link from 'next/link';
 import ZoomGame from '@/components/games/ZoomGame';
 import MemeGame from '@/components/games/MemeGame';
+import CadavreGame from '@/components/games/CadavreGame';
+import PoetGame from '@/components/games/PoetGame';
 
 const PROFILES = ['Moi', 'Chéri(e)', 'Éditeur ✍️', 'Testeur 🛠️'];
 
@@ -98,10 +100,8 @@ export default function DailyGamePage() {
   }
 
   // Calcul du gain (gagné ou perdu) pour l'affichage final
-  // Note: Pour le Meme Maker, c'est le score accumulé par les votes
   const userScore = session?.players[currentUser]?.score || 0;
-  // const hasWon = session?.players[session?.sharedData?.guesser]?.score > 0; // Ancienne logique Zoom
-  // Nouvelle logique générique : Si le score a augmenté pendant cette session (difficile à tracker sans état précédent, on simplifie)
+  // Logique générique simplifiée pour l'affichage final
   const isZoom = session?.game?.id === 'zoom';
   const hasWonZoom = isZoom && session?.players[session?.sharedData?.guesser]?.score > 0;
 
@@ -144,6 +144,8 @@ export default function DailyGamePage() {
               <>
                 {session.game.id === 'zoom' && <ZoomGame session={session} currentUser={currentUser} onAction={handleAction} />}
                 {session.game.id === 'meme' && <MemeGame session={session} currentUser={currentUser} onAction={handleAction} />}
+                {session.game.id === 'cadavre' && <CadavreGame session={session} currentUser={currentUser} onAction={handleAction} />}
+                {session.game.id === 'poet' && <PoetGame session={session} currentUser={currentUser} onAction={handleAction} />}
               </>
             )}
 
@@ -159,7 +161,6 @@ export default function DailyGamePage() {
                   </div>
                   
                   <div className="p-8 text-center">
-                    {/* Affiche les points gagnés spécifiquement sur ce jeu si possible, sinon le score total */}
                     <div className="flex justify-center items-center gap-4 mb-4">
                       <div className="bg-gray-50 p-4 rounded-3xl flex-1 text-center border border-gray-100">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Moi</p>
