@@ -2,18 +2,25 @@ import { redis } from "@/lib/redis";
 import { keys } from "@/lib/keys";
 import type { CinemaListType, MovieListItem, CinemaMatch } from "@/types/cinema";
 
+function getCinemaListKey(
+  householdId: string,
+  memberId: string,
+  listType: CinemaListType
+): string {
+  return listType === "wishlist"
+    ? keys.cinemaWishlist(householdId, memberId)
+    : keys.cinemaHistory(householdId, memberId);
+}
+
 export async function getCinemaList(
   householdId: string,
   memberId: string,
   listType: CinemaListType
 ): Promise<MovieListItem[]> {
-  const key =
-    listType === "wishlist"
-      ? keys.cinemaWishlist(householdId, memberId)
-      : keys.cinemaHistory(householdId, memberId);
-
+  const key = getCinemaListKey(householdId, memberId, listType);
   const list = await redis.get<MovieListItem[]>(key);
-  return list ?? [];
+
+  return Array.isArray(list) ? list : [];
 }
 
 export async function saveMovieToCinemaList(params: {
@@ -24,12 +31,10 @@ export async function saveMovieToCinemaList(params: {
 }): Promise<{ isMatch: boolean; savedMovie: MovieListItem }> {
   const { householdId, memberId, listType, movie } = params;
 
-  const key =
-    listType === "wishlist"
-      ? keys.cinemaWishlist(householdId, memberId)
-      : keys.cinemaHistory(householdId, memberId);
+  const key = getCinemaListKey(householdId, memberId, listType);
 
-  let currentList = (await redis.get<MovieListItem[]>(key)) ?? [];
+  const existingList = await redis.get<MovieListItem[]>(key);
+  let currentList: MovieListItem[] = Array.isArray(existingList) ? existingList : [];
 
   currentList = currentList.filter((m) => m.id !== movie.id);
 
@@ -47,13 +52,15 @@ export async function saveMovieToCinemaList(params: {
 
   if (listType === "wishlist") {
     const membersKey = keys.householdMembers(householdId);
-    const memberIds = (await redis.get<string[]>(membersKey)) ?? [];
+    const storedMemberIds = await redis.get<string[]>(membersKey);
+    const memberIds: string[] = Array.isArray(storedMemberIds) ? storedMemberIds : [];
 
     for (const otherMemberId of memberIds) {
       if (otherMemberId === memberId) continue;
 
       const otherKey = keys.cinemaWishlist(householdId, otherMemberId);
-      const otherList = (await redis.get<MovieListItem[]>(otherKey)) ?? [];
+      const otherStoredList = await redis.get<MovieListItem[]>(otherKey);
+      const otherList: MovieListItem[] = Array.isArray(otherStoredList) ? otherStoredList : [];
 
       if (otherList.some((m) => m.id === movie.id)) {
         isMatch = true;
@@ -62,7 +69,10 @@ export async function saveMovieToCinemaList(params: {
     }
   }
 
-  return { isMatch, savedMovie: movieToSave };
+  return {
+    isMatch,
+    savedMovie: movieToSave,
+  };
 }
 
 export async function deleteMovieFromCinemaList(params: {
@@ -73,12 +83,11 @@ export async function deleteMovieFromCinemaList(params: {
 }): Promise<void> {
   const { householdId, memberId, listType, movieId } = params;
 
-  const key =
-    listType === "wishlist"
-      ? keys.cinemaWishlist(householdId, memberId)
-      : keys.cinemaHistory(householdId, memberId);
+  const key = getCinemaListKey(householdId, memberId, listType);
 
-  const currentList = (await redis.get<MovieListItem[]>(key)) ?? [];
+  const existingList = await redis.get<MovieListItem[]>(key);
+  const currentList: MovieListItem[] = Array.isArray(existingList) ? existingList : [];
+
   const updatedList = currentList.filter((m) => m.id !== movieId);
 
   await redis.set(key, updatedList);
@@ -88,13 +97,15 @@ export async function getCinemaMatches(
   householdId: string
 ): Promise<CinemaMatch[]> {
   const membersKey = keys.householdMembers(householdId);
-  const memberIds = (await redis.get<string[]>(membersKey)) ?? [];
+  const storedMemberIds = await redis.get<string[]>(membersKey);
+  const memberIds: string[] = Array.isArray(storedMemberIds) ? storedMemberIds : [];
 
   const movieMap = new Map<number, CinemaMatch>();
 
   for (const memberId of memberIds) {
     const wishlistKey = keys.cinemaWishlist(householdId, memberId);
-    const wishlist = (await redis.get<MovieListItem[]>(wishlistKey)) ?? [];
+    const storedWishlist = await redis.get<MovieListItem[]>(wishlistKey);
+    const wishlist: MovieListItem[] = Array.isArray(storedWishlist) ? storedWishlist : [];
 
     for (const movie of wishlist) {
       const existing = movieMap.get(movie.id);
