@@ -1,95 +1,121 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+type TmdbDiscoverMovie = {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  overview: string;
+  vote_average: number;
+};
+
+type TmdbDiscoverResponse = {
+  results?: TmdbDiscoverMovie[];
+};
 
 export async function GET(request: Request) {
   const apiKey = process.env.TMDB_API_KEY;
   const { searchParams } = new URL(request.url);
-  
-  // Paramètres
-  const mode = searchParams.get('mode') || 'cinematch'; 
-  const genre = searchParams.get('genre');
-  const minYear = searchParams.get('minYear');
-  const maxYear = searchParams.get('maxYear');
-  const minVote = searchParams.get('minVote');
-  const sortBy = searchParams.get('sortBy') || 'popularity.desc'; 
-  const page = searchParams.get('page') || '1';
-  
-  // NOUVEAU : Paramètre de recherche
-  const query = searchParams.get('query');
+
+  const mode = searchParams.get("mode") || "cinematch";
+  const genre = searchParams.get("genre");
+  const minYear = searchParams.get("minYear");
+  const maxYear = searchParams.get("maxYear");
+  const minVote = searchParams.get("minVote");
+  const sortBy = searchParams.get("sortBy") || "popularity.desc";
+  const page = searchParams.get("page") || "1";
+  const query = searchParams.get("query");
 
   if (!apiKey) {
-    return NextResponse.json({ error: 'API Key manquante' }, { status: 500 });
+    return NextResponse.json(
+      { error: "TMDB_API_KEY manquante." },
+      { status: 500 }
+    );
   }
 
   try {
-    const today = new Date().toISOString().split('T')[0];
-    let url = '';
+    const today = new Date().toISOString().split("T")[0];
+    let url = "";
 
-    // =========================================================
-    // CAS 1 : MODE RECHERCHE (Si l'utilisateur a tapé du texte)
-    // =========================================================
-    if (query && query.trim() !== '') {
-        // On utilise l'endpoint SEARCH de TMDB
-        url = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&language=fr-FR&include_adult=false&page=${page}&query=${encodeURIComponent(query)}`;
-        
-        // On peut quand même filtrer par année si demandé
-        if (minYear) url += `&primary_release_year=${minYear}`;
-    } 
-    
-    // =========================================================
-    // CAS 2 : MODE DÉCOUVERTE (Cinematch & Catalogue classique)
-    // =========================================================
-    else {
-        // On utilise l'endpoint DISCOVER de TMDB (Ta logique existante)
-        url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&language=fr-FR&include_adult=false`;
+    if (query && query.trim() !== "") {
+      url =
+        `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}` +
+        `&language=fr-FR` +
+        `&include_adult=false` +
+        `&page=${page}` +
+        `&query=${encodeURIComponent(query)}`;
 
-        // --- FILTRES COMMUNS ---
-        if (genre) url += `&with_genres=${genre}`;
-        if (minYear) url += `&primary_release_date.gte=${minYear}-01-01`;
-        if (minVote) url += `&vote_average.gte=${minVote}`;
-        url += `&vote_count.gte=50`; 
+      if (minYear) {
+        url += `&primary_release_year=${minYear}`;
+      }
+    } else {
+      url =
+        `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}` +
+        `&language=fr-FR` +
+        `&include_adult=false`;
 
-        // --- LOGIQUE SPECIFIQUE ---
-        if (mode === 'catalogue') {
-            // Mode Catalogue : Tri + Pagination normale + Date limite
-            const dateLimit = maxYear ? `${maxYear}-12-31` : today;
-            url += `&primary_release_date.lte=${dateLimit}`;
-            url += `&page=${page}`; // Pagination normale
+      if (genre) url += `&with_genres=${genre}`;
+      if (minYear) url += `&primary_release_date.gte=${minYear}-01-01`;
+      if (minVote) url += `&vote_average.gte=${minVote}`;
 
-            if (sortBy === 'newest') url += `&sort_by=primary_release_date.desc`;
-            else if (sortBy === 'oldest') url += `&sort_by=primary_release_date.asc`;
-            else if (sortBy === 'rating') url += `&sort_by=vote_average.desc`;
-            else url += `&sort_by=popularity.desc`;
+      url += `&vote_count.gte=50`;
 
-        } else {
-            // Mode CineMatch : Page Aléatoire
-            const randomPage = Math.floor(Math.random() * 20) + 1;
-            url += `&page=${randomPage}`; // Page aléatoire
-            url += `&sort_by=popularity.desc`;
-            if (maxYear) url += `&primary_release_date.lte=${maxYear}-12-31`;
+      if (mode === "catalogue") {
+        const dateLimit = maxYear ? `${maxYear}-12-31` : today;
+
+        url += `&primary_release_date.lte=${dateLimit}`;
+        url += `&page=${page}`;
+
+        if (sortBy === "newest") url += `&sort_by=primary_release_date.desc`;
+        else if (sortBy === "oldest")
+          url += `&sort_by=primary_release_date.asc`;
+        else if (sortBy === "rating") url += `&sort_by=vote_average.desc`;
+        else url += `&sort_by=popularity.desc`;
+      } else {
+        const randomPage = Math.floor(Math.random() * 20) + 1;
+
+        url += `&page=${randomPage}`;
+        url += `&sort_by=popularity.desc`;
+
+        if (maxYear) {
+          url += `&primary_release_date.lte=${maxYear}-12-31`;
         }
+      }
     }
 
-    // --- RÉCUPÉRATION ET FORMATAGE ---
-    const res = await fetch(url);
-    const data = await res.json();
+    const res = await fetch(url, { cache: "no-store" });
 
-    const formattedMovies = (data.results || []).map((movie: any) => ({
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Impossible de récupérer les films TMDB." },
+        { status: res.status }
+      );
+    }
+
+    const data = (await res.json()) as TmdbDiscoverResponse;
+
+    const formattedMovies = (data.results || []).map((movie) => ({
       id: movie.id,
       title: movie.title,
-      poster_path: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : null,
+      poster_path: movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : null,
       overview: movie.overview,
       vote: movie.vote_average.toFixed(1),
     }));
-    
-    // Si c'est CineMatch ET qu'on n'est pas en recherche, on mélange les résultats
-    const finalResult = (mode === 'cinematch' && !query) ? formattedMovies.sort(() => 0.5 - Math.random()) : formattedMovies;
+
+    const finalResult =
+      mode === "cinematch" && !query
+        ? [...formattedMovies].sort(() => 0.5 - Math.random())
+        : formattedMovies;
 
     return NextResponse.json(finalResult);
-
   } catch (error) {
-    console.error("Erreur TMDB:", error);
-    return NextResponse.json({ error: "Impossible de récupérer les films" }, { status: 500 });
+    console.error("Erreur TMDB discover:", error);
+    return NextResponse.json(
+      { error: "Impossible de récupérer les films." },
+      { status: 500 }
+    );
   }
 }

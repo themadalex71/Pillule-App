@@ -1,27 +1,10 @@
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
+import type { Metadata } from "next";
+import AppBootstrap from "@/components/AppBootstrap";
 
-const inter = Inter({ subsets: ["latin"] });
-
-// C'est ici qu'on configure le comportement "App"
 export const metadata: Metadata = {
-  title: "Pillule",
-  description: "Rappel quotidien",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Pillule",
-  },
-};
-
-// Empêche le zoom sur mobile pour faire "natif"
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  title: "Les Gogoles",
+  description: "Hub des mini-apps du foyer",
 };
 
 export default function RootLayout({
@@ -31,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={inter.className}>{children}</body>
+      <body>
+        <AppBootstrap />
+        {children}
+      </body>
     </html>
   );
 }

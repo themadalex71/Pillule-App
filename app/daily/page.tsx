@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, Trophy, Users, ArrowLeft, RefreshCw, Trash2, Star, Clock } from 'lucide-react';
+import { Loader2, Trophy, Users, ArrowLeft, RefreshCw, Trash2, Star, Clock, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import ZoomGame from '@/components/games/ZoomGame';
 import MemeGame from '@/components/games/MemeGame';
 import CadavreGame from '@/components/games/CadavreGame';
 import PoetGame from '@/components/games/PoetGame';
+import TierListGame from '@/components/games/TierListGame';
 
 const PROFILES = ['Moi', 'Chéri(e)', 'Éditeur ✍️', 'Testeur 🛠️'];
 
@@ -99,12 +100,6 @@ export default function DailyGamePage() {
     );
   }
 
-  // Calcul du gain (gagné ou perdu) pour l'affichage final
-  const userScore = session?.players[currentUser]?.score || 0;
-  // Logique générique simplifiée pour l'affichage final
-  const isZoom = session?.game?.id === 'zoom';
-  const hasWonZoom = isZoom && session?.players[session?.sharedData?.guesser]?.score > 0;
-
   return (
     <main className="min-h-screen bg-gray-50 pb-10 font-sans">
       <header className="p-4 flex items-center justify-between bg-white border-b sticky top-0 z-20">
@@ -146,6 +141,7 @@ export default function DailyGamePage() {
                 {session.game.id === 'meme' && <MemeGame session={session} currentUser={currentUser} onAction={handleAction} />}
                 {session.game.id === 'cadavre' && <CadavreGame session={session} currentUser={currentUser} onAction={handleAction} />}
                 {session.game.id === 'poet' && <PoetGame session={session} currentUser={currentUser} onAction={handleAction} />}
+                {session.game.id === 'tierlist' && <TierListGame session={session} currentUser={currentUser} onAction={handleAction} />}
               </>
             )}
 
@@ -164,16 +160,79 @@ export default function DailyGamePage() {
                     <div className="flex justify-center items-center gap-4 mb-4">
                       <div className="bg-gray-50 p-4 rounded-3xl flex-1 text-center border border-gray-100">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Moi</p>
-                        <p className="font-bold text-gray-700 text-xl">{session.players["Moi"].score} pts</p>
+                        <p className="font-bold text-gray-700 text-xl">{session.players["Moi"]?.score || 0} pts</p>
                       </div>
                       <div className="text-xl opacity-30 italic font-black">VS</div>
                       <div className="bg-gray-50 p-4 rounded-3xl flex-1 text-center border border-gray-100">
                         <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Chéri(e)</p>
-                        <p className="font-bold text-gray-700 text-xl">{session.players["Chéri(e)"].score} pts</p>
+                        <p className="font-bold text-gray-700 text-xl">{session.players["Chéri(e)"]?.score || 0} pts</p>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* --- 🆕 RÉSULTATS DÉTAILLÉS TIER LIST (CORRIGÉ & SÉCURISÉ) --- */}
+                {session.game.id === 'tierlist' && session.sharedData?.players && (
+                  <div className="space-y-4">
+                    {[
+                      { guesser: "Moi", target: "Chéri(e)", data: session.sharedData.players["Moi"] },
+                      { guesser: "Chéri(e)", target: "Moi", data: session.sharedData.players["Chéri(e)"] }
+                    ].map((entry, i) => {
+                      // SÉCURITÉ : Récupération depuis sharedData avec fallback
+                      const guessOrder = entry.data?.guessOrder || [];
+                      const targetRealOrder = session.sharedData.players[entry.target]?.realOrder || [];
+
+                      // Si les données ne sont pas prêtes, on n'affiche rien pour éviter le crash
+                      if (guessOrder.length === 0 || targetRealOrder.length === 0) return null;
+
+                      return (
+                        <div key={i} className="bg-white p-5 rounded-[2.5rem] shadow-lg border border-gray-100">
+                          <div className="flex items-center gap-2 mb-4">
+                              <span className="text-2xl">{i === 0 ? '🤔' : '🧐'}</span>
+                              <h3 className="font-black text-xs uppercase tracking-widest text-gray-400">
+                                  {entry.guesser === currentUser ? 'Tes prédictions' : `Prédictions de ${entry.guesser}`}
+                              </h3>
+                          </div>
+
+                          <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-4 text-[9px] font-black uppercase text-gray-300 text-center px-2">
+                                  <span>Devinette</span>
+                                  <span>Réalité ({entry.target})</span>
+                              </div>
+
+                              {guessOrder.map((guessId: any, idx: number) => {
+                                  const realId = targetRealOrder[idx];
+                                  
+                                  // SÉCURITÉ : Recherche de l'item avec fallback
+                                  const guessItem = session.sharedData.mission.items.find((it: any) => String(it.id) === String(guessId));
+                                  const realItem = session.sharedData.mission.items.find((it: any) => String(it.id) === String(realId));
+                                  
+                                  if (!guessItem || !realItem) return null;
+
+                                  const isMatch = String(guessId) === String(realId);
+
+                                  return (
+                                      <div key={idx} className={`relative flex items-center justify-between p-2 rounded-xl border-2 ${isMatch ? 'border-green-100 bg-green-50/50' : 'border-red-50 bg-red-50/30'}`}>
+                                          <div className="flex items-center gap-2 w-[45%]">
+                                              <img src={guessItem.url} className="w-8 h-8 rounded-lg object-cover shadow-sm" />
+                                              <span className="text-[10px] font-bold text-gray-700 truncate">{guessItem.label}</span>
+                                          </div>
+                                          <div className={`absolute left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center border-2 z-10 ${isMatch ? 'bg-green-500 border-white text-white' : 'bg-white border-red-100 text-red-300'}`}>
+                                              {isMatch ? <Check size={12} strokeWidth={4} /> : <X size={12} strokeWidth={3} />}
+                                          </div>
+                                          <div className="flex items-center justify-end gap-2 w-[45%]">
+                                              <span className="text-[10px] font-bold text-gray-700 truncate text-right">{realItem.label}</span>
+                                              <img src={realItem.url} className="w-8 h-8 rounded-lg object-cover shadow-sm" />
+                                          </div>
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Message d'attente */}
                 <div className="bg-blue-600 rounded-[2rem] p-6 text-white flex items-center gap-4 shadow-lg animate-pulse">
@@ -203,7 +262,7 @@ export default function DailyGamePage() {
                           <span className="text-2xl font-black text-yellow-400">{score as number} <span className="text-[10px] text-white/30 uppercase tracking-widest ml-1">Pts</span></span>
                         </div>
                       ))}
-                  </div>
+                  </div>  
                 </div>
                 
                 <button onClick={handleGlobalReset} className="w-full py-4 text-gray-400 font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 opacity-40 hover:opacity-100 transition-all">

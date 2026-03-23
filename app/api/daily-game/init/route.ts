@@ -4,9 +4,8 @@ import { GAMES_LIST, getDailySeed } from '@/lib/dailyGameLogic';
 
 export const dynamic = "force-dynamic";
 
-// --- TEMPLATES PAR DÉFAUT (BACKUP) ---
-// Ce sont exactement ceux que tu m'as donnés.
-const DEFAULT_CADAVRE_TEMPLATES = [
+// --- CONFIG CADAVRE EXQUIS (GRAMMAIRE) ---
+const GRAMMAR_TEMPLATES = [
   {
     id: "classique",
     title: "La Phrase Complexe",
@@ -57,11 +56,25 @@ const DEFAULT_CADAVRE_TEMPLATES = [
   }
 ];
 
+// --- FALLBACK TIER LIST (NOUVEAU) ---
+const DEFAULT_TIER_LIST = [
+  {
+    id: "demo_fruit",
+    title: "Les Meilleurs Fruits",
+    items: [
+      { id: 1, label: "Pomme", url: "https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg" },
+      { id: 2, label: "Banane", url: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Banana-Single.jpg" },
+      { id: 3, label: "Fraise", url: "https://upload.wikimedia.org/wikipedia/commons/2/29/PerfectStrawberry.jpg" },
+      { id: 4, label: "Kiwi", url: "https://upload.wikimedia.org/wikipedia/commons/b/b8/Kiwi_%28Actinidia_chinensis%29_1_Luc_Viatour.jpg" },
+      { id: 5, label: "Orange", url: "https://upload.wikimedia.org/wikipedia/commons/c/c4/Orange-Fruit-Pieces.jpg" }
+    ]
+  }
+];
+
 // --- HELPER MEME MAKER ---
 function getRandomMemes(allMemes: any[], count: number, excludeIds: number[] = []) {
   const pool = allMemes.filter(m => !excludeIds.includes(m.id));
   const source = pool.length < count ? allMemes : pool;
-  if (source.length === 0) return [];
   const shuffled = [...source].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }
@@ -126,17 +139,9 @@ export async function GET(request: Request) {
         };
       } 
       
-      // --- INITIALISATION CADAVRE (MODIFIÉ) ---
+      // --- INITIALISATION CADAVRE ---
       else if (game.id === 'cadavre') {
-        // 1. On cherche les templates en base
-        let templates = await kv.get<any[]>('missions:cadavre') || [];
-        
-        // 2. Si vide, on utilise les templates par défaut (ton code)
-        if (templates.length === 0) {
-            templates = DEFAULT_CADAVRE_TEMPLATES;
-        }
-
-        const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
+        const randomTemplate = GRAMMAR_TEMPLATES[Math.floor(Math.random() * GRAMMAR_TEMPLATES.length)];
         const emptyParts = new Array(randomTemplate.steps.length).fill(null);
         
         // Alternance des auteurs
@@ -181,6 +186,30 @@ export async function GET(request: Request) {
             "Chéri(e)": null
           },
           votes: { "Moi": [], "Chéri(e)": [] }
+        };
+      }
+
+      // --- INITIALISATION TIER LIST (AJOUT MANQUANT) ---
+      else if (game.id === 'tierlist') {
+        let missionsPool = await kv.get<any[]>('missions:tierlist') || [];
+        if (missionsPool.length === 0) missionsPool = DEFAULT_TIER_LIST;
+        
+        // Sélection aléatoire
+        const mission = missionsPool[Math.floor(Math.random() * missionsPool.length)];
+        
+        // On mélange l'ordre initial pour que le joueur doive le ranger
+        const shuffledItems = [...mission.items].sort(() => 0.5 - Math.random());
+
+        sharedData = {
+            phase: 'INPUT', // INPUT -> RESULTS
+            mission: {
+                ...mission,
+                initialItems: shuffledItems // Pour l'affichage initial
+            },
+            players: {
+                "Moi": { realOrder: null, guessOrder: null, finished: false },
+                "Chéri(e)": { realOrder: null, guessOrder: null, finished: false }
+            }
         };
       }
 

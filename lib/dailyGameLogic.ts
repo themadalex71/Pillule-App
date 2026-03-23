@@ -67,6 +67,13 @@ export const GAMES_LIST = [
     emoji: '🪶',
     color: 'bg-pink-500',
     type: 'simultaneous'
+  },
+  
+  {
+    id: 'tierlist',
+    title: 'Tier List',
+    emoji: '📊',
+    description: "Classe ces éléments et devine les goûts de l'autre !"
   }
 ];
 
@@ -74,6 +81,8 @@ export const GAMES_LIST = [
 export function getDailySeed() {
   const now = new Date();
   return now.toISOString().split('T')[0]; // Retourne "YYYY-MM-DD"
+  const date = new Date();
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 }
 
 // 🎲 LOGIQUE DE SÉLECTION DE MISSION ZOOM

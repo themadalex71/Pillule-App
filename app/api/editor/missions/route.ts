@@ -17,14 +17,13 @@ export async function GET(request: Request) {
   // 2. Récupération
   let missions = await kv.get<any[]>(redisKey);
 
-  // 3. SÉCURITÉ : Détection des "vieilles données" pour le Cadavre Exquis
-  // Si on trouve des données mais que ce sont des simples textes (string), c'est l'ancien format !
-  // On considère alors que la base est "corrompue" pour forcer la réinitialisation.
+  // 3. SÉCURITÉ CADAVRE (Si données corrompues)
   const isCadavreCorrupted = gameId === 'cadavre' && missions && missions.length > 0 && typeof missions[0] === 'string';
 
-  // 4. Initialisation (Si vide OU si données corrompues)
+  // 4. Initialisation (Si vide OU corrompu)
   if (!missions || missions.length === 0 || isCadavreCorrupted) {
     
+    // --- ZOOM ---
     if (gameId === 'zoom') {
       missions = [
         "Un truc tout doux", "Un truc qui gratte", "Quelque chose en bois", 
@@ -40,11 +39,31 @@ export async function GET(request: Request) {
         "Un truc sale ou poussiéreux", "Ton objet préféré", "Le truc le plus moche de la pièce"
       ];
     } 
+    
+    // --- MEME ---
     else if (gameId === 'meme') {
       missions = [];
     } 
+    
+    // --- TIER LIST (NOUVEAU) ---
+    else if (gameId === 'tierlist') {
+      missions = [
+        {
+          id: "demo_fruit",
+          title: "Les Meilleurs Fruits",
+          items: [
+            { id: 1, label: "Pomme", url: "https://upload.wikimedia.org/wikipedia/commons/1/15/Red_Apple.jpg" },
+            { id: 2, label: "Banane", url: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Banana-Single.jpg" },
+            { id: 3, label: "Fraise", url: "https://upload.wikimedia.org/wikipedia/commons/2/29/PerfectStrawberry.jpg" },
+            { id: 4, label: "Kiwi", url: "https://upload.wikimedia.org/wikipedia/commons/b/b8/Kiwi_%28Actinidia_chinensis%29_1_Luc_Viatour.jpg" },
+            { id: 5, label: "Orange", url: "https://upload.wikimedia.org/wikipedia/commons/c/c4/Orange-Fruit-Pieces.jpg" }
+          ]
+        }
+      ];
+    }
+
+    // --- CADAVRE ---
     else if (gameId === 'cadavre') {
-        // LES TEMPLATES CORRECTS (Objets complets)
         missions = [
             {
                 id: "classique",
@@ -84,6 +103,8 @@ export async function GET(request: Request) {
             }
         ];
     } 
+    
+    // --- POÈTE ---
     else if (gameId === 'poet') {
       if (category === 'themes') {
         missions = ["L'odeur du métro le matin", "Une déclaration d'amour à un kebab", "La tragédie de la chaussette orpheline"];
@@ -96,7 +117,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Sauvegarde immédiate pour écraser les vieilles données corrompues
     if (missions && missions.length > 0) {
       await kv.set(redisKey, missions);
     }
