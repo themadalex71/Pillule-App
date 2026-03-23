@@ -112,9 +112,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json(finalResult);
   } catch (error) {
-    console.error("Erreur TMDB discover:", error);
+    console.error("Erreur TMDB discover détaillée:", error);
     return NextResponse.json(
-      { error: "Impossible de récupérer les films." },
+      {
+        error: "Impossible de récupérer les films.",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
