@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { GAMES_LIST, getDailySeed } from '@/lib/dailyGameLogic';
+import { GAMES_LIST, getDailySeed } from '@/features/daily/services/dailyGameLogic';
 
 export const dynamic = "force-dynamic";
 

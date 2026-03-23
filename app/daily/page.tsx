@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Trophy, Users, ArrowLeft, RefreshCw, Trash2, Star, Clock, Check, X } from 'lucide-react';
 import Link from 'next/link';
-import ZoomGame from '@/components/games/ZoomGame';
-import MemeGame from '@/components/games/MemeGame';
-import CadavreGame from '@/components/games/CadavreGame';
-import PoetGame from '@/components/games/PoetGame';
-import TierListGame from '@/components/games/TierListGame';
+import ZoomGame from '@/features/daily/components/ZoomGame';
+import MemeGame from '@/features/daily/components/MemeGame';
+import CadavreGame from '@/features/daily/components/CadavreGame';
+import PoetGame from '@/features/daily/components/PoetGame';
+import TierListGame from '@/features/daily/components/TierListGame';
 
 const PROFILES = ['Moi', 'Chéri(e)', 'Éditeur ✍️', 'Testeur 🛠️'];
 
@@ -19,7 +19,7 @@ export default function DailyGamePage() {
   const fetchSession = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const res = await fetch('/api/daily-game/init');
+      const res = await fetch('/api/daily/daily-game/init');
       const data = await res.json();
       setSession(data);
     } catch (e) {
@@ -32,7 +32,7 @@ export default function DailyGamePage() {
     if (!confirm("Voulez-vous réinitialiser la partie pour tout le monde ?")) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/daily-game/init?forceReset=true');
+      const res = await fetch('/api/daily/daily-game/init?forceReset=true');
       const data = await res.json();
       setSession(data);
     } catch (e) {
@@ -57,7 +57,7 @@ export default function DailyGamePage() {
 
   const handleAction = async (payload: any) => {
     try {
-      const res = await fetch('/api/daily-game/action', {
+      const res = await fetch('/api/daily/daily-game/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, player: currentUser })

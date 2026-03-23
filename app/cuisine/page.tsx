@@ -2,44 +2,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, X, UtensilsCrossed, Pencil, Check, Image as ImageIcon, Refrigerator, Sparkles, Plus, FolderPlus, Tag, Trash2, Link as LinkIcon, HelpCircle, FileText, Instagram, Edit3 } from 'lucide-react';
+import { 
+  ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, 
+  X, UtensilsCrossed, Pencil, Check, Refrigerator, Sparkles, Plus, FolderPlus, 
+  Tag, Trash2, Link as LinkIcon, HelpCircle, Instagram, Edit3 
+} from 'lucide-react';
 
-// --- TYPES ---
-interface IngredientItem {
-    quantity: string;
-    name: string;
-}
-
-interface Recipe {
-    id: string;
-    title: string;
-    prepTime: string;
-    cookTime: string;
-    servings: string;
-    ingredients: (IngredientItem | string)[]; 
-    steps: string[];
-    addedBy: string;
-    image?: string;
-}
-
-interface Category {
-    name: string;
-    items: string[];
-}
-
-// --- CONFIGURATION PAR DÉFAUT ---
-const INITIAL_CATEGORIES: Category[] = [
-    { name: "🥦 Légumes & Fruits", items: ["Tomate", "Oignon", "Ail", "Pomme de terre", "Carotte", "Courgette", "Poivron", "Champignon", "Épinard", "Haricot vert", "Brocoli", "Chou-fleur", "Concombre", "Avocat", "Citron", "Salade"] },
-    { name: "🥩 Viandes & Poissons", items: ["Poulet", "Boeuf", "Porc", "Jambon", "Lardon", "Saucisse", "Dinde", "Canard", "Thon", "Saumon", "Crevette", "Cabillaud", "Sardine"] },
-    { name: "🧀 Crèmerie & Oeufs", items: ["Oeuf", "Lait", "Beurre", "Crème fraîche", "Yaourt", "Fromage râpé", "Mozzarella", "Parmesan", "Chèvre", "Feta", "Cheddar"] },
-    { name: "🍝 Féculents & Base", items: ["Pâtes", "Riz", "Semoule", "Pain", "Farine", "Maïzena", "Lentilles", "Pois chiches", "Haricots rouges", "Pâte feuilletée", "Pâte brisée"] },
-    { name: "🥫 Épicerie & Assaisonnement", items: ["Huile d'olive", "Vinaigre", "Sauce soja", "Moutarde", "Mayonnaise", "Ketchup", "Coulis de tomate", "Lait de coco", "Miel", "Sucre", "Chocolat", "Levure", "Noix", "Amandes"] }
-];
+// --- IMPORTS DES TYPES ET COMPOSANTS EXTRAITS ---
+import { Recipe, IngredientItem, Category, INITIAL_CATEGORIES } from '@/features/cuisine/types';
+import RecipeModal from '@/features/cuisine/components/RecipeModal';
+import VariantModal from '@/features/cuisine/components/VariantModal';
 
 export default function CuisinePage() {
   // --- ETATS PRINCIPAUX ---
   const [activeTab, setActiveTab] = useState<'scan' | 'book' | 'fridge'>('scan');
-  
+
   // SCANNER & IMPORT
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -83,11 +60,10 @@ export default function CuisinePage() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'az'>('newest');
-
-  const [isEditMode, setIsEditMode] = useState(false); // Mode édition activé ?
-  const [editingMasterIngredient, setEditingMasterIngredient] = useState<string | null>(null); // Quel ingrédient on modifie ?
-  const [newAliasInput, setNewAliasInput] = useState(""); // Champ texte pour ajouter une variante
-  const [aliasToMove, setAliasToMove] = useState<string | null>(null); // La variante qu'on veut déplacer
+  const [isEditMode, setIsEditMode] = useState(false); 
+  const [editingMasterIngredient, setEditingMasterIngredient] = useState<string | null>(null); 
+  const [newAliasInput, setNewAliasInput] = useState(""); 
+  const [aliasToMove, setAliasToMove] = useState<string | null>(null); 
   const [moveSearchTerm, setMoveSearchTerm] = useState("");    
 
   // --- 1. CHARGEMENT DONNÉES ---
@@ -225,7 +201,6 @@ export default function CuisinePage() {
   };
 
   // --- 3. LOGIQUE RÉSOLUTION & SAUVEGARDE INTELLIGENTE ---
-
   const updateCurrentRecipeIngredientName = (oldName: string, newName: string) => {
       if(!pendingRecipeToSave) return;
       const updatedIngredients = pendingRecipeToSave.ingredients.map((ing: IngredientItem) => {
@@ -236,7 +211,6 @@ export default function CuisinePage() {
   };
 
   const addToCategory = (categoryName: string) => {
-      // Cas A: Ajout manuel
       if (pendingIngredient && isCategoryModalOpen) {
           const newCategories = categories.map(cat => {
               if (cat.name === categoryName) return { ...cat, items: [...cat.items, pendingIngredient] };
@@ -249,18 +223,14 @@ export default function CuisinePage() {
           setIsCategoryModalOpen(false);
           return;
       }
-      
-      // Cas B: Résolution Inconnu + Apprentissage
       if (currentUnknown) {
           const finalName = cleanNameInput.trim(); 
           if (!finalName) return;
-
           const newCategories = categories.map(cat => {
               if (cat.name === categoryName) return { ...cat, items: [...cat.items, finalName] };
               return cat;
           });
           saveCategoriesToDb(newCategories);
-          
           if (finalName.toLowerCase() !== currentUnknown.name.toLowerCase()) {
               const newAliases = { ...aliases };
               if (!newAliases[finalName]) newAliases[finalName] = [];
@@ -269,7 +239,6 @@ export default function CuisinePage() {
               }
               saveAliasesToDb(newAliases);
           }
-
           updateCurrentRecipeIngredientName(currentUnknown.name, finalName);
           processNextUnknown();
       }
@@ -278,11 +247,9 @@ export default function CuisinePage() {
   const createCategoryAndAdd = () => {
       const targetIng = pendingIngredient || cleanNameInput.trim();
       if (!targetIng || !newCategoryName.trim()) return;
-      
       const newCat = { name: newCategoryName.trim(), items: [targetIng] };
       const newCategories = [...categories, newCat];
       saveCategoriesToDb(newCategories);
-      
       if (pendingIngredient) {
           setSelectedIngredients(prev => [...prev, pendingIngredient]);
           setPendingIngredient(null);
@@ -306,31 +273,25 @@ export default function CuisinePage() {
       if (!currentUnknown) return;
       const finalName = cleanNameInput.trim(); 
       if (!finalName) return;
-
       const newAliases = { ...aliases };
       if (!newAliases[masterIngredient]) newAliases[masterIngredient] = [];
       if (!newAliases[masterIngredient].includes(finalName)) {
           newAliases[masterIngredient].push(finalName);
       }
       saveAliasesToDb(newAliases);
-      
       updateCurrentRecipeIngredientName(currentUnknown.name, finalName);
       processNextUnknown();
   };
 
-  // NOUVEAU : CRÉER UN GROUPE PARENT (Ex: Épices) ✨
   const createMasterAndLink = (categoryName: string) => {
       const masterName = newMasterName.trim();
       const aliasName = currentUnknown?.name;
-
       if (!masterName || !aliasName || !currentUnknown) return;
-
       const newCategories = categories.map(cat => {
           if (cat.name === categoryName) return { ...cat, items: [...cat.items, masterName] };
           return cat;
       });
       saveCategoriesToDb(newCategories);
-
       const newAliases = { ...aliases };
       if (!newAliases[masterName]) newAliases[masterName] = [];
       if (!newAliases[masterName].includes(aliasName)) {
@@ -341,7 +302,6 @@ export default function CuisinePage() {
            newAliases[masterName].push(cleanedName);
       }
       saveAliasesToDb(newAliases);
-
       updateCurrentRecipeIngredientName(currentUnknown.name, masterName);
       setIsCreatingMaster(false);
       setNewMasterName("");
@@ -352,7 +312,6 @@ export default function CuisinePage() {
       setPendingRecipeToSave(recipe);
       setSaving(true);
       const unknowns: IngredientItem[] = [];
-
       if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
           recipe.ingredients.forEach((ing: any) => {
               let ingredientName = "";
@@ -362,7 +321,6 @@ export default function CuisinePage() {
                   ingredientName = ing.name;
               }
               if (!ingredientName) return;
-
               const lowerName = ingredientName.toLowerCase();
               let found = false;
               categories.forEach(cat => { if (cat.items.some(item => lowerName.includes(item.toLowerCase()))) found = true; });
@@ -381,7 +339,6 @@ export default function CuisinePage() {
               }
           });
       }
-
       if (unknowns.length > 0) {
           setUnknownQueue(unknowns);
           setCurrentUnknown(unknowns[0]);
@@ -449,22 +406,19 @@ export default function CuisinePage() {
   };
 
   const startManualCreation = () => {
-    // On prépare une recette vide
     const newRecipe: Recipe = {
-        id: "", // L'ID vide signale au Backend de créer un vrai ID
+        id: "", 
         title: "",
         prepTime: "",
         cookTime: "",
         servings: "",
-        ingredients: [{ quantity: "", name: "" }], // Une ligne vide prête à remplir
-        steps: [""], // Une étape vide prête à remplir
+        ingredients: [{ quantity: "", name: "" }], 
+        steps: [""], 
         addedBy: "Moi"
     };
-    
-    // On l'ouvre directement
     setSelectedRecipe(newRecipe);
-};
-  
+  };
+
   const handleTextImport = async () => {
       if (!importText.trim()) return;
       setAnalyzing(true);
@@ -497,312 +451,32 @@ export default function CuisinePage() {
 
   const deleteRecipe = async (id: string) => {
     if(!window.confirm("Tu es sûr de vouloir supprimer cette recette ? C'est définitif ! 🗑️")) return;
-    
     try {
         await fetch('/api/cuisine/delete-recipe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id })
         });
-        
-        // Mise à jour immédiate de l'affichage (pas besoin de recharger)
         setMyRecipes(prev => prev.filter(r => r.id !== id));
-        // Si on est dans le frigo, on met à jour les résultats aussi
         setFridgeResults(prev => prev.filter(item => item.recipe.id !== id));
-        
-        setSelectedRecipe(null); // On ferme la fiche recette
+        setSelectedRecipe(null); 
     } catch(e) {
         alert("Erreur lors de la suppression");
     }
-};
-
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
-                const scaleSize = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scaleSize;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                resolve(compressedBase64);
-            };
-        };
-        reader.onerror = (error) => reject(error);
-    });
   };
 
-  // --- COMPOSANT FICHE RECETTE AMÉLIORÉ (Édition Ligne par Ligne) ---
-  const RecipeCardFull = ({ recipe, isPreview = false, onClose, onUpdate, onDelete }: { recipe: any, isPreview?: boolean, onClose: () => void, onUpdate?: (r: Recipe) => Promise<boolean>, onDelete?: (id: string) => void }) => {
-    // MODIF ICI : Si la recette n'a pas de titre (création), on active l'édition direct !
-    const [isEditing, setIsEditing] = useState(recipe.title === "");
-    
-    // On prépare les données. Si les ingrédients sont des strings, on les convertit en objets pour l'édition propre
-    const normalizeIngredients = (ings: any[]) => {
-        return ings.map(ing => typeof ing === 'string' ? { quantity: '', name: ing } : ing);
-    };
-
-    const [formData, setFormData] = useState<Recipe>({
-        ...recipe,
-        ingredients: normalizeIngredients(recipe.ingredients || []),
-        steps: recipe.steps || []
-    });
-    
-    const [savingEdit, setSavingEdit] = useState(false);
-    const imageInputRef = useRef<HTMLInputElement>(null);
-
-    // Reset des données quand on annule/ouvre
-    const toggleEdit = () => {
-        if (isEditing) {
-            // Annulation : on remet les données d'origine
-            setFormData({
-                ...recipe,
-                ingredients: normalizeIngredients(recipe.ingredients || []),
-                steps: recipe.steps || []
-            });
-        }
-        setIsEditing(!isEditing);
-    };
-
-    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const compressed = await compressImage(file);
-        setFormData({ ...formData, image: compressed });
-    };
-
-    // --- GESTION DES INGRÉDIENTS (Ligne par ligne) ---
-    const updateIngredient = (index: number, field: 'quantity' | 'name', value: string) => {
-        const newIngs = [...(formData.ingredients as IngredientItem[])];
-        newIngs[index] = { ...newIngs[index], [field]: value };
-        setFormData({ ...formData, ingredients: newIngs });
-    };
-
-    const addIngredientLine = () => {
-        setFormData({
-            ...formData,
-            ingredients: [...(formData.ingredients as IngredientItem[]), { quantity: "", name: "" }]
-        });
-    };
-
-    const removeIngredientLine = (index: number) => {
-        const newIngs = [...(formData.ingredients as IngredientItem[])];
-        newIngs.splice(index, 1);
-        setFormData({ ...formData, ingredients: newIngs });
-    };
-
-    // --- GESTION DES ÉTAPES (Ligne par ligne) ---
-    const updateStep = (index: number, value: string) => {
-        const newSteps = [...formData.steps];
-        newSteps[index] = value;
-        setFormData({ ...formData, steps: newSteps });
-    };
-
-    const addStepLine = () => {
-        setFormData({ ...formData, steps: [...formData.steps, ""] });
-    };
-
-    const removeStepLine = (index: number) => {
-        const newSteps = [...formData.steps];
-        newSteps.splice(index, 1);
-        setFormData({ ...formData, steps: newSteps });
-    };
-
-    const saveChanges = async () => {
-        setSavingEdit(true);
-        // Nettoyage : on enlève les lignes vides
-        const cleanIngredients = (formData.ingredients as IngredientItem[]).filter(i => i.name.trim() !== "");
-        const cleanSteps = formData.steps.filter(s => s.trim() !== "");
-
-        const updatedRecipe = {
-            ...formData,
-            ingredients: cleanIngredients,
-            steps: cleanSteps
-        };
-
-        if (onUpdate) {
-            const success = await onUpdate(updatedRecipe);
-            if (success) setIsEditing(false);
-        }
-        setSavingEdit(false);
-    };
-
-    const moveAliasToNewMaster = (newMaster: string) => {
-        if (!editingMasterIngredient || !aliasToMove) return;
-  
-        const oldMaster = editingMasterIngredient;
-        const newAliases = { ...aliases };
-  
-        // 1. On retire de l'ancien
-        if (newAliases[oldMaster]) {
-            newAliases[oldMaster] = newAliases[oldMaster].filter(a => a !== aliasToMove);
-            // Si vide, on nettoie (optionnel)
-            if (newAliases[oldMaster].length === 0) delete newAliases[oldMaster];
-        }
-  
-        // 2. On ajoute au nouveau
-        if (!newAliases[newMaster]) newAliases[newMaster] = [];
-        if (!newAliases[newMaster].includes(aliasToMove)) {
-            newAliases[newMaster].push(aliasToMove);
-        }
-  
-        // 3. Sauvegarde et Reset
-        saveAliasesToDb(newAliases);
-        setAliasToMove(null);
-        setEditingMasterIngredient(null); // On ferme tout
-        alert(`Déplacé : "${aliasToMove}" est maintenant dans "${newMaster}" !`);
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-slate-900 w-full h-[95vh] sm:h-[85vh] sm:w-[600px] sm:rounded-2xl rounded-t-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col relative animate-in slide-in-from-bottom-10 duration-300">
-                
-                {/* IMAGE */}
-                <div className="relative h-48 sm:h-56 w-full shrink-0 bg-slate-800 group overflow-hidden">
-                    {formData.image ? <img src={formData.image} alt="Plat" className="w-full h-full object-cover transition duration-500 hover:scale-105" /> : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-500/20 to-slate-800 text-orange-500/50"><ImageIcon size={48} /></div>}
-                    {isEditing && <div className="absolute inset-0 bg-black/50 flex items-center justify-center cursor-pointer" onClick={() => imageInputRef.current?.click()}><div className="flex flex-col items-center text-white"><Camera size={32} /><span className="text-xs font-bold mt-2">Changer la photo</span></div><input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageChange} /></div>}
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-black/40 text-white p-2 rounded-full hover:bg-black/60 transition backdrop-blur-sm border border-white/10 z-10"><X size={20} /></button>
-                </div>
-
-                {/* ENTÊTE (TITRE + ACTIONS) */}
-                <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900 shrink-0">
-                    {isEditing ? (
-                         <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-slate-800 border border-slate-700 text-white font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none" placeholder="Nom de la recette"/>
-                    ) : (
-                        <h2 className="text-2xl font-black text-white truncate pr-4">{formData.title}</h2>
-                    )}
-                    
-                    {!isPreview && !isEditing && (
-                        <div className="flex gap-2 shrink-0">
-                            <button onClick={() => onDelete?.(recipe.id)} className="p-2 bg-slate-800 rounded-full hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition border border-transparent hover:border-red-500/30">
-                                <Trash2 size={20} />
-                            </button>
-                            <button onClick={toggleEdit} className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white shrink-0">
-                                <Pencil size={20} />
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* CONTENU SCROLLABLE */}
-                <div className="p-6 overflow-y-auto flex-1 pb-24">
-                    {/* INFO TEMPS / PERS */}
-                    <div className="flex gap-4 mb-6 text-sm font-medium text-slate-300 justify-center">
-                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl"><Clock size={16} className="text-orange-500"/> {isEditing ? <input value={formData.prepTime} onChange={e => setFormData({...formData, prepTime: e.target.value})} className="bg-transparent w-20 text-center outline-none border-b border-slate-600 focus:border-orange-500" placeholder="Ex: 10m"/> : (formData.prepTime || "?")}</div>
-                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl"><Users size={16} className="text-orange-500"/> {isEditing ? <input value={formData.servings} onChange={e => setFormData({...formData, servings: e.target.value})} className="bg-transparent w-10 text-center outline-none border-b border-slate-600 focus:border-orange-500" placeholder="Ex: 4"/> : (formData.servings || "?")} {!isEditing && " pers."}</div>
-                    </div>
-
-                    {/* SECTION INGRÉDIENTS */}
-                    <div className="mb-8">
-                        <h3 className="font-bold text-white uppercase tracking-wider text-xs mb-4 flex items-center gap-2"><Search size={14}/> Ingrédients</h3>
-                        
-                        {isEditing ? (
-                            <div className="space-y-2">
-                                {(formData.ingredients as IngredientItem[]).map((ing, i) => (
-                                    <div key={i} className="flex gap-2 animate-in slide-in-from-left-5">
-                                        <input 
-                                            value={ing.quantity} 
-                                            onChange={(e) => updateIngredient(i, 'quantity', e.target.value)} 
-                                            className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-orange-500 outline-none text-right" 
-                                            placeholder="Qté"
-                                        />
-                                        <input 
-                                            value={ing.name} 
-                                            onChange={(e) => updateIngredient(i, 'name', e.target.value)} 
-                                            className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-2 text-sm text-white focus:border-orange-500 outline-none" 
-                                            placeholder="Nom de l'ingrédient"
-                                        />
-                                        <button onClick={() => removeIngredientLine(i)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded transition"><X size={16}/></button>
-                                    </div>
-                                ))}
-                                <button onClick={addIngredientLine} className="w-full py-2 border border-dashed border-slate-700 text-slate-400 rounded-lg hover:border-orange-500 hover:text-orange-500 transition text-sm font-medium flex items-center justify-center gap-2 mt-2"><Plus size={16}/> Ajouter un ingrédient</button>
-                            </div>
-                        ) : (
-                            <ul className="grid grid-cols-1 gap-2">
-                                {(formData.ingredients as IngredientItem[])?.map((ing, i) => {
-                                    const quantity = ing.quantity || "";
-                                    const name = ing.name || ""; // Au cas où
-                                    return (
-                                        <li key={i} className="flex items-start gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-800">
-                                            <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mt-1.5"></span>
-                                            <span className="text-slate-300 text-sm leading-relaxed">
-                                                {quantity && <span className="font-bold text-white mr-1">{quantity}</span>}
-                                                {name}
-                                            </span>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </div>
-
-                    {/* SECTION PRÉPARATION */}
-                    <div>
-                        <h3 className="font-bold text-white uppercase tracking-wider text-xs mb-4 flex items-center gap-2"><UtensilsCrossed size={14}/> Préparation</h3>
-                        {isEditing ? (
-                             <div className="space-y-4">
-                                {formData.steps.map((step, i) => (
-                                    <div key={i} className="flex gap-3 animate-in slide-in-from-left-5">
-                                        <div className="flex flex-col items-center pt-2">
-                                            <span className="w-6 h-6 rounded-full bg-slate-700 text-xs flex items-center justify-center font-bold text-slate-400">{i+1}</span>
-                                        </div>
-                                        <textarea 
-                                            value={step} 
-                                            onChange={(e) => updateStep(i, e.target.value)} 
-                                            className="flex-1 bg-slate-800 border border-slate-700 rounded p-3 text-sm text-white focus:border-orange-500 outline-none min-h-[80px]" 
-                                            placeholder={`Étape ${i+1}...`}
-                                        />
-                                        <button onClick={() => removeStepLine(i)} className="p-2 h-fit text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded transition mt-2"><X size={16}/></button>
-                                    </div>
-                                ))}
-                                <button onClick={addStepLine} className="w-full py-2 border border-dashed border-slate-700 text-slate-400 rounded-lg hover:border-orange-500 hover:text-orange-500 transition text-sm font-medium flex items-center justify-center gap-2 mt-2"><Plus size={16}/> Ajouter une étape</button>
-                             </div>
-                        ) : (
-                            <div className="space-y-6">
-                                {formData.steps?.map((step: string, i: number) => (
-                                    <div key={i} className="flex gap-4">
-                                        <div className="flex-col flex items-center">
-                                            <span className="w-8 h-8 rounded-full bg-orange-500 text-slate-900 flex items-center justify-center text-sm font-bold shadow-lg shadow-orange-500/20">{i + 1}</span>
-                                            {i !== formData.steps.length - 1 && <div className="w-0.5 h-full bg-slate-800 mt-2"></div>}
-                                        </div>
-                                        <p className="text-slate-300 text-sm leading-relaxed pt-1 pb-4">{step}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* FOOTER ACTIONS */}
-                {isPreview && (<div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 flex gap-3"><button onClick={onClose} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-700">Annuler</button><button onClick={() => handleSmartSave(formData)} disabled={saving} className="flex-1 py-3 bg-orange-500 text-slate-900 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition">{saving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Sauvegarder</button></div>)}
-                {isEditing && !isPreview && (<div className="absolute bottom-0 w-full p-4 border-t border-slate-800 bg-slate-900 flex gap-3"><button onClick={toggleEdit} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold border border-slate-700">Annuler</button><button onClick={saveChanges} disabled={savingEdit} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-95 transition">{savingEdit ? <Loader2 className="animate-spin"/> : <Check size={18}/>} Valider</button></div>)}
-            </div>
-        </div>
-    );
-  };
-  
   // Ouvre la modale des variantes
   const openVariantModal = (ing: string) => {
       setEditingMasterIngredient(ing);
       setNewAliasInput("");
   };
 
-  // Ajoute une variante manuellement
   const addAliasToMaster = () => {
       if (!editingMasterIngredient || !newAliasInput.trim()) return;
       const master = editingMasterIngredient;
       const aliasToAdd = newAliasInput.trim();
-
       const newAliases = { ...aliases };
       if (!newAliases[master]) newAliases[master] = [];
-      
       if (!newAliases[master].includes(aliasToAdd)) {
           newAliases[master].push(aliasToAdd);
           saveAliasesToDb(newAliases);
@@ -810,15 +484,12 @@ export default function CuisinePage() {
       setNewAliasInput("");
   };
 
-  // Supprime une variante
   const removeAliasFromMaster = (aliasToRemove: string) => {
       if (!editingMasterIngredient) return;
       const master = editingMasterIngredient;
-
       const newAliases = { ...aliases };
       if (newAliases[master]) {
           newAliases[master] = newAliases[master].filter(a => a !== aliasToRemove);
-          // Si la liste est vide, on peut nettoyer la clé (optionnel)
           if (newAliases[master].length === 0) delete newAliases[master];
           saveAliasesToDb(newAliases);
       }
@@ -826,36 +497,25 @@ export default function CuisinePage() {
 
   const moveAliasToNewMaster = (newMaster: string) => {
     if (!editingMasterIngredient || !aliasToMove) return;
-
     const oldMaster = editingMasterIngredient;
     const newAliases = { ...aliases };
-
-    // 1. On retire de l'ancien
     if (newAliases[oldMaster]) {
         newAliases[oldMaster] = newAliases[oldMaster].filter(a => a !== aliasToMove);
-        // Si vide, on nettoie (optionnel)
         if (newAliases[oldMaster].length === 0) delete newAliases[oldMaster];
     }
-
-    // 2. On ajoute au nouveau
     if (!newAliases[newMaster]) newAliases[newMaster] = [];
     if (!newAliases[newMaster].includes(aliasToMove)) {
         newAliases[newMaster].push(aliasToMove);
     }
-
-    // 3. Sauvegarde et Reset
     saveAliasesToDb(newAliases);
     setAliasToMove(null);
-    setEditingMasterIngredient(null); // On ferme tout
+    setEditingMasterIngredient(null); 
     alert(`Déplacé : "${aliasToMove}" est maintenant dans "${newMaster}" !`);
-};
+  };
 
-    // 1. RENOMMER UNE CATÉGORIE
   const renameCategory = (oldName: string) => {
-      // On utilise un simple prompt pour aller vite
       const newName = window.prompt(`Nouveau nom pour "${oldName}" ?`, oldName);
       if (!newName || newName === oldName) return;
-
       const newCategories = categories.map(cat => {
           if (cat.name === oldName) return { ...cat, name: newName.trim() };
           return cat;
@@ -863,38 +523,24 @@ export default function CuisinePage() {
       saveCategoriesToDb(newCategories);
   };
 
-  // 2. RENOMMER UN INGRÉDIENT PRINCIPAL
   const renameMasterIngredient = () => {
       if (!editingMasterIngredient) return;
-      // On utilise un prompt ici aussi ou on pourrait faire un champ dans la modale
-      // Pour l'instant, on va l'intégrer dans la modale via un nouvel état local, 
-      // mais voici la logique brute :
-      
       const oldName = editingMasterIngredient;
       const newName = window.prompt(`Renommer "${oldName}" en :`, oldName);
-      
       if (!newName || newName === oldName) return;
       const finalName = newName.trim();
-
-      // A. On met à jour dans les Catégories
       const newCategories = categories.map(cat => ({
           ...cat,
           items: cat.items.map(item => item === oldName ? finalName : item)
       }));
-
-      // B. On met à jour les Alias (On déplace les enfants vers le nouveau nom)
       const newAliases = { ...aliases };
       if (newAliases[oldName]) {
-          newAliases[finalName] = newAliases[oldName]; // On copie les variantes
-          delete newAliases[oldName]; // On supprime l'ancienne clé
+          newAliases[finalName] = newAliases[oldName]; 
+          delete newAliases[oldName]; 
       }
-
-      // C. Sauvegarde tout
       saveCategoriesToDb(newCategories);
       saveAliasesToDb(newAliases);
-      
-      // D. On met à jour l'interface
-      setEditingMasterIngredient(finalName); // On garde la modale ouverte sur le nouveau nom
+      setEditingMasterIngredient(finalName); 
   };
 
   // --- RENDU UI PRINCIPAL ---
@@ -940,13 +586,10 @@ export default function CuisinePage() {
         <div className="px-4 pb-20 animate-in slide-in-from-right-10 duration-300">
             {!hasSearchedFridge ? (
                 <>
-                    {/* EN-TÊTE */}
                     <div className="text-center py-6">
                          <h2 className="text-xl font-bold mb-2">Qu&apos;est-ce que tu as ?</h2>
                          <p className="text-slate-400 text-xs">Sélectionne tes ingrédients ou ajoutes-en un.</p>
                     </div>
-
-                    {/* BARRE D'OUTILS (Ajout / Édition / Suppression) */}
                     <div className="flex gap-2 mb-8 max-w-md mx-auto relative z-0 items-center">
                         <input 
                             type="text" 
@@ -957,23 +600,16 @@ export default function CuisinePage() {
                             disabled={isDeleteMode || isEditMode} 
                             className={`flex-1 bg-slate-800 border ${isDeleteMode ? 'border-red-900 opacity-50' : isEditMode ? 'border-blue-900 opacity-50' : 'border-slate-700'} rounded-lg px-4 py-2 text-sm text-white focus:border-orange-500 outline-none transition`}
                         />
-                        
-                        {/* Bouton AJOUTER */}
                         <button onClick={initiateAddIngredient} disabled={isDeleteMode || isEditMode} className={`px-3 py-2 rounded-lg text-white transition ${isDeleteMode || isEditMode ? 'bg-slate-800 opacity-50' : 'bg-slate-700 hover:bg-slate-600'}`}>
                             <Plus size={20}/>
                         </button>
-                        
                         <div className="w-[1px] h-8 bg-slate-700 mx-1"></div>
-                        
-                        {/* Bouton ÉDITION (Variantes) - Bleu */}
                         <button 
                             onClick={() => { setIsEditMode(!isEditMode); setIsDeleteMode(false); }} 
                             className={`p-2 rounded-lg transition border ${isEditMode ? 'bg-blue-600 text-white border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
                         >
                             <Edit3 size={20}/>
                         </button>
-
-                        {/* Bouton SUPPRESSION - Rouge */}
                         <button 
                             onClick={() => { setIsDeleteMode(!isDeleteMode); setIsEditMode(false); }} 
                             className={`p-2 rounded-lg transition border ${isDeleteMode ? 'bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
@@ -982,25 +618,15 @@ export default function CuisinePage() {
                         </button>
                     </div>
 
-                    {/* LISTE DES INGRÉDIENTS */}
                     {loadingData ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-orange-500" /></div> : (
                         <div className="space-y-6 mb-24">
                             {categories.map((category, idx) => (
                                 <div key={idx}>
                                     <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1 flex items-center gap-2">
-                                    {/* Icône de catégorie */}
                                     {category.name.startsWith("✨") ? <Sparkles size={14}/> : <Tag size={14}/>} 
-                                    
-                                    {/* Nom de la catégorie */}
                                     {category.name}
-
-                                    {/* BOUTON RENOMMER (Apparaît seulement en mode Édition) */}
                                     {isEditMode && (
-                                        <button 
-                                            onClick={() => renameCategory(category.name)} 
-                                            className="p-1 hover:bg-blue-500/20 text-blue-500 rounded transition"
-                                            title="Renommer la catégorie"
-                                        >
+                                        <button onClick={() => renameCategory(category.name)} className="p-1 hover:bg-blue-500/20 text-blue-500 rounded transition" title="Renommer la catégorie" >
                                             <Pencil size={12}/>
                                         </button>
                                     )}
@@ -1032,7 +658,6 @@ export default function CuisinePage() {
                                                 {isDeleteMode && <X size={12}/>} 
                                                 {isEditMode && <LinkIcon size={12}/>} 
                                                 {ing}
-                                                {/* Petit point gris si l'ingrédient a des variantes (alias) */}
                                                 {!isDeleteMode && !isEditMode && aliases[ing]?.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>}
                                             </button>
                                         ))}
@@ -1041,8 +666,6 @@ export default function CuisinePage() {
                             ))}
                         </div>
                     )}
-
-                    {/* BOUTON RECHERCHER (Fixe en bas) */}
                     {!isDeleteMode && !isEditMode && (
                         <div className="fixed bottom-20 left-0 w-full px-4 flex justify-center bg-gradient-to-t from-slate-900 via-slate-900/90 to-transparent pb-4 pt-10 pointer-events-none">
                             <button 
@@ -1056,13 +679,11 @@ export default function CuisinePage() {
                     )}
                 </>
             ) : (
-                /* --- AFFICHAGE DES RÉSULTATS --- */
                 <>
                     <div className="flex items-center justify-between mb-6 pt-4">
                         <button onClick={resetFridge} className="text-slate-400 hover:text-white flex items-center gap-1 text-sm"><ArrowLeft size={16}/> Changer les ingrédients</button>
                         <span className="text-orange-500 font-bold text-sm">{fridgeResults.length} recettes trouvées</span>
                     </div>
-                    
                     {fridgeResults.length === 0 ? (
                         <div className="text-center py-10 opacity-50">
                             <UtensilsCrossed size={48} className="mx-auto mb-4 text-slate-600"/>
@@ -1094,7 +715,7 @@ export default function CuisinePage() {
         </div>
       )}
 
-      {/* LIVRE RECETTES (Le bloc manquant est là) */}
+      {/* LIVRE RECETTES */}
       {activeTab === 'book' && (
         <div className="px-4 pb-24 animate-in slide-in-from-right-10 duration-300">
            <div className="sticky top-0 bg-slate-900 z-10 py-4 -mx-4 px-4 border-b border-slate-800 mb-6 shadow-xl">
@@ -1135,19 +756,28 @@ export default function CuisinePage() {
         </div>
       )}
 
-      {scannedRecipe && <RecipeCardFull recipe={scannedRecipe} isPreview={true} onClose={() => setScannedRecipe(null)} />}
+      {/* --- INTEGRATION DES MODALES --- */}
+      {scannedRecipe && (
+          <RecipeModal 
+              recipe={scannedRecipe} 
+              isPreview={true} 
+              onClose={() => setScannedRecipe(null)} 
+              onSmartSave={handleSmartSave}
+              saving={saving}
+          />
+      )}
+      
       {selectedRecipe && (
-    <RecipeCardFull 
-        recipe={selectedRecipe} 
-        isPreview={false} 
-        onClose={() => setSelectedRecipe(null)} 
-        onUpdate={handleUpdateRecipe} 
-        onDelete={deleteRecipe}   // <--- Vérifie que cette ligne est bien là !
-    />
-)}
+          <RecipeModal 
+              recipe={selectedRecipe} 
+              isPreview={false} 
+              onClose={() => setSelectedRecipe(null)} 
+              onUpdate={handleUpdateRecipe} 
+              onDelete={deleteRecipe} 
+          />
+      )}
 
-      {/* --- MODALES --- */}
-
+      {/* --- AUTRES MODALES (Import / Ingrédients / Variantes) --- */}
       {isImportModalOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
               <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
@@ -1164,7 +794,6 @@ export default function CuisinePage() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
             <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
                 {isCategoryModalOpen && <button onClick={() => setIsCategoryModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>}
-                
                 {currentUnknown ? (
                     <div className="text-center mb-4">
                          <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500"><HelpCircle size={32}/></div>
@@ -1182,7 +811,6 @@ export default function CuisinePage() {
                         <p className="text-slate-400 text-sm mb-6">Choisis une catégorie.</p>
                     </>
                 )}
-
                 {currentUnknown && !resolveType ? (
                      <div className="grid grid-cols-1 gap-3 mt-4">
                           <button onClick={() => setResolveType('alias')} className="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-left border border-slate-700 flex items-center gap-3 transition group">
@@ -1243,154 +871,23 @@ export default function CuisinePage() {
         </div>
       )}
 
-      {/* MODALE GESTION VARIANTES (CORRIGÉE & AMÉLIORÉE) */}
-      {editingMasterIngredient && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
-              {/* Conteneur principal : Hauteur Max fixée et Flex Column pour gérer le scroll */}
-              <div className="bg-slate-900 border border-slate-700 w-[95%] max-w-sm rounded-2xl shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden">
-                  
-                  {/* BOUTON FERMER (Absolu pour être toujours là) */}
-                  <button 
-                      onClick={() => { setEditingMasterIngredient(null); setAliasToMove(null); setMoveSearchTerm(""); }} 
-                      className="absolute top-4 right-4 text-slate-500 hover:text-white z-20 p-2 bg-slate-900/50 rounded-full"
-                  >
-                      <X size={20}/>
-                  </button>
-                  
-                  {/* --- ÉCRAN 1 : LISTE DES VARIANTES --- */}
-                  {!aliasToMove ? (
-                      <div className="flex flex-col h-full p-6">
-                        {/* Header fixe avec Renommage */}
-                        <div className="flex items-center gap-3 mb-6 shrink-0 pr-8">
-                            <div className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                                <LinkIcon size={24}/>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-xl text-white leading-tight">{editingMasterIngredient}</h3>
-                                    
-                                    {/* BOUTON RENOMMER L'INGRÉDIENT 👇 */}
-                                    <button 
-                                        onClick={renameMasterIngredient} 
-                                        className="p-1.5 bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 rounded-full transition"
-                                        title="Renommer l'ingrédient"
-                                    >
-                                        <Pencil size={12}/>
-                                    </button>
-                                </div>
-                                <p className="text-sm text-slate-400">Gérer les variantes</p>
-                            </div>
-                        </div>
-
-                        {/* Zone Scrollable des variantes */}
-                        <div className="bg-slate-950 rounded-xl border border-slate-800 flex-1 overflow-y-auto min-h-0 mb-4 p-2">
-                            {(aliases[editingMasterIngredient] || []).length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
-                                    <LinkIcon size={32} className="mb-2"/>
-                                    <p className="text-sm italic">Aucune variante associée.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase px-2 py-1 sticky top-0 bg-slate-950 z-10">Liés à {editingMasterIngredient}</p>
-                                    {(aliases[editingMasterIngredient] || []).map(alias => (
-                                        <div key={alias} className="flex items-center justify-between bg-slate-900 text-slate-200 text-sm px-3 py-3 rounded-lg border border-slate-800 group hover:border-slate-600 transition">
-                                            <span className="font-medium truncate">{alias}</span>
-                                            <div className="flex gap-1 shrink-0">
-                                                {/* DÉPLACER */}
-                                                <button onClick={() => setAliasToMove(alias)} className="p-2 text-slate-500 hover:text-blue-400 hover:bg-slate-800 rounded-lg transition" title="Déplacer">
-                                                    <ArrowLeft size={16} className="rotate-180"/>
-                                                </button>
-                                                {/* SUPPRIMER */}
-                                                <button onClick={() => removeAliasFromMaster(alias)} className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded-lg transition" title="Détacher">
-                                                    <Trash2 size={16}/>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer fixe : Ajouter */}
-                        <div className="flex gap-2 shrink-0">
-                            <input 
-                                type="text" 
-                                placeholder="Ajouter une variante..." 
-                                value={newAliasInput} 
-                                onChange={(e) => setNewAliasInput(e.target.value)} 
-                                className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:border-blue-500 outline-none shadow-inner"
-                            />
-                            <button onClick={addAliasToMaster} disabled={!newAliasInput.trim()} className="bg-blue-600 text-white px-4 py-3 rounded-xl hover:bg-blue-500 disabled:opacity-50 font-bold"><Plus size={20}/></button>
-                        </div>
-                      </div>
-                  ) : (
-                      /* --- ÉCRAN 2 : DÉPLACEMENT AVEC RECHERCHE --- */
-                      <div className="flex flex-col h-full overflow-hidden">
-                          {/* Header Fixe */}
-                          <div className="p-6 pb-2 shrink-0 bg-slate-900 z-10 shadow-xl border-b border-slate-800">
-                              <button onClick={() => { setAliasToMove(null); setMoveSearchTerm(""); }} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-bold mb-4 transition">
-                                  <ArrowLeft size={16}/> Retour
-                              </button>
-                              <h3 className="font-bold text-lg text-white mb-1">Où déplacer &quot;{aliasToMove}&quot; ?</h3>
-                              <p className="text-xs text-slate-400 mb-4">Choisis le nouvel ingrédient principal.</p>
-                              
-                              {/* Barre de recherche intégrée */}
-                              <div className="relative">
-                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16}/>
-                                  <input 
-                                    type="text" 
-                                    autoFocus
-                                    placeholder="Chercher un ingrédient..." 
-                                    value={moveSearchTerm}
-                                    onChange={(e) => setMoveSearchTerm(e.target.value)}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-9 pr-4 text-sm text-white focus:border-blue-500 outline-none"
-                                  />
-                              </div>
-                          </div>
-                          
-                          {/* Liste Scrollable */}
-                          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900">
-                              {categories.map((cat, idx) => {
-                                  // Filtrage des items selon la recherche
-                                  const filteredItems = cat.items
-                                    .filter(i => i !== editingMasterIngredient) // Ne pas montrer le parent actuel
-                                    .filter(i => i.toLowerCase().includes(moveSearchTerm.toLowerCase()))
-                                    .sort();
-
-                                  if (filteredItems.length === 0) return null;
-
-                                  return (
-                                      <div key={idx} className="animate-in slide-in-from-bottom-2">
-                                          <h4 className="text-xs font-bold text-slate-500 uppercase mb-2 ml-1">{cat.name}</h4>
-                                          <div className="grid grid-cols-1 gap-1">
-                                              {filteredItems.map(item => (
-                                                  <button 
-                                                      key={item} 
-                                                      onClick={() => { moveAliasToNewMaster(item); setMoveSearchTerm(""); }}
-                                                      className="w-full text-left px-4 py-3 rounded-xl bg-slate-800 hover:bg-blue-600 hover:text-white border border-slate-700/50 hover:border-blue-500 transition text-sm flex items-center justify-between group"
-                                                  >
-                                                      <span className="font-medium">{item}</span>
-                                                      <div className="bg-slate-900/50 group-hover:bg-white/20 p-1 rounded-full transition">
-                                                        <ArrowLeft size={14} className="rotate-180 text-slate-500 group-hover:text-white"/>
-                                                      </div>
-                                                  </button>
-                                              ))}
-                                          </div>
-                                      </div>
-                                  );
-                              })}
-                              
-                              {/* Message si aucun résultat */}
-                              {categories.every(cat => cat.items.filter(i => i.toLowerCase().includes(moveSearchTerm.toLowerCase()) && i !== editingMasterIngredient).length === 0) && (
-                                  <div className="text-center py-10 opacity-50">
-                                      <p>Aucun ingrédient trouvé.</p>
-                                  </div>
-                              )}
-                          </div>
-                      </div>
-                  )}
-              </div>
-          </div>
+        {editingMasterIngredient && (
+          <VariantModal
+              editingMasterIngredient={editingMasterIngredient}
+              setEditingMasterIngredient={setEditingMasterIngredient}
+              aliases={aliases}
+              categories={categories}
+              aliasToMove={aliasToMove}
+              setAliasToMove={setAliasToMove}
+              moveSearchTerm={moveSearchTerm}
+              setMoveSearchTerm={setMoveSearchTerm}
+              newAliasInput={newAliasInput}
+              setNewAliasInput={setNewAliasInput}
+              renameMasterIngredient={renameMasterIngredient}
+              removeAliasFromMaster={removeAliasFromMaster}
+              addAliasToMaster={addAliasToMaster}
+              moveAliasToNewMaster={moveAliasToNewMaster}
+          />
       )}
     </main>
   );

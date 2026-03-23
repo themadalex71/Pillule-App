@@ -1,4 +1,4 @@
-import CalendrierView from '../components/CalendrierView'; // Note les ".." pour remonter d'un étage
+import CalendrierView from '@/features/pilule/components/CalendrierView';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 

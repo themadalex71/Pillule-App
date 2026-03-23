@@ -42,7 +42,7 @@ export default function CalendrierView() {
 
     // --- SAUVEGARDE DANS LE CLOUD (Invisible) ---
     try {
-      await fetch('/api/sync-pill', {
+      await fetch('/api/pilule/sync-pill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: dateStr, status: newStatus }),

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv'; // On passe sur KV comme pour les recettes
-import { getGameOfTheDay } from '@/lib/gameUtils';
+import { getGameOfTheDay } from '@/features/daily/services/gameUtils';
 
 export const dynamic = 'force-dynamic';
 

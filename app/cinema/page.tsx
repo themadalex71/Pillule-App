@@ -1,63 +1,17 @@
+// app/cinema/page.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Library, Popcorn, Flame, X, Loader2, Info, Calendar, Clock, Clapperboard, Users, Trash2, Eye, ChevronRight, LayoutGrid, Star, StarHalf, SlidersHorizontal, ArrowDownWideNarrow, ArrowUpNarrowWide, Trophy, EyeOff, Heart, FileUp, Search } from 'lucide-react';
-import TinderCard from 'react-tinder-card';
+import { ArrowLeft, Library, Popcorn, Flame, Loader2, LayoutGrid, SlidersHorizontal, Trash2, ChevronRight, Eye, Heart, FileUp } from 'lucide-react';
 import Papa from 'papaparse'; 
 
-// --- TYPES ---
-interface MovieBasic {
-  id: number;
-  title: string;
-  poster_path: string | null;
-  overview: string;
-  vote: string;
-  userRating?: number | null;
-  ratedAt?: string | null;
-  addedByMemberId?: string;
-}
-
-interface Actor {
-  name: string;
-  profile_path: string | null;
-  character: string;
-}
-
-interface MovieFull extends MovieBasic {
-  backdrop_path: string | null;
-  release_date: string;
-  runtime: string;
-  genres: string;
-  director: string;
-  cast: Actor[];
-  tagline: string;
-}
-
-// Liste des Genres TMDB
-const GENRES = [
-    { id: 28, name: "Action" },
-    { id: 12, name: "Aventure" },
-    { id: 16, name: "Animation" },
-    { id: 35, name: "Comédie" },
-    { id: 80, name: "Crime" },
-    { id: 99, name: "Documentaire" },
-    { id: 18, name: "Drame" },
-    { id: 10751, name: "Famille" },
-    { id: 14, name: "Fantastique" },
-    { id: 36, name: "Histoire" },
-    { id: 27, name: "Horreur" },
-    { id: 10402, name: "Musique" },
-    { id: 9648, name: "Mystère" },
-    { id: 10749, name: "Romance" },
-    { id: 878, name: "Science-Fiction" },
-    { id: 53, name: "Thriller" },
-    { id: 10752, name: "Guerre" },
-    { id: 37, name: "Western" },
-];
+import { MovieBasic, MovieFull } from '@/features/cinema/types';
+import FilterModal from '@/features/cinema/components/FilterModal';
+import CineMatchCards from '@/features/cinema/components/CineMatchCards';
+import MovieDetailsModal from '@/features/cinema/components/MovieDetailsModal';
 
 export default function CinemaPage() {
-  // --- ETATS ---
   const householdId = 'household_demo';
   const [activeTab, setActiveTab] = useState('cinematch');
   const [currentUser, setCurrentUser] = useState('Alex');
@@ -77,34 +31,23 @@ export default function CinemaPage() {
 
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   
-  // ETAT POUR LA MODALE DE SUPPRESSION
   const [deleteModal, setDeleteModal] = useState<{show: boolean, movieId: number | null, title: string}>({ 
       show: false, movieId: null, title: '' 
   });
 
-  // ETATS POUR LES FILTRES & TRI
   const [showFilters, setShowFilters] = useState(false);
   const [cataloguePage, setCataloguePage] = useState(1);
   const [sortOption, setSortOption] = useState('newest'); 
   const [searchQuery, setSearchQuery] = useState('');
   
-  // ETATS POUR L'IMPORT LETTERBOXD
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>({ current: 0, total: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [filters, setFilters] = useState({
-      genre: null as number | null,
-      minYear: '',
-      maxYear: '',
-      minVote: 0
-  });
+  const [filters, setFilters] = useState({ genre: null as number | null, minYear: '', maxYear: '', minVote: 0 });
 
-  const currentYear = new Date().getFullYear();
-  const cardRefs = useRef<any[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // --- EFFETS ---
   useEffect(() => {
     if (activeTab === 'cinematch' && movies.length === 0) fetchDiscoverMovies();
     if (activeTab === 'catalogue' && catalogueMovies.length === 0) fetchCatalogueMovies(1, true);
@@ -113,9 +56,7 @@ export default function CinemaPage() {
     else if (activeTab === 'list-history') fetchSavedList('history');
     else if (activeTab === 'list-matches') fetchMatchesList();
     
-    if (activeTab === 'cinematch' || activeTab === 'catalogue') {
-        fetchSavedList('wishlist', true);
-    }
+    if (activeTab === 'cinematch' || activeTab === 'catalogue') fetchSavedList('wishlist', true);
   }, [activeTab, currentUser]); 
 
   useEffect(() => {
@@ -128,20 +69,12 @@ export default function CinemaPage() {
             fetchCatalogueMovies(1, true, '');
             return;
         }
-
-        const delayDebounceFn = setTimeout(() => {
-            fetchCatalogueMovies(1, true, searchQuery);
-        }, 500);
-
+        const delayDebounceFn = setTimeout(() => { fetchCatalogueMovies(1, true, searchQuery); }, 500);
         return () => clearTimeout(delayDebounceFn);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  // --- LOGIQUE IMPORTATION CSV ---
-  const handleFileClick = () => {
-      fileInputRef.current?.click();
-  };
+  const handleFileClick = () => fileInputRef.current?.click();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -151,33 +84,21 @@ export default function CinemaPage() {
         const fileName = file.name.toLowerCase();
         let targetListType = '';
 
-        if (fileName.includes('ratings') || fileName.includes('diary') || fileName.includes('watched')) {
-            targetListType = 'history'; 
-        } else if (fileName.includes('watchlist')) {
-            targetListType = 'wishlist'; 
-        } else {
-            console.warn(`Fichier ignoré : ${fileName}`);
-            return;
-        }
+        if (fileName.includes('ratings') || fileName.includes('diary') || fileName.includes('watched')) targetListType = 'history'; 
+        else if (fileName.includes('watchlist')) targetListType = 'wishlist'; 
+        else return;
 
         setIsImporting(true);
 
         Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: async (results: any) => {
-                await processImport(results.data, targetListType, fileName);
-            }
+            header: true, skipEmptyLines: true,
+            complete: async (results: any) => await processImport(results.data, targetListType, fileName)
         });
     });
   };
 
   const processImport = async (rows: any[], listType: string, sourceFileName: string) => {
-    setImportProgress(prev => ({
-        current: prev?.current || 0,
-        total: (prev?.total || 0) + rows.length
-    }));
-
+    setImportProgress(prev => ({ current: prev?.current || 0, total: (prev?.total || 0) + rows.length }));
     let count = 0;
 
     for (const row of rows) {
@@ -189,42 +110,22 @@ export default function CinemaPage() {
         if (title && year) {
             try {
                 await fetch('/api/cinema', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'import',
-                        householdId,
-                        memberId,
-                        title,
-                        year,
-                        userRating: importedRating,
-                        watchedDate,
-                        listType
-                    })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'import', householdId, memberId, title, year, userRating: importedRating, watchedDate, listType })
                 });
-            } catch (e) {
-                console.error('Erreur import', title, e);
-            }
+            } catch (e) { console.error('Erreur import', title, e); }
         }
 
         count++;
-        setImportProgress(prev =>
-          prev
-            ? { current: prev.current + 1, total: prev.total }
-            : { current: 1, total: rows.length }
-        );
+        setImportProgress(prev => prev ? { current: prev.current + 1, total: prev.total } : { current: 1, total: rows.length });
     }
 
     alert(`Importation de ${sourceFileName} terminée ! (${count} films traités)`);
-
-    if (activeTab === `list-${listType}`) {
-        fetchSavedList(listType);
-    }
+    if (activeTab === `list-${listType}`) fetchSavedList(listType);
     setIsImporting(false);
     setImportProgress(null);
   };
 
-  // --- AUTRES FONCTIONS API ---
   const fetchDiscoverMovies = async () => {
     setLoading(true);
     try {
@@ -241,50 +142,29 @@ export default function CinemaPage() {
       ]);
 
       const tmdbData = await resTmdb.json();
-      const wishlistResponse = await resWishlist.json();
-      const historyResponse = await resHistory.json();
-      const wishlistData = wishlistResponse.list || [];
-      const historyData = historyResponse.list || [];
+      const wishlistData = (await resWishlist.json()).list || [];
+      const historyData = (await resHistory.json()).list || [];
 
       if (Array.isArray(tmdbData)) {
-          const excludedIds = new Set([
-              ...wishlistData.map((m: any) => m.id),
-              ...historyData.map((m: any) => m.id)
-          ]);
-
-          const filteredMovies = tmdbData.filter((movie: MovieBasic) => !excludedIds.has(movie.id));
-          setMovies(filteredMovies);
+          const excludedIds = new Set([...wishlistData.map((m: any) => m.id), ...historyData.map((m: any) => m.id)]);
+          setMovies(tmdbData.filter((movie: MovieBasic) => !excludedIds.has(movie.id)));
       }
-    } catch (error) { 
-        console.error("Erreur lors du chargement des films :", error); 
-    } finally { 
-        setLoading(false); 
-    }
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
   const fetchCatalogueMovies = async (page: number, reset = false, queryOverride?: string) => {
-    if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-    }
-    
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     const newController = new AbortController();
     abortControllerRef.current = newController;
 
-    if (reset) {
-        setCatalogueMovies([]);
-    }
-    
+    if (reset) setCatalogueMovies([]);
     setLoading(true);
     
     try {
       let url = `/api/cinema/discover?mode=catalogue&page=${page}&sortBy=${sortOption}`;
-      
       const queryToUse = queryOverride !== undefined ? queryOverride : searchQuery;
 
-      if (queryToUse.trim() !== '') {
-          url += `&query=${encodeURIComponent(queryToUse)}`;
-      }
-
+      if (queryToUse.trim() !== '') url += `&query=${encodeURIComponent(queryToUse)}`;
       if (filters.genre) url += `&genre=${filters.genre}`;
       if (filters.minYear) url += `&minYear=${filters.minYear}`;
       if (filters.maxYear) url += `&maxYear=${filters.maxYear}`;
@@ -294,22 +174,13 @@ export default function CinemaPage() {
       const data = await res.json();
       
       if (Array.isArray(data)) {
-          if (reset) { 
-              setCatalogueMovies(data); 
-              setCataloguePage(1); 
-          } else { 
-              setCatalogueMovies(prev => [...prev, ...data]); 
-              setCataloguePage(page); 
-          }
+          if (reset) { setCatalogueMovies(data); setCataloguePage(1); } 
+          else { setCatalogueMovies(prev => [...prev, ...data]); setCataloguePage(page); }
       }
     } catch (error: any) { 
-        if (error.name === 'AbortError') return;
-        console.error(error); 
+        if (error.name !== 'AbortError') console.error(error); 
     } finally { 
-        if (abortControllerRef.current === newController) {
-             setLoading(false); 
-             abortControllerRef.current = null;
-        }
+        if (abortControllerRef.current === newController) { setLoading(false); abortControllerRef.current = null; }
     }
   };
 
@@ -319,169 +190,106 @@ export default function CinemaPage() {
       else if (activeTab === 'catalogue') { fetchCatalogueMovies(1, true); }
   };
 
-  const resetFilters = () => { setFilters({ genre: null, minYear: '', maxYear: '', minVote: 0 }); };
+  const resetFilters = () => setFilters({ genre: null, minYear: '', maxYear: '', minVote: 0 });
 
   const fetchSavedList = async (type: string, silent = false) => {
     if (!silent) setLoading(true);
     if (!silent) setSavedMovies([]);
     try {
       const res = await fetch(`/api/cinema?action=list&listType=${type}&householdId=${householdId}&memberId=${memberId}`);
+      if (!res.ok) throw new Error(`Erreur HTTP: ${res.status}`);
       const data = await res.json();
+      console.log(`[DEBUG] Films récupérés pour ${type}:`, data);
       setSavedMovies(data.list || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      if (!silent) setLoading(false);
-    }
+    } catch (e) { 
+      console.error("[DEBUG] Erreur fetchSavedList:", e);
+      alert(`Erreur de connexion à l'API Cinéma (${type}) ! Regarde la console (F12).`);
+    } finally { if (!silent) setLoading(false); }
   };
 
   const fetchMatchesList = async () => {
-      setLoading(true);
-      setSavedMovies([]);
+      setLoading(true); setSavedMovies([]);
       try {
           const res = await fetch(`/api/cinema?action=matches&householdId=${householdId}&memberId=${memberId}`);
+          if (!res.ok) throw new Error(`Erreur HTTP: ${res.status}`);
           const data = await res.json();
+          console.log(`[DEBUG] Matchs récupérés:`, data);
           setSavedMovies(data.matches || []);
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
-      }
+      } catch (e) { 
+          console.error("[DEBUG] Erreur fetchMatchesList:", e);
+          alert("Erreur de connexion à l'API Matchs ! Regarde la console (F12).");
+      } finally { setLoading(false); }
   };
 
   const saveMovie = async (movie: MovieBasic, listType: string, userRating?: number) => {
       try {
         const movieToSave = {
-          ...movie,
-          userRating: userRating ?? movie.userRating ?? null,
-          ratedAt: userRating ? new Date().toLocaleDateString('fr-FR') : movie.ratedAt ?? null,
+          ...movie, userRating: userRating ?? movie.userRating ?? null, ratedAt: userRating ? new Date().toLocaleDateString('fr-FR') : movie.ratedAt ?? null,
         };
-
         const res = await fetch('/api/cinema', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'save',
-            householdId,
-            memberId,
-            movie: movieToSave,
-            listType
-          })
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'save', householdId, memberId, movie: movieToSave, listType })
         });
         const data = await res.json();
-        if (data.isMatch && listType === 'wishlist') triggerMatchAnimation();
-      } catch (error) {
-        console.error(error);
-      }
+        if (data.isMatch && listType === 'wishlist') { setShowMatchAnimation(true); setTimeout(() => setShowMatchAnimation(false), 3500); }
+      } catch (error) { console.error(error); }
   };
 
-  const triggerMatchAnimation = () => { setShowMatchAnimation(true); setTimeout(() => setShowMatchAnimation(false), 3500); };
-
   const handleDeleteClick = (e: React.MouseEvent, movieTitle: string, movieId: number) => {
-      e.stopPropagation(); 
-      e.preventDefault();
-      setDeleteModal({ show: true, movieId: movieId, title: movieTitle });
+      e.stopPropagation(); e.preventDefault(); setDeleteModal({ show: true, movieId: movieId, title: movieTitle });
   };
 
   const confirmDelete = async () => {
-    if (deleteModal.movieId) {
-        await deleteMovie(deleteModal.movieId);
-        setDeleteModal({ show: false, movieId: null, title: '' }); 
-    }
+    if (deleteModal.movieId) { await deleteMovie(deleteModal.movieId); setDeleteModal({ show: false, movieId: null, title: '' }); }
   };
 
   const deleteMovie = async (movieId: number) => {
     const listType = activeTab === 'list-wishlist' ? 'wishlist' : 'history';
     const typeToSend = activeTab === 'list-matches' ? 'wishlist' : listType;
 
-    if (['list-wishlist', 'list-history', 'list-matches'].includes(activeTab)) {
-         setSavedMovies(prev => prev.filter(m => m.id !== movieId));
-    }
-
+    if (['list-wishlist', 'list-history', 'list-matches'].includes(activeTab)) setSavedMovies(prev => prev.filter(m => m.id !== movieId));
     try {
         await fetch('/api/cinema', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'delete',
-                householdId,
-                memberId,
-                movieId,
-                listType: typeToSend
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', householdId, memberId, movieId, listType: typeToSend })
         });
-    } catch (error) {
-        console.error('Erreur suppression', error);
-        fetchSavedList(listType);
-    }
+    } catch (error) { fetchSavedList(listType); }
   };
 
   const toggleWishlist = async () => {
     if (!movieDetails) return;
     if (isInWishlist) {
-        await deleteMovie(movieDetails.id);
-        setIsInWishlist(false);
-        setSavedMovies(prev => prev.filter(m => m.id !== movieDetails.id));
+        await deleteMovie(movieDetails.id); setIsInWishlist(false); setSavedMovies(prev => prev.filter(m => m.id !== movieDetails.id));
     } else {
-        await saveMovie(movieDetails, 'wishlist');
-        setIsInWishlist(true);
-        if (activeTab === 'list-wishlist') setSavedMovies(prev => [...prev, movieDetails]);
+        await saveMovie(movieDetails, 'wishlist'); setIsInWishlist(true); if (activeTab === 'list-wishlist') setSavedMovies(prev => [...prev, movieDetails]);
     }
   };
 
   const rateAndMoveToHistory = async () => {
       if (!movieDetails) return;
       await saveMovie(movieDetails, 'history', rating);
-      await fetch('/api/cinema', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'delete',
-            householdId,
-            memberId,
-            movieId: movieDetails.id,
-            listType: 'wishlist'
-          })
-      });
-      if (activeTab === 'list-history') fetchSavedList('history');
-      else setSavedMovies(prev => prev.filter(m => m.id !== movieDetails.id));
+      await fetch('/api/cinema', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', householdId, memberId, movieId: movieDetails.id, listType: 'wishlist' }) });
+      if (activeTab === 'list-history') fetchSavedList('history'); else setSavedMovies(prev => prev.filter(m => m.id !== movieDetails.id));
       closeModale();
   };
 
   const onSwipe = (direction: string, movie: MovieBasic) => {
-    if (direction === 'right') {
-      saveMovie(movie, 'wishlist');
-      setSavedMovies(prev => [...prev, movie]);
-    } 
+    if (direction === 'right') { saveMovie(movie, 'wishlist'); setSavedMovies(prev => [...prev, movie]); } 
     setTimeout(() => { setMovies((prev) => prev.filter(m => m.id !== movie.id)); }, 200);
   };
 
   const openMovieDetails = async (id: number) => {
-    setSelectedMovieId(id); 
-    setLoadingDetails(true);
-    const inList = activeTab === 'list-matches' || savedMovies.some(m => m.id === id);
-    setIsInWishlist(inList);
-    const existingMovie = savedMovies.find(m => m.id === id);
-    setRating(existingMovie?.userRating || 0);
+    setSelectedMovieId(id); setLoadingDetails(true);
+    setIsInWishlist(activeTab === 'list-matches' || savedMovies.some(m => m.id === id));
+    setRating(savedMovies.find(m => m.id === id)?.userRating || 0);
     try {
       const res = await fetch(`/api/cinema/details?id=${id}`);
-      const data = await res.json();
-      setMovieDetails(data);
-    } catch (error) { 
-      console.error(error); 
-    } finally { 
-      setLoadingDetails(false); 
-    }
+      setMovieDetails(await res.json());
+    } catch (error) { console.error(error); } finally { setLoadingDetails(false); }
   };
 
-  const closeModale = () => { 
-    setSelectedMovieId(null); 
-    setMovieDetails(null); 
-    setRating(0); 
-    setIsInWishlist(false); 
-  };
+  const closeModale = () => { setSelectedMovieId(null); setMovieDetails(null); setRating(0); setIsInWishlist(false); };
 
-  // --- RENDU ---
   return (
     <main className="h-[100dvh] bg-slate-900 text-white flex flex-col relative overflow-hidden">
       
@@ -494,19 +302,12 @@ export default function CinemaPage() {
             `}</style>
             <div className="relative w-48 h-48">
                 <div className="absolute top-2 left-8 w-32 h-12 bg-slate-200 rounded-md origin-bottom-left shadow-lg" style={{ animation: 'clap-top 3.5s ease-in-out forwards' }}>
-                    <div className="flex h-full">
-                        <div className="w-1/4 bg-slate-800 rounded-l-md"></div><div className="w-1/4 bg-slate-200"></div><div className="w-1/4 bg-slate-800"></div><div className="w-1/4 bg-slate-200 rounded-r-md"></div>
-                    </div>
+                    <div className="flex h-full"><div className="w-1/4 bg-slate-800 rounded-l-md"></div><div className="w-1/4 bg-slate-200"></div><div className="w-1/4 bg-slate-800"></div><div className="w-1/4 bg-slate-200 rounded-r-md"></div></div>
                 </div>
                 <div className="absolute top-14 left-8 w-32 h-20 bg-slate-900 rounded-md border-4 border-slate-200 shadow-lg"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-7xl" style={{ animation: 'explode 3.5s ease-out forwards' }}>🎆</div>
-                </div>
+                <div className="absolute inset-0 flex items-center justify-center"><div className="text-7xl" style={{ animation: 'explode 3.5s ease-out forwards' }}>🎆</div></div>
                 <div className="absolute inset-0 flex items-center justify-center pt-24" style={{ animation: 'text-pop 3.5s ease-out forwards' }}>
-                    <div className="text-center">
-                        <Heart size={32} className="mx-auto text-pink-500 fill-pink-500 mb-2" />
-                        <p className="font-black text-3xl text-white tracking-wider drop-shadow-[0_2px_8px_rgba(255,255,255,0.5)]">MATCH !</p>
-                    </div>
+                    <div className="text-center"><Heart size={32} className="mx-auto text-pink-500 fill-pink-500 mb-2" /><p className="font-black text-3xl text-white tracking-wider drop-shadow-[0_2px_8px_rgba(255,255,255,0.5)]">MATCH !</p></div>
                 </div>
             </div>
         </div>
@@ -549,179 +350,26 @@ export default function CinemaPage() {
           </div>
       )}
 
-      {showFilters && (
-          <div className="fixed inset-0 z-[950] bg-black/80 backdrop-blur-sm p-4 flex items-end" onClick={() => setShowFilters(false)}>
-              <div className="bg-slate-900 border border-slate-700 rounded-t-3xl w-full max-w-lg mx-auto p-5 animate-in slide-in-from-bottom-10 duration-300" onClick={e => e.stopPropagation()}>
-                  <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6"></div>
-                  <h2 className="font-bold text-xl mb-5">Filtres & Tri</h2>
-                  
-                  <div className="space-y-5">
-                      <div>
-                          <label className="text-sm font-bold text-slate-400 mb-2 block">Recherche</label>
-                          <div className="relative">
-                              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Titre d'un film..." className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-2 focus:ring-purple-500"/>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                          <div>
-                              <label className="text-sm font-bold text-slate-400 mb-2 block">Genre</label>
-                              <select value={filters.genre ?? ''} onChange={e => setFilters({...filters, genre: e.target.value ? Number(e.target.value) : null})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-yellow-500">
-                                  <option value="">Tous</option>
-                                  {GENRES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                              </select>
-                          </div>
-                          <div>
-                              <label className="text-sm font-bold text-slate-400 mb-2 block">Note min.</label>
-                              <select value={filters.minVote} onChange={e => setFilters({...filters, minVote: Number(e.target.value)})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-yellow-500">
-                                  {[0, 5, 6, 7, 8].map(v => <option key={v} value={v}>{v === 0 ? 'Aucune' : `${v}/10`}</option>)}
-                              </select>
-                          </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                          <div>
-                              <label className="text-sm font-bold text-slate-400 mb-2 block">Année min.</label>
-                              <input type="number" value={filters.minYear} onChange={e => setFilters({...filters, minYear: e.target.value})} placeholder="Ex: 1990" min="1900" max={currentYear} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-yellow-500"/>
-                          </div>
-                          <div>
-                              <label className="text-sm font-bold text-slate-400 mb-2 block">Année max.</label>
-                              <input type="number" value={filters.maxYear} onChange={e => setFilters({...filters, maxYear: e.target.value})} placeholder={`Ex: ${currentYear}`} min="1900" max={currentYear} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-yellow-500"/>
-                          </div>
-                      </div>
-
-                      {activeTab === 'catalogue' && (
-                          <div>
-                              <label className="text-sm font-bold text-slate-400 mb-2 block">Trier par</label>
-                              <div className="grid grid-cols-2 gap-3">
-                                  <button onClick={() => setSortOption('newest')} className={`p-3 rounded-xl border flex items-center justify-center gap-2 ${sortOption === 'newest' ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowDownWideNarrow size={16}/> Plus récents</button>
-                                  <button onClick={() => setSortOption('oldest')} className={`p-3 rounded-xl border flex items-center justify-center gap-2 ${sortOption === 'oldest' ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><ArrowUpNarrowWide size={16}/> Plus anciens</button>
-                                  <button onClick={() => setSortOption('rating')} className={`p-3 rounded-xl border flex items-center justify-center gap-2 ${sortOption === 'rating' ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><StarHalf size={16}/> Mieux notés</button>
-                                  <button onClick={() => setSortOption('popularity.desc')} className={`p-3 rounded-xl border flex items-center justify-center gap-2 ${sortOption === 'popularity.desc' ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}><Trophy size={16}/> Populaires</button>
-                              </div>
-                          </div>
-                      )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-8">
-                      <button onClick={resetFilters} className="w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-slate-300 transition">Réinitialiser</button>
-                      <button onClick={applyFilters} className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-900 rounded-xl font-black transition">Appliquer</button>
-                  </div>
-              </div>
-          </div>
-      )}
+      {/* COMPOSANT FILTRES */}
+      <FilterModal showFilters={showFilters} setShowFilters={setShowFilters} activeTab={activeTab} searchQuery={searchQuery} setSearchQuery={setSearchQuery} filters={filters} setFilters={setFilters} sortOption={sortOption} setSortOption={setSortOption} applyFilters={applyFilters} resetFilters={resetFilters} />
 
       <div className="flex-1 overflow-y-auto min-h-0 relative px-4 pt-4 pb-24">
         {activeTab === 'hub' && (
           <div className="animate-in fade-in duration-300">
             <div className="grid grid-cols-1 gap-4">
-              <button onClick={() => setActiveTab('list-wishlist')} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition">
-                <div className="w-14 h-14 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0"><Popcorn size={28} className="text-yellow-500"/></div>
-                <div className="text-left flex-1">
-                  <p className="font-bold text-lg">À voir</p>
-                  <p className="text-slate-400 text-sm">Ta watchlist personnelle</p>
-                </div>
-                <ChevronRight className="text-slate-600"/>
-              </button>
-
-              <button onClick={() => setActiveTab('list-history')} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition">
-                <div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0"><Eye size={28} className="text-green-500"/></div>
-                <div className="text-left flex-1">
-                  <p className="font-bold text-lg">Déjà vus</p>
-                  <p className="text-slate-400 text-sm">Ton historique noté</p>
-                </div>
-                <ChevronRight className="text-slate-600"/>
-              </button>
-
-              <button onClick={() => setActiveTab('list-matches')} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition">
-                <div className="w-14 h-14 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0"><Heart size={28} className="text-pink-500 fill-pink-500"/></div>
-                <div className="text-left flex-1">
-                  <p className="font-bold text-lg">Nos Matchs</p>
-                  <p className="text-slate-400 text-sm">Les films présents dans plusieurs wishlists</p>
-                </div>
-                <ChevronRight className="text-slate-600"/>
-              </button>
-
-              <button onClick={handleFileClick} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition">
-                <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0"><FileUp size={28} className="text-blue-500"/></div>
-                <div className="text-left flex-1">
-                  <p className="font-bold text-lg">Importer CSV</p>
-                  <p className="text-slate-400 text-sm">Watchlist / Diary / Ratings</p>
-                </div>
-                <ChevronRight className="text-slate-600"/>
-              </button>
+              <button onClick={() => setActiveTab('list-wishlist')} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0"><Popcorn size={28} className="text-yellow-500"/></div><div className="text-left flex-1"><p className="font-bold text-lg">À voir</p><p className="text-slate-400 text-sm">Ta watchlist personnelle</p></div><ChevronRight className="text-slate-600"/></button>
+              <button onClick={() => setActiveTab('list-history')} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-green-500/10 flex items-center justify-center shrink-0"><Eye size={28} className="text-green-500"/></div><div className="text-left flex-1"><p className="font-bold text-lg">Déjà vus</p><p className="text-slate-400 text-sm">Ton historique noté</p></div><ChevronRight className="text-slate-600"/></button>
+              <button onClick={() => setActiveTab('list-matches')} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0"><Heart size={28} className="text-pink-500 fill-pink-500"/></div><div className="text-left flex-1"><p className="font-bold text-lg">Nos Matchs</p><p className="text-slate-400 text-sm">Les films présents dans plusieurs wishlists</p></div><ChevronRight className="text-slate-600"/></button>
+              <button onClick={handleFileClick} className="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0"><FileUp size={28} className="text-blue-500"/></div><div className="text-left flex-1"><p className="font-bold text-lg">Importer CSV</p><p className="text-slate-400 text-sm">Watchlist / Diary / Ratings</p></div><ChevronRight className="text-slate-600"/></button>
             </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv"
-              multiple
-              className="hidden"
-              onChange={handleFileUpload}
-            />
+            <input ref={fileInputRef} type="file" accept=".csv" multiple className="hidden" onChange={handleFileUpload} />
           </div>
         )}
 
+        {/* COMPOSANT CINEMATCH CARDS */}
         {activeTab === 'cinematch' && (
           <div className="relative h-full animate-in fade-in duration-300">
-            {loading && movies.length === 0 ? (
-              <div className="h-full flex flex-col justify-center items-center text-slate-500">
-                <Loader2 size={40} className="animate-spin mb-4" />
-                <p>Chargement des cartes...</p>
-              </div>
-            ) : movies.length > 0 ? (
-              <div className="relative w-full h-full max-w-sm mx-auto">
-                {movies.map((movie, index) => (
-                  <TinderCard
-                    ref={(el) => { if (el) cardRefs.current[index] = el; }}
-                    key={movie.id}
-                    onSwipe={(dir) => onSwipe(dir, movie)}
-                    preventSwipe={['up']}
-                    className="absolute w-full"
-                  >
-                    <div className="relative h-[68vh] w-full rounded-[2rem] overflow-hidden shadow-2xl border-2 border-slate-700 bg-slate-800">
-                      {movie.poster_path ? (
-                        <img src={movie.poster_path} alt={movie.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-slate-800 flex items-center justify-center"><Popcorn size={64} className="text-slate-600"/></div>
-                      )}
-
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
-
-                      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-sm font-bold flex items-center gap-1.5 border border-white/10">
-                        <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                        <span>{movie.vote}</span>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <h2 className="text-3xl font-black mb-2 drop-shadow-lg line-clamp-2">{movie.title}</h2>
-                        <p className="text-slate-200 text-sm leading-relaxed line-clamp-3 mb-4 drop-shadow-md">{movie.overview || "Pas de résumé disponible."}</p>
-                        <div className="grid grid-cols-3 gap-3">
-                          <button onClick={(e) => { e.stopPropagation(); cardRefs.current[index]?.swipe('left'); }} className="bg-black/50 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center justify-center active:scale-95 transition">
-                            <X size={28} className="text-red-500" />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); openMovieDetails(movie.id); }} className="bg-black/50 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center justify-center active:scale-95 transition">
-                            <Info size={24} className="text-white" />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); cardRefs.current[index]?.swipe('right'); }} className="bg-black/50 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center justify-center active:scale-95 transition">
-                            <Heart size={24} className="text-green-400" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </TinderCard>
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex flex-col justify-center items-center text-center text-slate-500 px-8">
-                <EyeOff size={48} className="mb-4" />
-                <h2 className="font-bold text-xl text-slate-300 mb-2">Plus de films à te proposer</h2>
-                <p className="text-sm mb-6">Relance une recherche ou change les filtres.</p>
-                <button onClick={fetchDiscoverMovies} className="bg-yellow-500 text-slate-900 font-black px-6 py-3 rounded-xl">Recharger</button>
-              </div>
-            )}
+            <CineMatchCards movies={movies} setMovies={setMovies} loading={loading} onSwipe={onSwipe} openMovieDetails={openMovieDetails} fetchDiscoverMovies={fetchDiscoverMovies} />
           </div>
         )}
 
@@ -740,18 +388,8 @@ export default function CinemaPage() {
                 ))}
               </div>
             )}
-
-            {loading && (
-              <div className="flex justify-center py-6">
-                <Loader2 className="animate-spin text-slate-400" />
-              </div>
-            )}
-
-            {!loading && catalogueMovies.length > 0 && (
-              <button onClick={() => fetchCatalogueMovies(cataloguePage + 1)} className="w-full mt-6 py-4 rounded-2xl bg-slate-800 border border-slate-700 font-bold active:scale-[0.98] transition">
-                Charger plus
-              </button>
-            )}
+            {loading && <div className="flex justify-center py-6"><Loader2 className="animate-spin text-slate-400" /></div>}
+            {!loading && catalogueMovies.length > 0 && <button onClick={() => fetchCatalogueMovies(cataloguePage + 1)} className="w-full mt-6 py-4 rounded-2xl bg-slate-800 border border-slate-700 font-bold active:scale-[0.98] transition">Charger plus</button>}
           </div>
         )}
 
@@ -771,20 +409,11 @@ export default function CinemaPage() {
                         <div className="min-w-0">
                           <h3 className="font-black line-clamp-2">{movie.title}</h3>
                           <p className="text-xs text-slate-400 mt-1">Note TMDB : {movie.vote}/10</p>
-                          {movie.userRating !== undefined && movie.userRating !== null && (
-                            <p className="text-xs text-yellow-500 font-bold mt-1">Ma note : {movie.userRating}/5</p>
-                          )}
-                          {movie.ratedAt && (
-                            <p className="text-xs text-slate-500 mt-1">Le {movie.ratedAt}</p>
-                          )}
+                          {movie.userRating !== undefined && movie.userRating !== null && <p className="text-xs text-yellow-500 font-bold mt-1">Ma note : {movie.userRating}/5</p>}
+                          {movie.ratedAt && <p className="text-xs text-slate-500 mt-1">Le {movie.ratedAt}</p>}
                         </div>
                         {activeTab !== 'list-matches' && (
-                          <button
-                            onClick={(e) => handleDeleteClick(e, movie.title, movie.id)}
-                            className="shrink-0 p-2 rounded-full bg-slate-700 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition self-start"
-                          >
-                            <Trash2 size={16}/>
-                          </button>
+                          <button onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} className="shrink-0 p-2 rounded-full bg-slate-700 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition self-start"><Trash2 size={16}/></button>
                         )}
                       </div>
                       <p className="text-xs text-slate-400 mt-2 line-clamp-2">{movie.overview || "Pas de résumé disponible."}</p>
@@ -806,9 +435,7 @@ export default function CinemaPage() {
       {deleteModal.show && (
         <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDeleteModal({ show: false, movieId: null, title: '' })}>
           <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-sm text-center animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-              <Trash2 size={28} className="text-red-500"/>
-            </div>
+            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4"><Trash2 size={28} className="text-red-500"/></div>
             <h2 className="text-xl font-black mb-2">Supprimer ce film ?</h2>
             <p className="text-slate-400 text-sm mb-6">"{deleteModal.title}" sera retiré de la liste.</p>
             <div className="grid grid-cols-2 gap-3">
@@ -819,88 +446,9 @@ export default function CinemaPage() {
         </div>
       )}
 
+      {/* COMPOSANT MOVIE DETAILS MODAL */}
       {selectedMovieId && (
-        <div className="fixed inset-0 z-[1000] bg-black/95 backdrop-blur-md flex items-end justify-center" onClick={closeModale}>
-            <div className="bg-slate-950 w-full max-w-lg h-[92vh] rounded-t-[2rem] border-t border-x border-slate-800 overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 duration-300" onClick={e => e.stopPropagation()}>
-                {loadingDetails || !movieDetails ? (
-                    <div className="flex-1 flex flex-col items-center justify-center"><Loader2 className="animate-spin text-slate-500 mb-4"/><p className="text-slate-400">Chargement...</p></div>
-                ) : (
-                    <>
-                        <div className="relative h-[38vh] shrink-0">
-                            {movieDetails.backdrop_path ? (
-                              <img src={movieDetails.backdrop_path} alt={movieDetails.title} className="w-full h-full object-cover"/>
-                            ) : movieDetails.poster_path ? (
-                              <img src={movieDetails.poster_path} alt={movieDetails.title} className="w-full h-full object-cover"/>
-                            ) : (
-                              <div className="w-full h-full bg-slate-800"></div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent"/>
-                            <button onClick={closeModale} className="absolute top-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-full border border-white/10"><X size={20}/></button>
-                            <div className="absolute bottom-0 left-0 right-0 p-5">
-                                <h2 className="text-3xl font-black leading-tight mb-1">{movieDetails.title}</h2>
-                                <p className="text-slate-300 italic text-sm">{movieDetails.tagline}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-5 pb-32">
-                            <div className="flex gap-3 mb-6">
-                                <button onClick={toggleWishlist} className={`flex-1 py-3 rounded-xl font-black transition flex items-center justify-center gap-2 ${isInWishlist ? 'bg-pink-500/20 text-pink-400 border border-pink-500/40' : 'bg-green-500 text-slate-950'}`}>
-                                    <Heart size={18} className={isInWishlist ? 'fill-current' : ''}/>
-                                    {isInWishlist ? 'Dans À voir' : 'Ajouter'}
-                                </button>
-                                <button onClick={rateAndMoveToHistory} className="flex-1 py-3 rounded-xl font-black bg-blue-500 text-white transition flex items-center justify-center gap-2">
-                                    <Eye size={18}/>
-                                    J’ai vu
-                                </button>
-                            </div>
-
-                            <div className="mb-6">
-                                <p className="text-sm font-bold text-slate-400 mb-3">Ma note</p>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                        <button key={star} onClick={() => setRating(star)} className="active:scale-110 transition">
-                                            <Star size={28} className={star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-600'} />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 mb-6 text-xs font-bold">
-                                <div className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700 flex gap-1"><Calendar size={14} className="text-blue-500"/> {movieDetails.release_date}</div>
-                                <div className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700 flex gap-1"><StarHalf size={14} className="text-yellow-500"/> {movieDetails.vote}/10</div>
-                                <div className="bg-slate-800 px-3 py-1 rounded-full border border-slate-700 flex gap-1"><Clock size={14} className="text-yellow-500"/> {movieDetails.runtime}</div>
-                            </div>
-
-                            <div className="mb-6">
-                                <p className="text-slate-300 leading-relaxed text-sm text-justify">{movieDetails.overview}</p>
-                            </div>
-
-                            <div>
-                                <h3 className="text-slate-500 text-xs uppercase tracking-wider font-bold mb-3 flex items-center gap-2"><Users size={16}/> Distribution</h3>
-                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                                    <div className="flex flex-col items-center min-w-[80px]">
-                                        <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-yellow-500/50 flex items-center justify-center mb-2 overflow-hidden"><Clapperboard size={24} className="text-slate-500"/></div>
-                                        <span className="text-xs font-bold text-center">{movieDetails.director}</span>
-                                    </div>
-                                    {movieDetails.cast.map((actor, i) => (
-                                        <div key={i} className="flex flex-col items-center min-w-[80px]">
-                                            <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 mb-2 overflow-hidden relative">
-                                                {actor.profile_path ? <img src={actor.profile_path} alt={actor.name} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center bg-slate-700"><Users size={24} className="text-slate-500"/></div>}
-                                            </div>
-                                            <span className="text-xs font-bold text-center line-clamp-2">{actor.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-4 border-t border-slate-800 bg-slate-900 shrink-0 absolute bottom-0 w-full">
-                          <button onClick={closeModale} className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition">Fermer</button>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
+        <MovieDetailsModal movieDetails={movieDetails} loadingDetails={loadingDetails} closeModale={closeModale} isInWishlist={isInWishlist} toggleWishlist={toggleWishlist} rating={rating} setRating={setRating} rateAndMoveToHistory={rateAndMoveToHistory} />
       )}
 
       <nav className="p-2 pb-safe bg-slate-800 border-t border-slate-700 z-[900] shrink-0">
