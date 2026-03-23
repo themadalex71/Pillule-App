@@ -1,5 +1,5 @@
 import { redis } from "@/lib/redis";
-import { keys } from "@/lib/db/keys";
+import { keys } from "@/lib/keys";
 import type { CinemaListType, MovieListItem, CinemaMatch } from "@/types/cinema";
 
 export async function getCinemaList(
