@@ -511,13 +511,24 @@ export default function CuisinePage() {
           const pointerY = lastPointerYRef.current;
           if (pointerY !== null && isPointerActiveRef.current) {
               const viewportHeight = window.innerHeight;
-              const edgeThreshold = 120;
+              // Auto-scroll only in a very small zone near screen edges.
+              const edgeThreshold = 64;
+              // Small guard band to avoid accidental scroll starts.
+              const activationInset = 14;
               let scrollDelta = 0;
 
               if (pointerY < edgeThreshold) {
-                  scrollDelta = -Math.max(4, ((edgeThreshold - pointerY) / edgeThreshold) * 16);
+                  const proximity = edgeThreshold - pointerY;
+                  if (proximity > activationInset) {
+                      const ratio = (proximity - activationInset) / (edgeThreshold - activationInset);
+                      scrollDelta = -Math.max(2, ratio * 10);
+                  }
               } else if (pointerY > viewportHeight - edgeThreshold) {
-                  scrollDelta = Math.max(4, ((pointerY - (viewportHeight - edgeThreshold)) / edgeThreshold) * 16);
+                  const proximity = pointerY - (viewportHeight - edgeThreshold);
+                  if (proximity > activationInset) {
+                      const ratio = (proximity - activationInset) / (edgeThreshold - activationInset);
+                      scrollDelta = Math.max(2, ratio * 10);
+                  }
               }
 
               if (scrollDelta !== 0) {
