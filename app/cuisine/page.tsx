@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { DndContext, DragEndEvent, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { 
   ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, 
   X, UtensilsCrossed, Pencil, Check, Refrigerator, Sparkles, Plus, FolderPlus, 
@@ -70,7 +70,8 @@ function DraggableIngredientChip({
       </button>
       <button
         type="button"
-        className="p-0.5 rounded hover:bg-white/10 cursor-grab active:cursor-grabbing"
+        className="p-0.5 rounded hover:bg-white/10 cursor-grab active:cursor-grabbing touch-none"
+        style={{ touchAction: 'none' }}
         aria-label={`Deplacer ${label}`}
         {...listeners}
         {...attributes}
@@ -136,6 +137,7 @@ export default function CuisinePage() {
   const [openFridgeCategories, setOpenFridgeCategories] = useState<Record<string, boolean>>({});
   const [, setDraggedIngredientId] = useState<string | null>(null);
   const [dragOrigin, setDragOrigin] = useState<FridgeDropZone | null>(null);
+  const [isDraggingIngredient, setIsDraggingIngredient] = useState(false);
 
   // --- 1. CHARGEMENT DONNÉES ---
   useEffect(() => {
@@ -363,6 +365,7 @@ export default function CuisinePage() {
   const handleDragStart = (event: DragStartEvent) => {
       const id = String(event.active.id);
       if (!id.startsWith('ing:')) return;
+      setIsDraggingIngredient(true);
       setDraggedIngredientId(id);
       const payload = id.slice(4).split('::');
       setDragOrigin({
@@ -381,10 +384,35 @@ export default function CuisinePage() {
           if (!targetZone) return;
           moveIngredientBetweenZones(ingredient, dragOrigin, targetZone);
       } finally {
+          setIsDraggingIngredient(false);
           setDraggedIngredientId(null);
           setDragOrigin(null);
       }
   };
+
+  const handleDragCancel = (_event: DragCancelEvent) => {
+      setIsDraggingIngredient(false);
+      setDraggedIngredientId(null);
+      setDragOrigin(null);
+  };
+
+  useEffect(() => {
+      if (!isDraggingIngredient) return;
+      const prevOverflow = document.body.style.overflow;
+      const prevTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      return () => {
+          document.body.style.overflow = prevOverflow;
+          document.body.style.touchAction = prevTouchAction;
+      };
+  }, [isDraggingIngredient]);
+
+  const dragSensors = useSensors(
+      useSensor(PointerSensor, {
+          activationConstraint: { distance: 8 },
+      })
+  );
 
   // --- 3. LOGIQUE RÉSOLUTION & SAUVEGARDE INTELLIGENTE ---
   const updateCurrentRecipeIngredientName = (oldName: string, newName: string) => {
@@ -814,7 +842,12 @@ export default function CuisinePage() {
                     </div>
 
                     {loadingData ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-orange-500" /></div> : (
-                        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                        <DndContext
+                            sensors={dragSensors}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            onDragCancel={handleDragCancel}
+                        >
                             <div className="space-y-6 mb-24">
                                 {categories.map((category, idx) => {
                                     const totalItems = category.items.length + (category.subcategories || []).reduce((acc, sub) => acc + sub.items.length, 0);
