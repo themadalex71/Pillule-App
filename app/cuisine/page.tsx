@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, DragOverEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, DragOverEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { 
   ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, 
   X, UtensilsCrossed, Pencil, Check, Refrigerator, Sparkles, Plus, FolderPlus, 
@@ -158,10 +158,12 @@ export default function CuisinePage() {
   const [aliasToMove, setAliasToMove] = useState<string | null>(null); 
   const [moveSearchTerm, setMoveSearchTerm] = useState("");
   const [openFridgeCategories, setOpenFridgeCategories] = useState<Record<string, boolean>>({});
-  const [, setDraggedIngredientId] = useState<string | null>(null);
+  const [draggedIngredientId, setDraggedIngredientId] = useState<string | null>(null);
+  const [draggedIngredientLabel, setDraggedIngredientLabel] = useState<string | null>(null);
   const [dragOrigin, setDragOrigin] = useState<FridgeDropZone | null>(null);
   const [isDraggingIngredient, setIsDraggingIngredient] = useState(false);
   const lastPointerYRef = useRef<number | null>(null);
+  const isPointerActiveRef = useRef(false);
   const autoScrollRafRef = useRef<number | null>(null);
   const expandCategoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -392,6 +394,7 @@ export default function CuisinePage() {
       const id = String(event.active.id);
       if (!id.startsWith('ing:')) return;
       setIsDraggingIngredient(true);
+      isPointerActiveRef.current = true;
       setDraggedIngredientId(id);
       const evt = event.activatorEvent as PointerEvent | TouchEvent | MouseEvent | undefined;
       if (evt && 'clientY' in evt) {
@@ -400,6 +403,7 @@ export default function CuisinePage() {
           lastPointerYRef.current = evt.touches[0].clientY;
       }
       const payload = id.slice(4).split('::');
+      setDraggedIngredientLabel(payload[0] || null);
       setDragOrigin({
           categoryName: payload[1],
           subcategoryName: payload[2] || undefined,
@@ -450,7 +454,9 @@ export default function CuisinePage() {
       } finally {
           clearExpandCategoryTimer();
           setIsDraggingIngredient(false);
+          isPointerActiveRef.current = false;
           setDraggedIngredientId(null);
+          setDraggedIngredientLabel(null);
           setDragOrigin(null);
           lastPointerYRef.current = null;
       }
@@ -459,7 +465,9 @@ export default function CuisinePage() {
   const handleDragCancel = (_event: DragCancelEvent) => {
       clearExpandCategoryTimer();
       setIsDraggingIngredient(false);
+      isPointerActiveRef.current = false;
       setDraggedIngredientId(null);
+      setDraggedIngredientLabel(null);
       setDragOrigin(null);
       lastPointerYRef.current = null;
   };
@@ -485,16 +493,23 @@ export default function CuisinePage() {
       const updatePointer = (event: PointerEvent | TouchEvent) => {
           if ('touches' in event && event.touches.length > 0) {
               lastPointerYRef.current = event.touches[0].clientY;
+              isPointerActiveRef.current = true;
               return;
           }
           if ('clientY' in event) {
               lastPointerYRef.current = event.clientY;
+              isPointerActiveRef.current = true;
           }
+      };
+
+      const stopPointer = () => {
+          isPointerActiveRef.current = false;
+          lastPointerYRef.current = null;
       };
 
       const scrollLoop = () => {
           const pointerY = lastPointerYRef.current;
-          if (pointerY !== null) {
+          if (pointerY !== null && isPointerActiveRef.current) {
               const viewportHeight = window.innerHeight;
               const edgeThreshold = 120;
               let scrollDelta = 0;
@@ -506,7 +521,17 @@ export default function CuisinePage() {
               }
 
               if (scrollDelta !== 0) {
-                  window.scrollBy({ top: scrollDelta });
+                  const scrollingEl = document.scrollingElement;
+                  if (scrollingEl) {
+                      const atTop = scrollingEl.scrollTop <= 0;
+                      const atBottom = scrollingEl.scrollTop + window.innerHeight >= scrollingEl.scrollHeight - 1;
+                      if ((scrollDelta < 0 && atTop) || (scrollDelta > 0 && atBottom)) {
+                          scrollDelta = 0;
+                      }
+                  }
+                  if (scrollDelta !== 0) {
+                      window.scrollBy({ top: scrollDelta });
+                  }
               }
           }
           autoScrollRafRef.current = requestAnimationFrame(scrollLoop);
@@ -514,11 +539,17 @@ export default function CuisinePage() {
 
       window.addEventListener('pointermove', updatePointer, { passive: true });
       window.addEventListener('touchmove', updatePointer, { passive: true });
+      window.addEventListener('pointerup', stopPointer, { passive: true });
+      window.addEventListener('touchend', stopPointer, { passive: true });
+      window.addEventListener('touchcancel', stopPointer, { passive: true });
       autoScrollRafRef.current = requestAnimationFrame(scrollLoop);
 
       return () => {
           window.removeEventListener('pointermove', updatePointer);
           window.removeEventListener('touchmove', updatePointer);
+          window.removeEventListener('pointerup', stopPointer);
+          window.removeEventListener('touchend', stopPointer);
+          window.removeEventListener('touchcancel', stopPointer);
           if (autoScrollRafRef.current) {
               cancelAnimationFrame(autoScrollRafRef.current);
               autoScrollRafRef.current = null;
@@ -1113,6 +1144,14 @@ export default function CuisinePage() {
                                     );
                                 })}
                             </div>
+                            <DragOverlay zIndex={9999}>
+                                {draggedIngredientId && draggedIngredientLabel ? (
+                                    <div className="px-3 py-1.5 rounded-full text-sm font-medium border bg-blue-600 text-white border-blue-600 shadow-2xl flex items-center gap-1 pointer-events-none">
+                                        <GripVertical size={12} />
+                                        {draggedIngredientLabel}
+                                    </div>
+                                ) : null}
+                            </DragOverlay>
                         </DndContext>
                     )}
                     {!isDeleteMode && !isEditMode && (
