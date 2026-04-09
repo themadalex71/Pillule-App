@@ -927,7 +927,7 @@ export default function CinemaPage() {
       {/* COMPOSANT FILTRES */}
       <FilterModal showFilters={showFilters} setShowFilters={setShowFilters} activeTab={activeTab} searchQuery={searchQuery} setSearchQuery={setSearchQuery} filters={filters} setFilters={setFilters} sortOption={sortOption} setSortOption={setSortOption} applyFilters={applyFilters} resetFilters={resetFilters} />
 
-      <div className="flex-1 overflow-y-auto min-h-0 relative px-4 pt-4 pb-24">
+      <div className={`flex-1 min-h-0 relative px-4 pt-4 pb-24 ${activeTab === 'cinematch' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {activeTab === 'hub' && (
           <div className="animate-in fade-in duration-300">
             <div className="grid grid-cols-1 gap-4">
@@ -962,7 +962,7 @@ export default function CinemaPage() {
         {/* COMPOSANT CINEMATCH CARDS */}
         {activeTab === 'cinematch' && (
           <div className="relative h-full animate-in fade-in duration-300">
-            <CineMatchCards movies={movies} setMovies={setMovies} loading={loading} onSwipe={onSwipe} openMovieDetails={openMovieDetails} fetchDiscoverMovies={fetchDiscoverMovies} emptySubtitle={discoverEmptyMessage || 'Relance une recherche ou change les filtres.'} />
+            <CineMatchCards movies={movies} loading={loading} onSwipe={onSwipe} openMovieDetails={openMovieDetails} fetchDiscoverMovies={fetchDiscoverMovies} emptySubtitle={discoverEmptyMessage || 'Relance une recherche ou change les filtres.'} />
           </div>
         )}
 
