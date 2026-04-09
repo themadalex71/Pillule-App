@@ -2,16 +2,84 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { DndContext, DragEndEvent, DragStartEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { 
   ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, 
   X, UtensilsCrossed, Pencil, Check, Refrigerator, Sparkles, Plus, FolderPlus, 
-  Tag, Trash2, Link as LinkIcon, HelpCircle, Instagram, Edit3 
+  Tag, Trash2, Link as LinkIcon, HelpCircle, Instagram, Edit3, ChevronDown, GripVertical
 } from 'lucide-react';
 
 // --- IMPORTS DES TYPES ET COMPOSANTS EXTRAITS ---
 import { Recipe, IngredientItem, Category, INITIAL_CATEGORIES } from '@/features/cuisine/types';
 import RecipeModal from '@/features/cuisine/components/RecipeModal';
 import VariantModal from '@/features/cuisine/components/VariantModal';
+
+type FridgeDropZone = {
+  categoryName: string;
+  subcategoryName?: string;
+};
+
+function FridgeDropZoneBlock({
+  id,
+  children,
+  active,
+}: {
+  id: string;
+  children: React.ReactNode;
+  active: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition rounded-xl ${isOver && active ? 'ring-2 ring-orange-500/50 bg-slate-800/40' : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DraggableIngredientChip({
+  id,
+  label,
+  className,
+  onClick,
+}: {
+  id: string;
+  label: string;
+  className: string;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className} ${isDragging ? 'opacity-60' : ''}`}
+      style={style}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-1"
+      >
+        <span>{label}</span>
+      </button>
+      <button
+        type="button"
+        className="p-0.5 rounded hover:bg-white/10 cursor-grab active:cursor-grabbing"
+        aria-label={`Deplacer ${label}`}
+        {...listeners}
+        {...attributes}
+      >
+        <GripVertical size={12} />
+      </button>
+    </div>
+  );
+}
 
 export default function CuisinePage() {
   // --- ETATS PRINCIPAUX ---
@@ -64,7 +132,10 @@ export default function CuisinePage() {
   const [editingMasterIngredient, setEditingMasterIngredient] = useState<string | null>(null); 
   const [newAliasInput, setNewAliasInput] = useState(""); 
   const [aliasToMove, setAliasToMove] = useState<string | null>(null); 
-  const [moveSearchTerm, setMoveSearchTerm] = useState("");    
+  const [moveSearchTerm, setMoveSearchTerm] = useState("");
+  const [openFridgeCategories, setOpenFridgeCategories] = useState<Record<string, boolean>>({});
+  const [, setDraggedIngredientId] = useState<string | null>(null);
+  const [dragOrigin, setDragOrigin] = useState<FridgeDropZone | null>(null);
 
   // --- 1. CHARGEMENT DONNÉES ---
   useEffect(() => {
@@ -77,6 +148,17 @@ export default function CuisinePage() {
           setCleanNameInput(currentUnknown.name); 
       }
   }, [currentUnknown]);
+
+  useEffect(() => {
+      setOpenFridgeCategories((prev) => {
+          if (categories.length === 0) return {};
+          const next: Record<string, boolean> = {};
+          categories.forEach((cat, index) => {
+              next[cat.name] = prev[cat.name] ?? index === 0;
+          });
+          return next;
+      });
+  }, [categories]);
 
   const fetchRecipes = async () => {
       setLoadingRecipes(true);
@@ -173,7 +255,11 @@ export default function CuisinePage() {
       if(!window.confirm(`Veux-tu vraiment supprimer "${ingToDelete}" de la liste ?`)) return;
       const newCategories = categories.map(cat => ({
           ...cat,
-          items: cat.items.filter(item => item !== ingToDelete)
+          items: cat.items.filter(item => item !== ingToDelete),
+          subcategories: (cat.subcategories || []).map((sub) => ({
+              ...sub,
+              items: sub.items.filter((item) => item !== ingToDelete),
+          })),
       }));
       saveCategoriesToDb(newCategories);
       setSelectedIngredients(prev => prev.filter(i => i !== ingToDelete));
@@ -183,7 +269,10 @@ export default function CuisinePage() {
       const ing = newIngredientInput.trim();
       if (!ing) return;
       let exists = false;
-      categories.forEach(cat => { if (cat.items.some(i => i.toLowerCase() === ing.toLowerCase())) exists = true; });
+      categories.forEach(cat => {
+          if (cat.items.some(i => i.toLowerCase() === ing.toLowerCase())) exists = true;
+          if ((cat.subcategories || []).some((sub) => sub.items.some((i) => i.toLowerCase() === ing.toLowerCase()))) exists = true;
+      });
       if (exists) {
           if (!selectedIngredients.includes(ing)) setSelectedIngredients(prev => [...prev, ing]);
           setNewIngredientInput("");
@@ -198,6 +287,103 @@ export default function CuisinePage() {
       setSelectedIngredients([]);
       setFridgeResults([]);
       setHasSearchedFridge(false);
+  };
+
+  const toggleFridgeCategory = (categoryName: string) => {
+      setOpenFridgeCategories((prev) => ({
+          ...prev,
+          [categoryName]: !prev[categoryName],
+      }));
+  };
+
+  const createSubcategory = (categoryName: string) => {
+      const newName = window.prompt(`Nom de la sous-categorie pour "${categoryName}" ?`);
+      if (!newName?.trim()) return;
+      const subName = newName.trim();
+      const newCategories = categories.map((cat) => {
+          if (cat.name !== categoryName) return cat;
+          const existing = cat.subcategories || [];
+          if (existing.some((sub) => sub.name.toLowerCase() === subName.toLowerCase())) {
+              alert('Cette sous-categorie existe deja.');
+              return cat;
+          }
+          return { ...cat, subcategories: [...existing, { name: subName, items: [] }] };
+      });
+      saveCategoriesToDb(newCategories);
+  };
+
+  const removeIngredientFromAllZones = (ingredient: string, source: FridgeDropZone) => {
+      return categories.map((cat) => {
+          if (cat.name !== source.categoryName) return cat;
+          if (source.subcategoryName) {
+              return {
+                  ...cat,
+                  subcategories: (cat.subcategories || []).map((sub) =>
+                      sub.name === source.subcategoryName
+                          ? { ...sub, items: sub.items.filter((item) => item !== ingredient) }
+                          : sub
+                  ),
+              };
+          }
+          return { ...cat, items: cat.items.filter((item) => item !== ingredient) };
+      });
+  };
+
+  const moveIngredientBetweenZones = (ingredient: string, from: FridgeDropZone, to: FridgeDropZone) => {
+      if (from.categoryName === to.categoryName && from.subcategoryName === to.subcategoryName) return;
+
+      let updated = removeIngredientFromAllZones(ingredient, from);
+      updated = updated.map((cat) => {
+          if (cat.name !== to.categoryName) return cat;
+          if (to.subcategoryName) {
+              return {
+                  ...cat,
+                  subcategories: (cat.subcategories || []).map((sub) =>
+                      sub.name === to.subcategoryName && !sub.items.includes(ingredient)
+                          ? { ...sub, items: [...sub.items, ingredient] }
+                          : sub
+                  ),
+              };
+          }
+          if (cat.items.includes(ingredient)) return cat;
+          return { ...cat, items: [...cat.items, ingredient] };
+      });
+
+      saveCategoriesToDb(updated);
+  };
+
+  const parseZoneId = (zoneId: string): FridgeDropZone | null => {
+      if (!zoneId.startsWith('zone:')) return null;
+      const content = zoneId.slice(5);
+      const [categoryName, subcategoryName] = content.split('::');
+      if (!categoryName) return null;
+      return { categoryName, subcategoryName: subcategoryName || undefined };
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+      const id = String(event.active.id);
+      if (!id.startsWith('ing:')) return;
+      setDraggedIngredientId(id);
+      const payload = id.slice(4).split('::');
+      setDragOrigin({
+          categoryName: payload[1],
+          subcategoryName: payload[2] || undefined,
+      });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+      try {
+          const activeId = String(event.active.id);
+          const overId = event.over ? String(event.over.id) : null;
+          if (!activeId.startsWith('ing:') || !overId || !dragOrigin) return;
+          const ingredient = activeId.slice(4).split('::')[0];
+          const targetZone = parseZoneId(overId);
+          if (!targetZone) return;
+          moveIngredientBetweenZones(ingredient, dragOrigin, targetZone);
+      } finally {
+          setDraggedIngredientId(null);
+          setDragOrigin(null);
+      }
   };
 
   // --- 3. LOGIQUE RÉSOLUTION & SAUVEGARDE INTELLIGENTE ---
@@ -323,7 +509,12 @@ export default function CuisinePage() {
               if (!ingredientName) return;
               const lowerName = ingredientName.toLowerCase();
               let found = false;
-              categories.forEach(cat => { if (cat.items.some(item => lowerName.includes(item.toLowerCase()))) found = true; });
+              categories.forEach(cat => {
+                  if (cat.items.some(item => lowerName.includes(item.toLowerCase()))) found = true;
+                  (cat.subcategories || []).forEach((sub) => {
+                      if (sub.items.some((item) => lowerName.includes(item.toLowerCase()))) found = true;
+                  });
+              });
               if (!found) {
                   Object.entries(aliases).forEach(([key, values]) => {
                       if (lowerName.includes(key.toLowerCase())) found = true;
@@ -531,7 +722,11 @@ export default function CuisinePage() {
       const finalName = newName.trim();
       const newCategories = categories.map(cat => ({
           ...cat,
-          items: cat.items.map(item => item === oldName ? finalName : item)
+          items: cat.items.map(item => item === oldName ? finalName : item),
+          subcategories: (cat.subcategories || []).map((sub) => ({
+              ...sub,
+              items: sub.items.map((item) => (item === oldName ? finalName : item)),
+          })),
       }));
       const newAliases = { ...aliases };
       if (newAliases[oldName]) {
@@ -619,52 +814,153 @@ export default function CuisinePage() {
                     </div>
 
                     {loadingData ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-orange-500" /></div> : (
-                        <div className="space-y-6 mb-24">
-                            {categories.map((category, idx) => (
-                                <div key={idx}>
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 ml-1 flex items-center gap-2">
-                                    {category.name.startsWith("✨") ? <Sparkles size={14}/> : <Tag size={14}/>} 
-                                    {category.name}
-                                    {isEditMode && (
-                                        <button onClick={() => renameCategory(category.name)} className="p-1 hover:bg-blue-500/20 text-blue-500 rounded transition" title="Renommer la catégorie" >
-                                            <Pencil size={12}/>
-                                        </button>
-                                    )}
-                                </h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {category.items
-                                            .slice()
-                                            .sort((a, b) => a.localeCompare(b))
-                                            .map(ing => (
-                                            <button 
-                                                key={ing} 
-                                                onClick={() => {
-                                                    if (isDeleteMode) deleteIngredient(ing);
-                                                    else if (isEditMode) openVariantModal(ing);
-                                                    else toggleIngredient(ing);
-                                                }}
-                                                className={`
-                                                    px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1
-                                                    ${isDeleteMode 
-                                                        ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
-                                                        : isEditMode
-                                                            ? 'bg-slate-900 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 animate-pulse'
-                                                            : selectedIngredients.includes(ing) 
-                                                                ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
-                                                                : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
-                                                    }
-                                                `}
+                        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                            <div className="space-y-6 mb-24">
+                                {categories.map((category, idx) => {
+                                    const totalItems = category.items.length + (category.subcategories || []).reduce((acc, sub) => acc + sub.items.length, 0);
+                                    return (
+                                        <div key={idx} className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+                                            <button
+                                                onClick={() => toggleFridgeCategory(category.name)}
+                                                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-slate-800/60 transition"
                                             >
-                                                {isDeleteMode && <X size={12}/>} 
-                                                {isEditMode && <LinkIcon size={12}/>} 
-                                                {ing}
-                                                {!isDeleteMode && !isEditMode && aliases[ing]?.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>}
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Tag size={14}/>
+                                                    <span className="text-sm font-bold text-slate-300 uppercase tracking-wider truncate">{category.name}</span>
+                                                    <span className="text-[11px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">{totalItems}</span>
+                                                    {isEditMode && (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    renameCategory(category.name);
+                                                                }}
+                                                                className="p-1 hover:bg-blue-500/20 text-blue-500 rounded transition"
+                                                                title="Renommer la categorie"
+                                                            >
+                                                                <Pencil size={12}/>
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    createSubcategory(category.name);
+                                                                }}
+                                                                className="p-1 hover:bg-purple-500/20 text-purple-400 rounded transition"
+                                                                title="Ajouter une sous-categorie"
+                                                            >
+                                                                <FolderPlus size={12}/>
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                                <ChevronDown
+                                                    size={18}
+                                                    className={`text-slate-500 transition-transform ${openFridgeCategories[category.name] ? 'rotate-180' : ''}`}
+                                                />
                                             </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                            {openFridgeCategories[category.name] && (
+                                                <div className="px-4 pb-4 pt-1 border-t border-slate-800 space-y-3">
+                                                    <FridgeDropZoneBlock id={`zone:${category.name}`} active={isEditMode && !isDeleteMode}>
+                                                        <div className="flex flex-wrap gap-2 p-2">
+                                                            {category.items
+                                                                .slice()
+                                                                .sort((a, b) => a.localeCompare(b))
+                                                                .map((ing) => {
+                                                                    const chipClass = `
+                                                                        px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1
+                                                                        ${isDeleteMode 
+                                                                            ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
+                                                                            : isEditMode
+                                                                                ? 'bg-slate-900 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600'
+                                                                                : selectedIngredients.includes(ing) 
+                                                                                    ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
+                                                                                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
+                                                                        }
+                                                                    `;
+                                                                    const onChipClick = () => {
+                                                                        if (isDeleteMode) deleteIngredient(ing);
+                                                                        else if (isEditMode) openVariantModal(ing);
+                                                                        else toggleIngredient(ing);
+                                                                    };
+                                                                    if (isEditMode && !isDeleteMode) {
+                                                                        return (
+                                                                            <DraggableIngredientChip
+                                                                                key={ing}
+                                                                                id={`ing:${ing}::${category.name}`}
+                                                                                label={ing}
+                                                                                className={chipClass}
+                                                                                onClick={onChipClick}
+                                                                            />
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <button key={ing} onClick={onChipClick} className={chipClass}>
+                                                                            {isDeleteMode && <X size={12}/>}
+                                                                            {isEditMode && <LinkIcon size={12}/>}
+                                                                            {ing}
+                                                                            {!isDeleteMode && !isEditMode && aliases[ing]?.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                        </div>
+                                                    </FridgeDropZoneBlock>
+
+                                                    {(category.subcategories || []).map((sub) => (
+                                                        <FridgeDropZoneBlock key={sub.name} id={`zone:${category.name}::${sub.name}`} active={isEditMode && !isDeleteMode}>
+                                                            <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-3">
+                                                                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 mb-2">{sub.name}</p>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {sub.items
+                                                                        .slice()
+                                                                        .sort((a, b) => a.localeCompare(b))
+                                                                        .map((ing) => {
+                                                                            const chipClass = `
+                                                                                px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1
+                                                                                ${isDeleteMode 
+                                                                                    ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
+                                                                                    : isEditMode
+                                                                                        ? 'bg-slate-900 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600'
+                                                                                        : selectedIngredients.includes(ing) 
+                                                                                            ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
+                                                                                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
+                                                                                }
+                                                                            `;
+                                                                            const onChipClick = () => {
+                                                                                if (isDeleteMode) deleteIngredient(ing);
+                                                                                else if (isEditMode) openVariantModal(ing);
+                                                                                else toggleIngredient(ing);
+                                                                            };
+                                                                            if (isEditMode && !isDeleteMode) {
+                                                                                return (
+                                                                                    <DraggableIngredientChip
+                                                                                        key={ing}
+                                                                                        id={`ing:${ing}::${category.name}::${sub.name}`}
+                                                                                        label={ing}
+                                                                                        className={chipClass}
+                                                                                        onClick={onChipClick}
+                                                                                    />
+                                                                                );
+                                                                            }
+                                                                            return (
+                                                                                <button key={ing} onClick={onChipClick} className={chipClass}>
+                                                                                    {isDeleteMode && <X size={12}/>}
+                                                                                    {isEditMode && <LinkIcon size={12}/>}
+                                                                                    {ing}
+                                                                                    {!isDeleteMode && !isEditMode && aliases[ing]?.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                </div>
+                                                            </div>
+                                                        </FridgeDropZoneBlock>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </DndContext>
                     )}
                     {!isDeleteMode && !isEditMode && (
                         <div className="fixed bottom-20 left-0 w-full px-4 flex justify-center bg-gradient-to-t from-slate-900 via-slate-900/90 to-transparent pb-4 pt-10 pointer-events-none">
@@ -830,7 +1126,11 @@ export default function CuisinePage() {
                                 <p className="text-sm text-slate-400">C&apos;est une variante de quoi ?</p>
                                 <button onClick={() => { setIsCreatingMaster(true); setNewMasterName(""); }} className="w-full text-left p-3 rounded-xl border-2 border-dashed border-slate-600 text-orange-400 hover:border-orange-500 hover:text-orange-500 transition flex items-center gap-2 mb-2 font-bold"><Plus size={18} /> Créer un nouveau groupe (ex: Épices)</button>
                                 <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2 border-t border-slate-800 pt-2">
-                                   {categories.flatMap(c => c.items).sort().map(ing => (
+                                   {categories
+                                      .flatMap(c => [c.items, ...(c.subcategories || []).map((sub) => sub.items)])
+                                      .flat()
+                                      .sort()
+                                      .map(ing => (
                                        <button key={ing} onClick={() => linkAsAlias(ing)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition font-medium">{ing}</button>
                                    ))}
                                 </div>

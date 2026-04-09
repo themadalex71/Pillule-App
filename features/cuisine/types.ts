@@ -20,6 +20,10 @@ export interface Recipe {
 export interface Category {
     name: string;
     items: string[];
+    subcategories?: {
+        name: string;
+        items: string[];
+    }[];
 }
 
 export const INITIAL_CATEGORIES: Category[] = [
