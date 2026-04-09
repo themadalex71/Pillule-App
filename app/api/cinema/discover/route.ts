@@ -12,6 +12,7 @@ type TmdbDiscoverMovie = {
 
 type TmdbDiscoverResponse = {
   results?: TmdbDiscoverMovie[];
+  total_pages?: number;
 };
 
 export async function GET(request: Request) {
@@ -50,22 +51,20 @@ export async function GET(request: Request) {
         url += `&primary_release_year=${minYear}`;
       }
     } else {
-      url =
+      const discoverBase =
         `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}` +
         `&language=fr-FR` +
-        `&include_adult=false`;
-
-      if (genre) url += `&with_genres=${genre}`;
-      if (minYear) url += `&primary_release_date.gte=${minYear}-01-01`;
-      if (minVote) url += `&vote_average.gte=${minVote}`;
-
-      url += `&vote_count.gte=50`;
+        `&include_adult=false` +
+        `${genre ? `&with_genres=${genre}` : ""}` +
+        `${minYear ? `&primary_release_date.gte=${minYear}-01-01` : ""}` +
+        `${minVote ? `&vote_average.gte=${minVote}` : ""}` +
+        `&vote_count.gte=50` +
+        `${maxYear ? `&primary_release_date.lte=${maxYear}-12-31` : ""}`;
 
       if (mode === "catalogue") {
         const dateLimit = maxYear ? `${maxYear}-12-31` : today;
 
-        url += `&primary_release_date.lte=${dateLimit}`;
-        url += `&page=${page}`;
+        url = `${discoverBase}&primary_release_date.lte=${dateLimit}&page=${page}`;
 
         if (sortBy === "newest") url += `&sort_by=primary_release_date.desc`;
         else if (sortBy === "oldest")
@@ -73,14 +72,59 @@ export async function GET(request: Request) {
         else if (sortBy === "rating") url += `&sort_by=vote_average.desc`;
         else url += `&sort_by=popularity.desc`;
       } else {
-        const randomPage = Math.floor(Math.random() * 20) + 1;
+        // CineMatch: avoid empty random pages by probing page 1 then sampling valid pages.
+        const firstRes = await fetch(
+          `${discoverBase}&page=1&sort_by=popularity.desc`,
+          { cache: "no-store" }
+        );
 
-        url += `&page=${randomPage}`;
-        url += `&sort_by=popularity.desc`;
-
-        if (maxYear) {
-          url += `&primary_release_date.lte=${maxYear}-12-31`;
+        if (!firstRes.ok) {
+          return NextResponse.json(
+            { error: "Impossible de recuperer les films TMDB." },
+            { status: firstRes.status }
+          );
         }
+
+        const firstData = (await firstRes.json()) as TmdbDiscoverResponse;
+        const totalPages = Math.max(1, Math.min(firstData.total_pages || 1, 500));
+        const collected = [...(firstData.results || [])];
+        const testedPages = new Set<number>([1]);
+
+        const tries = Math.min(6, totalPages);
+        for (let i = 0; i < tries && collected.length < 30; i += 1) {
+          const randomPage = Math.floor(Math.random() * totalPages) + 1;
+          if (testedPages.has(randomPage)) continue;
+          testedPages.add(randomPage);
+
+          const sampleRes = await fetch(
+            `${discoverBase}&page=${randomPage}&sort_by=popularity.desc`,
+            { cache: "no-store" }
+          );
+
+          if (!sampleRes.ok) continue;
+          const sampleData = (await sampleRes.json()) as TmdbDiscoverResponse;
+          if (Array.isArray(sampleData.results) && sampleData.results.length > 0) {
+            collected.push(...sampleData.results);
+          }
+        }
+
+        const deduped = Array.from(
+          new Map(collected.map((movie) => [movie.id, movie])).values()
+        );
+
+        const formattedMovies = deduped.map((movie) => ({
+          id: movie.id,
+          title: movie.title,
+          poster_path: movie.poster_path
+            ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+            : null,
+          overview: movie.overview,
+          vote: movie.vote_average.toFixed(1),
+        }));
+
+        return NextResponse.json(
+          [...formattedMovies].sort(() => 0.5 - Math.random()).slice(0, 24)
+        );
       }
     }
 

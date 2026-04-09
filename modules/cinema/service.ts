@@ -236,7 +236,7 @@ export async function importMovieToCinemaList(params: {
     watchedDate,
   });
 
-  const existingIndex = currentList.findIndex((m) => m.id === movie.id);
+  const existingIndex = currentList.findIndex((m) => m.id === normalizedMovie.id);
 
   if (existingIndex !== -1) {
     const existingMovie = currentList[existingIndex];

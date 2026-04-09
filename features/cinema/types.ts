@@ -8,6 +8,8 @@ export interface MovieBasic {
     userRating?: number | null;
     ratedAt?: string | null;
     addedByMemberId?: string;
+    matchedMemberIds?: string[];
+    matchedCount?: number;
   }
   
   export interface Actor {

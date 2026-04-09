@@ -1,4 +1,5 @@
 import type { CinemaListType, MovieListItem, CinemaMatch } from "./types";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 
 type CinemaListResponse = {
   success: boolean;
@@ -37,19 +38,23 @@ function buildCinemaQuery(
 }
 
 export async function fetchCinemaList(params: {
-  householdId: string;
-  memberId: string;
   listType: CinemaListType;
 }): Promise<MovieListItem[]> {
   const query = buildCinemaQuery({
     action: "list",
-    householdId: params.householdId,
-    memberId: params.memberId,
     listType: params.listType,
   });
 
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Utilisateur non connecte.");
+  }
+
   const res = await fetch(`/api/cinema?${query}`, {
     cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   const data = (await res.json()) as CinemaListResponse;
@@ -62,17 +67,23 @@ export async function fetchCinemaList(params: {
 }
 
 export async function fetchCinemaMatches(params: {
-  householdId: string;
-  memberId: string;
+  householdId?: string;
+  memberId?: string;
 }): Promise<CinemaMatch[]> {
   const query = buildCinemaQuery({
     action: "matches",
-    householdId: params.householdId,
-    memberId: params.memberId,
   });
+
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Utilisateur non connecte.");
+  }
 
   const res = await fetch(`/api/cinema?${query}`, {
     cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   const data = (await res.json()) as CinemaMatchesResponse;
@@ -85,20 +96,22 @@ export async function fetchCinemaMatches(params: {
 }
 
 export async function saveCinemaMovie(params: {
-  householdId: string;
-  memberId: string;
   listType: CinemaListType;
   movie: MovieListItem;
 }): Promise<{ list: MovieListItem[]; isMatch: boolean }> {
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Utilisateur non connecte.");
+  }
+
   const res = await fetch("/api/cinema", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       action: "save",
-      householdId: params.householdId,
-      memberId: params.memberId,
       listType: params.listType,
       movie: params.movie,
     }),
@@ -117,20 +130,22 @@ export async function saveCinemaMovie(params: {
 }
 
 export async function deleteCinemaMovie(params: {
-  householdId: string;
-  memberId: string;
   listType: CinemaListType;
   movieId: number;
 }): Promise<MovieListItem[]> {
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Utilisateur non connecte.");
+  }
+
   const res = await fetch("/api/cinema", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       action: "delete",
-      householdId: params.householdId,
-      memberId: params.memberId,
       listType: params.listType,
       movieId: params.movieId,
     }),
@@ -146,23 +161,25 @@ export async function deleteCinemaMovie(params: {
 }
 
 export async function importCinemaMovie(params: {
-  householdId: string;
-  memberId: string;
   listType: CinemaListType;
   title: string;
   year?: string | number | null;
   userRating?: number | null;
   watchedDate?: string | null;
 }): Promise<CinemaImportResponse> {
+  const token = await getFirebaseAuth().currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Utilisateur non connecte.");
+  }
+
   const res = await fetch("/api/cinema", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       action: "import",
-      householdId: params.householdId,
-      memberId: params.memberId,
       listType: params.listType,
       title: params.title,
       year: params.year,

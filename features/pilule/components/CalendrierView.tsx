@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay, differenceInDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay, differenceInDays, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Pill, CalendarDays, Check } from 'lucide-react';
+
+const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 export default function CalendrierView() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -42,7 +44,7 @@ export default function CalendrierView() {
 
     // --- SAUVEGARDE DANS LE CLOUD (Invisible) ---
     try {
-      await fetch('/api/pilule/sync-pill', {
+      await fetch('/api/sync-pill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: dateStr, status: newStatus }),
@@ -57,8 +59,10 @@ export default function CalendrierView() {
     const dateValue = e.target.value;
     if (!dateValue) return;
     
-    const newDate = new Date(dateValue);
+    const newDate = parse(dateValue, 'yyyy-MM-dd', new Date());
+    newDate.setHours(12, 0, 0, 0);
     setCycleStartDate(newDate);
+    setCurrentDate(newDate);
     localStorage.setItem('cycleStart', newDate.toISOString());
 
     // 👇 AJOUT : On prévient le serveur tout de suite !
@@ -107,6 +111,8 @@ export default function CalendrierView() {
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDayOfWeek = getDay(monthStart);
   const emptyDays = Array(startDayOfWeek === 0 ? 6 : startDayOfWeek - 1).fill(null);
+  const totalCells = emptyDays.length + daysInMonth.length;
+  const trailingEmptyDays = Array((7 - (totalCells % 7)) % 7).fill(null);
   const datePickerValue = cycleStartDate ? format(cycleStartDate, 'yyyy-MM-dd') : '';
 
   return (
@@ -120,13 +126,13 @@ export default function CalendrierView() {
         </div>
 
         <div className="grid grid-cols-7 bg-pink-50 p-2">
-          {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d) => (
-            <div key={d} className="text-center text-xs font-bold text-pink-400">{d}</div>
+          {WEEK_DAYS.map((d, index) => (
+            <div key={`${d}-${index}`} className="text-center text-xs font-bold text-pink-400">{d}</div>
           ))}
         </div>
 
         <div className="grid grid-cols-7 p-2 gap-2">
-          {emptyDays.map((_, i) => <div key={`empty-${i}`} />)}
+          {emptyDays.map((_, i) => <div key={`empty-start-${i}`} className="aspect-square" />)}
           
           {daysInMonth.map((day) => {
             const status = getDayStatus(day);
@@ -154,6 +160,8 @@ export default function CalendrierView() {
               </div>
             );
           })}
+
+          {trailingEmptyDays.map((_, i) => <div key={`empty-end-${i}`} className="aspect-square" />)}
         </div>
       </div>
 

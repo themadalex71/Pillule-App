@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type MovieItem = {
@@ -14,78 +16,92 @@ type MovieItem = {
   addedByMemberId?: string;
 };
 
-function getMemberIdFromBodyOrQuery(input: {
-  body?: any;
-  searchParams?: URLSearchParams;
-}) {
-  const bodyMemberId = input.body?.memberId;
-  const queryMemberId = input.searchParams?.get("memberId");
+type HouseholdDocument = {
+  ownerId: string;
+  memberIds: string[];
+};
 
-  if (bodyMemberId) return String(bodyMemberId);
-  if (queryMemberId) return String(queryMemberId);
+type UserHouseholdRecord = {
+  householdId?: string | null;
+};
 
-  return "member_alex";
+function normalizeCinemaListType(listType: string) {
+  if (listType === "history") return "history";
+  if (listType === "dismissed") return "dismissed";
+  return "wishlist";
 }
 
-function getHouseholdIdFromBodyOrQuery(input: {
-  body?: any;
-  searchParams?: URLSearchParams;
-}) {
-  const bodyHouseholdId = input.body?.householdId;
-  const queryHouseholdId = input.searchParams?.get("householdId");
-
-  if (bodyHouseholdId) return String(bodyHouseholdId);
-  if (queryHouseholdId) return String(queryHouseholdId);
-
-  return "household_demo";
-}
-
-function getListKey(
-  householdId: string,
-  memberId: string,
-  listType: string
-) {
-  const safeType = listType === "history" ? "history" : "wishlist";
+function getListKey(householdId: string, memberId: string, listType: string) {
+  const safeType = normalizeCinemaListType(listType);
   return `household:${householdId}:cinema:${safeType}:${memberId}`;
 }
 
-function getMembersKey(householdId: string) {
-  return `household:${householdId}:members`;
-}
+function getAuthTokenFromRequest(request: Request) {
+  const authHeader = request.headers.get("authorization") || "";
+  const [scheme, token] = authHeader.split(" ");
 
-function getMemberProfileKey(householdId: string, memberId: string) {
-  return `household:${householdId}:member:${memberId}`;
-}
-
-async function ensureDefaultMembers(redis: Redis, householdId: string) {
-  const membersKey = getMembersKey(householdId);
-  let memberIds = (await redis.get<string[]>(membersKey)) || [];
-
-  if (!memberIds || memberIds.length === 0) {
-    memberIds = ["member_alex", "member_juju"];
-    await redis.set(membersKey, memberIds);
-
-    await redis.set(getMemberProfileKey(householdId, "member_alex"), {
-      id: "member_alex",
-      displayName: "Alex",
-      householdId,
-      role: "admin",
-    });
-
-    await redis.set(getMemberProfileKey(householdId, "member_juju"), {
-      id: "member_juju",
-      displayName: "Juju",
-      householdId,
-      role: "member",
-    });
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    throw new Error("Non autorise.");
   }
 
-  return memberIds;
+  return token;
 }
 
-async function getCinemaMatches(redis: Redis, householdId: string) {
-  const memberIds = await ensureDefaultMembers(redis, householdId);
+async function getCinemaContext(request: Request) {
+  const idToken = getAuthTokenFromRequest(request);
+  const decoded = await getFirebaseAdminAuth().verifyIdToken(idToken);
+  const uid = decoded.uid;
 
+  const db = getFirebaseAdminDb();
+  const userSnapshot = await db.collection("users").doc(uid).get();
+
+  if (!userSnapshot.exists) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+      memberIds: [uid],
+      hasHousehold: false,
+    };
+  }
+
+  const userRecord = userSnapshot.data() as UserHouseholdRecord;
+
+  if (!userRecord.householdId) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+      memberIds: [uid],
+      hasHousehold: false,
+    };
+  }
+
+  const householdSnapshot = await db.collection("households").doc(userRecord.householdId).get();
+
+  if (!householdSnapshot.exists) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+      memberIds: [uid],
+      hasHousehold: false,
+    };
+  }
+
+  const household = householdSnapshot.data() as HouseholdDocument;
+  const memberIds = Array.isArray(household.memberIds) ? household.memberIds : [];
+
+  if (!memberIds.includes(uid)) {
+    throw new Error("Acces refuse a ce foyer.");
+  }
+
+  return {
+    uid,
+    householdId: householdSnapshot.id,
+    memberIds,
+    hasHousehold: true,
+  };
+}
+
+async function getCinemaMatches(redis: Redis, householdId: string, memberIds: string[]) {
   const movieMap = new Map<number, any>();
 
   for (const memberId of memberIds) {
@@ -119,15 +135,11 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
-
-    const householdId = getHouseholdIdFromBodyOrQuery({ searchParams });
-    const memberId = getMemberIdFromBodyOrQuery({ searchParams });
-
-    await ensureDefaultMembers(redis, householdId);
+    const context = await getCinemaContext(request);
 
     if (action === "list") {
       const listType = searchParams.get("listType") || "wishlist";
-      const key = getListKey(householdId, memberId, listType);
+      const key = getListKey(context.householdId, context.uid, listType);
       const list = (await redis.get<MovieItem[]>(key)) || [];
 
       return NextResponse.json({
@@ -137,7 +149,15 @@ export async function GET(request: Request) {
     }
 
     if (action === "matches") {
-      const matches = await getCinemaMatches(redis, householdId);
+      if (!context.hasHousehold) {
+        return NextResponse.json({
+          success: true,
+          matches: [],
+          matchesDisabled: true,
+        });
+      }
+
+      const matches = await getCinemaMatches(redis, context.householdId, context.memberIds);
 
       return NextResponse.json({
         success: true,
@@ -147,13 +167,15 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { success: false, error: "Action inconnue." },
-      { status: 400 }
+      { status: 400 },
     );
   } catch (error) {
-    console.error("GET /api/cinema error:", error);
+    const message = error instanceof Error ? error.message : "Erreur serveur.";
+    const status = message === "Non autorise." ? 401 : 500;
+
     return NextResponse.json(
-      { success: false, error: "Erreur serveur." },
-      { status: 500 }
+      { success: false, error: message },
+      { status },
     );
   }
 }
@@ -164,23 +186,19 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const action = body.action;
-
-    const householdId = getHouseholdIdFromBodyOrQuery({ body });
-    const memberId = getMemberIdFromBodyOrQuery({ body });
-
-    const memberIds = await ensureDefaultMembers(redis, householdId);
+    const context = await getCinemaContext(request);
 
     if (action === "save") {
       const { movie, listType } = body;
 
       if (!movie || !listType) {
         return NextResponse.json(
-          { success: false, error: "Données manquantes." },
-          { status: 400 }
+          { success: false, error: "Donnees manquantes." },
+          { status: 400 },
         );
       }
 
-      const key = getListKey(householdId, memberId, listType);
+      const key = getListKey(context.householdId, context.uid, listType);
       let currentList = (await redis.get<MovieItem[]>(key)) || [];
 
       currentList = currentList.filter((m) => m.id !== movie.id);
@@ -193,24 +211,25 @@ export async function POST(request: Request) {
         overview: movie.overview,
         userRating: movie.userRating ?? null,
         ratedAt: movie.ratedAt ?? null,
-        addedByMemberId: memberId,
+        addedByMemberId: context.uid,
       };
 
       currentList.unshift(movieToSave);
       await redis.set(key, currentList);
 
       let isMatch = false;
+      const matchedMemberIds: string[] = [];
 
-      if (listType === "wishlist") {
-        for (const otherMemberId of memberIds) {
-          if (otherMemberId === memberId) continue;
+      if (listType === "wishlist" && context.hasHousehold) {
+        for (const otherMemberId of context.memberIds) {
+          if (otherMemberId === context.uid) continue;
 
-          const otherKey = getListKey(householdId, otherMemberId, "wishlist");
+          const otherKey = getListKey(context.householdId, otherMemberId, "wishlist");
           const otherList = (await redis.get<MovieItem[]>(otherKey)) || [];
 
           if (otherList.some((m) => m.id === movie.id)) {
             isMatch = true;
-            break;
+            matchedMemberIds.push(otherMemberId);
           }
         }
       }
@@ -219,6 +238,7 @@ export async function POST(request: Request) {
         success: true,
         list: currentList,
         isMatch,
+        matchedMemberIds,
       });
     }
 
@@ -227,16 +247,14 @@ export async function POST(request: Request) {
 
       if (!movieId || !listType) {
         return NextResponse.json(
-          { success: false, error: "Données manquantes." },
-          { status: 400 }
+          { success: false, error: "Donnees manquantes." },
+          { status: 400 },
         );
       }
 
-      const key = getListKey(householdId, memberId, listType);
+      const key = getListKey(context.householdId, context.uid, listType);
       const currentList = (await redis.get<MovieItem[]>(key)) || [];
-      const updatedList = currentList.filter(
-        (movie) => String(movie.id) !== String(movieId)
-      );
+      const updatedList = currentList.filter((movie) => String(movie.id) !== String(movieId));
 
       await redis.set(key, updatedList);
 
@@ -246,14 +264,29 @@ export async function POST(request: Request) {
       });
     }
 
+    if (action === "reset") {
+      const wishlistKey = getListKey(context.householdId, context.uid, "wishlist");
+      const historyKey = getListKey(context.householdId, context.uid, "history");
+      const dismissedKey = getListKey(context.householdId, context.uid, "dismissed");
+
+      await Promise.all([redis.del(wishlistKey), redis.del(historyKey), redis.del(dismissedKey)]);
+
+      return NextResponse.json({
+        success: true,
+        wishlist: [],
+        history: [],
+        dismissed: [],
+      });
+    }
+
     if (action === "import") {
       const apiKey = process.env.TMDB_API_KEY;
       const { title, year, listType, userRating, watchedDate } = body;
 
       if (!title || !listType || !apiKey) {
         return NextResponse.json(
-          { success: false, error: "Données manquantes." },
-          { status: 400 }
+          { success: false, error: "Donnees manquantes." },
+          { status: 400 },
         );
       }
 
@@ -289,12 +322,12 @@ export async function POST(request: Request) {
       let formattedDate: string | null = null;
       if (watchedDate) {
         const dateObj = new Date(watchedDate);
-        if (!isNaN(dateObj.getTime())) {
+        if (!Number.isNaN(dateObj.getTime())) {
           formattedDate = dateObj.toLocaleDateString("fr-FR");
         }
       }
 
-      const key = getListKey(householdId, memberId, listType);
+      const key = getListKey(context.householdId, context.uid, listType);
       let currentList = (await redis.get<MovieItem[]>(key)) || [];
 
       const existingIndex = currentList.findIndex((m) => m.id === movie.id);
@@ -323,7 +356,7 @@ export async function POST(request: Request) {
 
           return NextResponse.json({
             success: true,
-            message: "Mis à jour",
+            message: "Mis a jour",
             movie: movie.title,
             updatedList: currentList,
             isMatch: false,
@@ -332,7 +365,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
           success: true,
-          message: "Déjà à jour",
+          message: "Deja a jour",
           movie: movie.title,
           updatedList: currentList,
           isMatch: false,
@@ -349,46 +382,50 @@ export async function POST(request: Request) {
         overview: movie.overview,
         userRating: userRating ?? null,
         ratedAt: formattedDate,
-        addedByMemberId: memberId,
+        addedByMemberId: context.uid,
       };
 
       currentList.unshift(movieToSave);
       await redis.set(key, currentList);
 
       let isMatch = false;
+      const matchedMemberIds: string[] = [];
 
-      if (listType === "wishlist") {
-        for (const otherMemberId of memberIds) {
-          if (otherMemberId === memberId) continue;
+      if (listType === "wishlist" && context.hasHousehold) {
+        for (const otherMemberId of context.memberIds) {
+          if (otherMemberId === context.uid) continue;
 
-          const otherKey = getListKey(householdId, otherMemberId, "wishlist");
+          const otherKey = getListKey(context.householdId, otherMemberId, "wishlist");
           const otherList = (await redis.get<MovieItem[]>(otherKey)) || [];
 
           if (otherList.some((m) => m.id === movie.id)) {
             isMatch = true;
-            break;
+            matchedMemberIds.push(otherMemberId);
           }
         }
       }
 
       return NextResponse.json({
         success: true,
-        message: "Importé",
+        message: "Importe",
         movie: movie.title,
         updatedList: currentList,
         isMatch,
+        matchedMemberIds,
       });
     }
 
     return NextResponse.json(
       { success: false, error: "Action inconnue." },
-      { status: 400 }
+      { status: 400 },
     );
   } catch (error) {
-    console.error("POST /api/cinema error:", error);
+    const message = error instanceof Error ? error.message : "Erreur serveur.";
+    const status = message === "Non autorise." ? 401 : 500;
+
     return NextResponse.json(
-      { success: false, error: "Erreur serveur." },
-      { status: 500 }
+      { success: false, error: message },
+      { status },
     );
   }
 }

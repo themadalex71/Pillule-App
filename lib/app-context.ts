@@ -21,7 +21,7 @@ export type Member = {
 };
 
 export const DEFAULT_HOUSEHOLD_ID = "household_demo";
-export const DEFAULT_MEMBER_ID = "member_alex";
+export const DEFAULT_MEMBER_ID = "demo_member_1";
 
 export function getAppContextFromRequest(request: Request): AppContext {
   const { searchParams } = new URL(request.url);

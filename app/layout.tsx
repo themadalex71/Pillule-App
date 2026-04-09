@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import AppBootstrap from "@/components/AppBootstrap";
 
 export const metadata: Metadata = {
-  title: "Les Gogoles",
-  description: "Hub des mini-apps du foyer",
+  title: "HarmoHome",
+  description: "L'app mobile du foyer pour vos routines, films, recettes et jeux.",
 };
 
 export default function RootLayout({

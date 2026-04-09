@@ -16,16 +16,16 @@ export const DEFAULT_HOUSEHOLD: Household = {
 
 export const DEFAULT_MEMBERS: Member[] = [
   {
-    id: "member_alex",
+    id: "demo_member_1",
     householdId: DEFAULT_HOUSEHOLD_ID,
-    displayName: "Alex",
+    displayName: "Membre 1",
     role: "admin",
     createdAt: new Date().toISOString(),
   },
   {
-    id: "member_juju",
+    id: "demo_member_2",
     householdId: DEFAULT_HOUSEHOLD_ID,
-    displayName: "Juju",
+    displayName: "Membre 2",
     role: "member",
     createdAt: new Date().toISOString(),
   },
