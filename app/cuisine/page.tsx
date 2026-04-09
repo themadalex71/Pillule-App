@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, DragOverEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { 
   ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, 
   X, UtensilsCrossed, Pencil, Check, Refrigerator, Sparkles, Plus, FolderPlus, 
@@ -36,6 +36,29 @@ function FridgeDropZoneBlock({
     >
       {children}
     </div>
+  );
+}
+
+function FridgeCategoryHeader({
+  id,
+  onClick,
+  className,
+  children,
+}: {
+  id: string;
+  onClick: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <button
+      ref={setNodeRef}
+      onClick={onClick}
+      className={`${className} ${isOver ? 'bg-slate-800/80' : ''}`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -138,6 +161,9 @@ export default function CuisinePage() {
   const [, setDraggedIngredientId] = useState<string | null>(null);
   const [dragOrigin, setDragOrigin] = useState<FridgeDropZone | null>(null);
   const [isDraggingIngredient, setIsDraggingIngredient] = useState(false);
+  const lastPointerYRef = useRef<number | null>(null);
+  const autoScrollRafRef = useRef<number | null>(null);
+  const expandCategoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- 1. CHARGEMENT DONNÉES ---
   useEffect(() => {
@@ -367,11 +393,49 @@ export default function CuisinePage() {
       if (!id.startsWith('ing:')) return;
       setIsDraggingIngredient(true);
       setDraggedIngredientId(id);
+      const evt = event.activatorEvent as PointerEvent | TouchEvent | MouseEvent | undefined;
+      if (evt && 'clientY' in evt) {
+          lastPointerYRef.current = evt.clientY;
+      } else if (evt && 'touches' in evt && evt.touches.length > 0) {
+          lastPointerYRef.current = evt.touches[0].clientY;
+      }
       const payload = id.slice(4).split('::');
       setDragOrigin({
           categoryName: payload[1],
           subcategoryName: payload[2] || undefined,
       });
+  };
+
+  const clearExpandCategoryTimer = () => {
+      if (expandCategoryTimerRef.current) {
+          clearTimeout(expandCategoryTimerRef.current);
+          expandCategoryTimerRef.current = null;
+      }
+  };
+
+  useEffect(() => {
+      return () => clearExpandCategoryTimer();
+  }, []);
+
+  const handleDragOver = (event: DragOverEvent) => {
+      const overId = event.over ? String(event.over.id) : '';
+      const expansionTarget = overId.startsWith('expand:') ? overId.slice(7) : overId.startsWith('zone:') ? overId.slice(5).split('::')[0] : '';
+
+      if (!expansionTarget) {
+          clearExpandCategoryTimer();
+          return;
+      }
+
+      if (openFridgeCategories[expansionTarget]) {
+          clearExpandCategoryTimer();
+          return;
+      }
+
+      clearExpandCategoryTimer();
+      expandCategoryTimerRef.current = setTimeout(() => {
+          setOpenFridgeCategories((prev) => ({ ...prev, [expansionTarget]: true }));
+          expandCategoryTimerRef.current = null;
+      }, 220);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -380,31 +444,85 @@ export default function CuisinePage() {
           const overId = event.over ? String(event.over.id) : null;
           if (!activeId.startsWith('ing:') || !overId || !dragOrigin) return;
           const ingredient = activeId.slice(4).split('::')[0];
-          const targetZone = parseZoneId(overId);
+          const targetZone = overId.startsWith('expand:') ? { categoryName: overId.slice(7) } : parseZoneId(overId);
           if (!targetZone) return;
           moveIngredientBetweenZones(ingredient, dragOrigin, targetZone);
       } finally {
+          clearExpandCategoryTimer();
           setIsDraggingIngredient(false);
           setDraggedIngredientId(null);
           setDragOrigin(null);
+          lastPointerYRef.current = null;
       }
   };
 
   const handleDragCancel = (_event: DragCancelEvent) => {
+      clearExpandCategoryTimer();
       setIsDraggingIngredient(false);
       setDraggedIngredientId(null);
       setDragOrigin(null);
+      lastPointerYRef.current = null;
   };
 
   useEffect(() => {
       if (!isDraggingIngredient) return;
-      const prevOverflow = document.body.style.overflow;
       const prevTouchAction = document.body.style.touchAction;
-      document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
       return () => {
-          document.body.style.overflow = prevOverflow;
           document.body.style.touchAction = prevTouchAction;
+      };
+  }, [isDraggingIngredient]);
+
+  useEffect(() => {
+      if (!isDraggingIngredient) {
+          if (autoScrollRafRef.current) {
+              cancelAnimationFrame(autoScrollRafRef.current);
+              autoScrollRafRef.current = null;
+          }
+          return;
+      }
+
+      const updatePointer = (event: PointerEvent | TouchEvent) => {
+          if ('touches' in event && event.touches.length > 0) {
+              lastPointerYRef.current = event.touches[0].clientY;
+              return;
+          }
+          if ('clientY' in event) {
+              lastPointerYRef.current = event.clientY;
+          }
+      };
+
+      const scrollLoop = () => {
+          const pointerY = lastPointerYRef.current;
+          if (pointerY !== null) {
+              const viewportHeight = window.innerHeight;
+              const edgeThreshold = 120;
+              let scrollDelta = 0;
+
+              if (pointerY < edgeThreshold) {
+                  scrollDelta = -Math.max(4, ((edgeThreshold - pointerY) / edgeThreshold) * 16);
+              } else if (pointerY > viewportHeight - edgeThreshold) {
+                  scrollDelta = Math.max(4, ((pointerY - (viewportHeight - edgeThreshold)) / edgeThreshold) * 16);
+              }
+
+              if (scrollDelta !== 0) {
+                  window.scrollBy({ top: scrollDelta });
+              }
+          }
+          autoScrollRafRef.current = requestAnimationFrame(scrollLoop);
+      };
+
+      window.addEventListener('pointermove', updatePointer, { passive: true });
+      window.addEventListener('touchmove', updatePointer, { passive: true });
+      autoScrollRafRef.current = requestAnimationFrame(scrollLoop);
+
+      return () => {
+          window.removeEventListener('pointermove', updatePointer);
+          window.removeEventListener('touchmove', updatePointer);
+          if (autoScrollRafRef.current) {
+              cancelAnimationFrame(autoScrollRafRef.current);
+              autoScrollRafRef.current = null;
+          }
       };
   }, [isDraggingIngredient]);
 
@@ -845,6 +963,7 @@ export default function CuisinePage() {
                         <DndContext
                             sensors={dragSensors}
                             onDragStart={handleDragStart}
+                            onDragOver={handleDragOver}
                             onDragEnd={handleDragEnd}
                             onDragCancel={handleDragCancel}
                         >
@@ -853,7 +972,8 @@ export default function CuisinePage() {
                                     const totalItems = category.items.length + (category.subcategories || []).reduce((acc, sub) => acc + sub.items.length, 0);
                                     return (
                                         <div key={idx} className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-                                            <button
+                                            <FridgeCategoryHeader
+                                                id={`expand:${category.name}`}
                                                 onClick={() => toggleFridgeCategory(category.name)}
                                                 className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-slate-800/60 transition"
                                             >
@@ -890,7 +1010,7 @@ export default function CuisinePage() {
                                                     size={18}
                                                     className={`text-slate-500 transition-transform ${openFridgeCategories[category.name] ? 'rotate-180' : ''}`}
                                                 />
-                                            </button>
+                                            </FridgeCategoryHeader>
                                             {openFridgeCategories[category.name] && (
                                                 <div className="px-4 pb-4 pt-1 border-t border-slate-800 space-y-3">
                                                     <FridgeDropZoneBlock id={`zone:${category.name}`} active={isEditMode && !isDeleteMode}>
