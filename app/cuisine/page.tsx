@@ -164,6 +164,8 @@ export default function CuisinePage() {
   const [isDraggingIngredient, setIsDraggingIngredient] = useState(false);
   const lastPointerYRef = useRef<number | null>(null);
   const isPointerActiveRef = useRef(false);
+  const edgeZoneRef = useRef<'top' | 'bottom' | null>(null);
+  const edgeZoneEnteredAtRef = useRef<number>(0);
   const autoScrollRafRef = useRef<number | null>(null);
   const expandCategoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -459,6 +461,8 @@ export default function CuisinePage() {
           setDraggedIngredientLabel(null);
           setDragOrigin(null);
           lastPointerYRef.current = null;
+          edgeZoneRef.current = null;
+          edgeZoneEnteredAtRef.current = 0;
       }
   };
 
@@ -470,6 +474,8 @@ export default function CuisinePage() {
       setDraggedIngredientLabel(null);
       setDragOrigin(null);
       lastPointerYRef.current = null;
+      edgeZoneRef.current = null;
+      edgeZoneEnteredAtRef.current = 0;
   };
 
   useEffect(() => {
@@ -505,30 +511,44 @@ export default function CuisinePage() {
       const stopPointer = () => {
           isPointerActiveRef.current = false;
           lastPointerYRef.current = null;
+          edgeZoneRef.current = null;
+          edgeZoneEnteredAtRef.current = 0;
       };
 
       const scrollLoop = () => {
           const pointerY = lastPointerYRef.current;
           if (pointerY !== null && isPointerActiveRef.current) {
+              const now = performance.now();
               const viewportHeight = window.innerHeight;
-              // Auto-scroll only in a very small zone near screen edges.
-              const edgeThreshold = 64;
-              // Small guard band to avoid accidental scroll starts.
-              const activationInset = 14;
+              const edgeThreshold = 52;
+              const activationInset = 12;
+              const edgeDwellMs = 180;
               let scrollDelta = 0;
+              let currentZone: 'top' | 'bottom' | null = null;
 
               if (pointerY < edgeThreshold) {
+                  currentZone = 'top';
                   const proximity = edgeThreshold - pointerY;
                   if (proximity > activationInset) {
                       const ratio = (proximity - activationInset) / (edgeThreshold - activationInset);
-                      scrollDelta = -Math.max(2, ratio * 10);
+                      scrollDelta = -Math.max(1, ratio * 6);
                   }
               } else if (pointerY > viewportHeight - edgeThreshold) {
+                  currentZone = 'bottom';
                   const proximity = pointerY - (viewportHeight - edgeThreshold);
                   if (proximity > activationInset) {
                       const ratio = (proximity - activationInset) / (edgeThreshold - activationInset);
-                      scrollDelta = Math.max(2, ratio * 10);
+                      scrollDelta = Math.max(1, ratio * 6);
                   }
+              }
+
+              if (currentZone !== edgeZoneRef.current) {
+                  edgeZoneRef.current = currentZone;
+                  edgeZoneEnteredAtRef.current = now;
+              }
+
+              if (!currentZone || now - edgeZoneEnteredAtRef.current < edgeDwellMs) {
+                  scrollDelta = 0;
               }
 
               if (scrollDelta !== 0) {
