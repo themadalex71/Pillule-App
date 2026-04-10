@@ -192,6 +192,38 @@ export default function CuisinePage() {
       });
   }, [categories]);
 
+  useEffect(() => {
+      if (!editingMasterIngredient) return;
+
+      const scrollY = window.scrollY;
+      const bodyStyle = document.body.style;
+      const htmlStyle = document.documentElement.style;
+
+      const prevBodyPosition = bodyStyle.position;
+      const prevBodyTop = bodyStyle.top;
+      const prevBodyWidth = bodyStyle.width;
+      const prevBodyOverflow = bodyStyle.overflow;
+      const prevBodyOverscroll = bodyStyle.overscrollBehavior;
+      const prevHtmlOverscroll = htmlStyle.overscrollBehavior;
+
+      bodyStyle.position = 'fixed';
+      bodyStyle.top = `-${scrollY}px`;
+      bodyStyle.width = '100%';
+      bodyStyle.overflow = 'hidden';
+      bodyStyle.overscrollBehavior = 'none';
+      htmlStyle.overscrollBehavior = 'none';
+
+      return () => {
+          bodyStyle.position = prevBodyPosition;
+          bodyStyle.top = prevBodyTop;
+          bodyStyle.width = prevBodyWidth;
+          bodyStyle.overflow = prevBodyOverflow;
+          bodyStyle.overscrollBehavior = prevBodyOverscroll;
+          htmlStyle.overscrollBehavior = prevHtmlOverscroll;
+          window.scrollTo(0, scrollY);
+      };
+  }, [editingMasterIngredient]);
+
   const fetchRecipes = async () => {
       setLoadingRecipes(true);
       try {

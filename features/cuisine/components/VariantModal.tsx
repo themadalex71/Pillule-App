@@ -48,7 +48,7 @@ export default function VariantModal({
                             <p className="text-sm text-slate-400">Gérer les variantes</p>
                         </div>
                     </div>
-                    <div className="bg-slate-950 rounded-xl border border-slate-800 flex-1 overflow-y-auto min-h-0 mb-4 p-2">
+                    <div className="bg-slate-950 rounded-xl border border-slate-800 flex-1 overflow-y-auto overscroll-contain min-h-0 mb-4 p-2">
                         {(aliases[editingMasterIngredient] || []).length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-60">
                                 <LinkIcon size={32} className="mb-2"/>
@@ -91,7 +91,7 @@ export default function VariantModal({
                                 <input type="text" autoFocus placeholder="Chercher un ingrédient..." value={moveSearchTerm} onChange={(e) => setMoveSearchTerm(e.target.value)} className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2.5 pl-9 pr-4 text-sm text-white focus:border-blue-500 outline-none" />
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900">
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 bg-slate-900">
                             {categories.map((cat, idx) => {
                                 const filteredItems = cat.items
                                 .filter(i => i !== editingMasterIngredient) 
