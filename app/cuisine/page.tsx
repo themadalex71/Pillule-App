@@ -512,10 +512,32 @@ export default function CuisinePage() {
 
   useEffect(() => {
       if (!isDraggingIngredient) return;
+      const bodyStyle = document.body.style;
+      const htmlStyle = document.documentElement.style;
       const prevTouchAction = document.body.style.touchAction;
-      document.body.style.touchAction = 'none';
+      const prevBodyOverscroll = bodyStyle.overscrollBehavior;
+      const prevHtmlOverscroll = htmlStyle.overscrollBehavior;
+      const prevBodyUserSelect = bodyStyle.userSelect;
+
+      const preventNativeScroll = (event: Event) => {
+          event.preventDefault();
+      };
+
+      bodyStyle.touchAction = 'none';
+      bodyStyle.overscrollBehavior = 'none';
+      htmlStyle.overscrollBehavior = 'none';
+      bodyStyle.userSelect = 'none';
+
+      document.addEventListener('touchmove', preventNativeScroll, { passive: false });
+      document.addEventListener('wheel', preventNativeScroll, { passive: false });
+
       return () => {
-          document.body.style.touchAction = prevTouchAction;
+          document.removeEventListener('touchmove', preventNativeScroll as EventListener);
+          document.removeEventListener('wheel', preventNativeScroll as EventListener);
+          bodyStyle.touchAction = prevTouchAction;
+          bodyStyle.overscrollBehavior = prevBodyOverscroll;
+          htmlStyle.overscrollBehavior = prevHtmlOverscroll;
+          bodyStyle.userSelect = prevBodyUserSelect;
       };
   }, [isDraggingIngredient]);
 
