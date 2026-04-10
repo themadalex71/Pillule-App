@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, DragOverEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragCancelEvent, DragOverEvent, DragOverlay, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { 
   ArrowLeft, Camera, ChefHat, Loader2, Clock, Users, Save, BookOpen, Search, 
   X, UtensilsCrossed, Pencil, Check, Refrigerator, Sparkles, Plus, FolderPlus, 
@@ -93,7 +93,7 @@ function DraggableIngredientChip({
       </button>
       <button
         type="button"
-        className="p-0.5 rounded hover:bg-white/10 cursor-grab active:cursor-grabbing touch-none"
+        className="p-1 rounded hover:bg-white/10 cursor-grab active:cursor-grabbing touch-none"
         style={{ touchAction: 'none' }}
         aria-label={`Deplacer ${label}`}
         {...listeners}
@@ -643,8 +643,14 @@ export default function CuisinePage() {
   }, [isDraggingIngredient]);
 
   const dragSensors = useSensors(
-      useSensor(PointerSensor, {
+      useSensor(MouseSensor, {
           activationConstraint: { distance: 8 },
+      }),
+      useSensor(TouchSensor, {
+          activationConstraint: {
+              delay: 170,
+              tolerance: 8,
+          },
       })
   );
 
