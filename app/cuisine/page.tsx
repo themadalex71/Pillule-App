@@ -32,7 +32,7 @@ function FridgeDropZoneBlock({
   return (
     <div
       ref={setNodeRef}
-      className={`transition rounded-xl ${isOver && active ? 'ring-2 ring-orange-500/50 bg-slate-800/40' : ''}`}
+      className={`transition rounded-xl ${isOver && active ? 'ring-2 ring-orange-500/50 bg-white/40' : ''}`}
     >
       {children}
     </div>
@@ -55,7 +55,7 @@ function FridgeCategoryHeader({
     <button
       ref={setNodeRef}
       onClick={onClick}
-      className={`${className} ${isOver ? 'bg-slate-800/80' : ''}`}
+      className={`${className} ${isOver ? 'bg-white/80' : ''}`}
     >
       {children}
     </button>
@@ -158,6 +158,7 @@ export default function CuisinePage() {
   const [aliasToMove, setAliasToMove] = useState<string | null>(null); 
   const [moveSearchTerm, setMoveSearchTerm] = useState("");
   const [openFridgeCategories, setOpenFridgeCategories] = useState<Record<string, boolean>>({});
+  const [openFridgeSubcategories, setOpenFridgeSubcategories] = useState<Record<string, boolean>>({});
   const [draggedIngredientId, setDraggedIngredientId] = useState<string | null>(null);
   const [draggedIngredientLabel, setDraggedIngredientLabel] = useState<string | null>(null);
   const [dragOrigin, setDragOrigin] = useState<FridgeDropZone | null>(null);
@@ -187,6 +188,20 @@ export default function CuisinePage() {
           const next: Record<string, boolean> = {};
           categories.forEach((cat, index) => {
               next[cat.name] = prev[cat.name] ?? index === 0;
+          });
+          return next;
+      });
+  }, [categories]);
+
+  useEffect(() => {
+      setOpenFridgeSubcategories((prev) => {
+          if (categories.length === 0) return {};
+          const next: Record<string, boolean> = {};
+          categories.forEach((cat) => {
+              (cat.subcategories || []).forEach((sub) => {
+                  const key = `${cat.name}::${sub.name}`;
+                  next[key] = prev[key] ?? true;
+              });
           });
           return next;
       });
@@ -374,6 +389,18 @@ export default function CuisinePage() {
           return { ...cat, subcategories: [...existing, { name: subName, items: [] }] };
       });
       saveCategoriesToDb(newCategories);
+      setOpenFridgeSubcategories((prev) => ({
+          ...prev,
+          [`${categoryName}::${subName}`]: true,
+      }));
+  };
+
+  const toggleFridgeSubcategory = (categoryName: string, subcategoryName: string) => {
+      const key = `${categoryName}::${subcategoryName}`;
+      setOpenFridgeSubcategories((prev) => ({
+          ...prev,
+          [key]: !prev[key],
+      }));
   };
 
   const removeIngredientFromAllZones = (ingredient: string, source: FridgeDropZone) => {
@@ -1008,35 +1035,35 @@ export default function CuisinePage() {
 
   // --- RENDU UI PRINCIPAL ---
   return (
-    <main className="min-h-screen bg-slate-900 text-white pb-20">
-      <div className="p-4 flex items-center justify-between bg-slate-900 sticky top-0 z-10 border-b border-slate-800">
-        <Link href="/" className="text-slate-400 hover:text-white transition"><ArrowLeft /></Link>
-        <h1 className="text-xl font-bold flex items-center gap-2 text-orange-500"><ChefHat /> Cuistot</h1>
+    <main className="min-h-screen bg-[#fcf7f2] text-[#4b3d6d] pb-20">
+      <div className="p-4 flex items-center justify-between bg-[#fcf7f2] sticky top-0 z-10 border-b border-[#eee5dc]">
+        <Link href="/" className="text-[#8d82a8] hover:text-[#4b3d6d] transition"><ArrowLeft /></Link>
+        <h1 className="text-xl font-bold flex items-center gap-2 text-[#ef9a79]"><ChefHat /> Cuistot</h1>
         <div className="w-6"></div> 
       </div>
 
       <div className="p-4">
-          <div className="flex bg-slate-800 p-1 rounded-xl">
-              <button onClick={() => setActiveTab('scan')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'scan' ? 'bg-orange-500 text-slate-900 shadow-lg' : 'text-slate-400 hover:text-white'}`}><Camera size={16} /> Scan</button>
-              <button onClick={() => setActiveTab('fridge')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'fridge' ? 'bg-orange-500 text-slate-900 shadow-lg' : 'text-slate-400 hover:text-white'}`}><Refrigerator size={16} /> Frigo</button>
-              <button onClick={() => setActiveTab('book')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'book' ? 'bg-orange-500 text-slate-900 shadow-lg' : 'text-slate-400 hover:text-white'}`}><BookOpen size={16} /> Livre</button>
+          <div className="flex bg-white p-1 rounded-xl">
+              <button onClick={() => setActiveTab('scan')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'scan' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f]'}`}><Camera size={16} /> Scan</button>
+              <button onClick={() => setActiveTab('fridge')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'fridge' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f]'}`}><Refrigerator size={16} /> Frigo</button>
+              <button onClick={() => setActiveTab('book')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'book' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f]'}`}><BookOpen size={16} /> Livre</button>
           </div>
       </div>
 
       {activeTab === 'scan' && (
         <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] gap-6 animate-in fade-in">
-            <div className="bg-slate-800 p-8 rounded-full border-4 border-slate-700 shadow-xl relative">
-                <ChefHat size={64} className="text-orange-500" />
-                <div className="absolute -bottom-2 -right-2 bg-slate-700 p-2 rounded-full border border-slate-600"><Camera size={20} className="text-white"/></div>
+            <div className="bg-white p-8 rounded-full border-4 border-[#eee5dc] shadow-xl relative">
+                <ChefHat size={64} className="text-[#ef9a79]" />
+                <div className="absolute -bottom-2 -right-2 bg-[#f6f0eb] p-2 rounded-full border border-[#eee5dc]"><Camera size={20} className="text-[#6f628f]"/></div>
             </div>
             <div className="text-center w-full max-w-sm">
                 <h2 className="text-xl font-bold mb-2">Ajouter une recette</h2>
-                <p className="text-slate-400 text-sm mb-6">Scan une photo OU colle un texte d&apos;Insta/TikTok.</p>
+                <p className="text-[#8d82a8] text-sm mb-6">Scan une photo OU colle un texte d&apos;Insta/TikTok.</p>
                 <div className="flex flex-col gap-3">
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleScanUpload} />
-                    <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} className="bg-orange-500 text-white w-full py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 active:scale-95 transition flex items-center justify-center gap-2">{analyzing ? <Loader2 className="animate-spin" /> : <Camera />} Scanner Photos</button>
-                    <button onClick={() => setIsImportModalOpen(true)} disabled={analyzing} className="bg-slate-700 text-white w-full py-4 rounded-xl font-bold hover:bg-slate-600 active:scale-95 transition flex items-center justify-center gap-2"><Instagram size={20} className="text-pink-400"/> Importer Texte / Insta</button>
-                    <button onClick={startManualCreation} disabled={analyzing} className="bg-slate-800 border border-slate-700 text-slate-300 w-full py-4 rounded-xl font-bold hover:bg-slate-700 hover:text-white active:scale-95 transition flex items-center justify-center gap-2">
+                    <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} className="bg-[#ef9a79] text-white w-full py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 active:scale-95 transition flex items-center justify-center gap-2">{analyzing ? <Loader2 className="animate-spin" /> : <Camera />} Scanner Photos</button>
+                    <button onClick={() => setIsImportModalOpen(true)} disabled={analyzing} className="bg-[#f6f0eb] text-[#4b3d6d] w-full py-4 rounded-xl font-bold hover:bg-[#efe7de] active:scale-95 transition flex items-center justify-center gap-2"><Instagram size={20} className="text-pink-400"/> Importer Texte / Insta</button>
+                    <button onClick={startManualCreation} disabled={analyzing} className="bg-white border border-[#eee5dc] text-[#6f628f] w-full py-4 rounded-xl font-bold hover:bg-[#f6f0eb] hover:text-[#4b3d6d] active:scale-95 transition flex items-center justify-center gap-2">
                         <Edit3 size={20} /> Créer manuellement
                     </button>
                 </div>
@@ -1051,7 +1078,7 @@ export default function CuisinePage() {
                 <>
                     <div className="text-center py-6">
                          <h2 className="text-xl font-bold mb-2">Qu&apos;est-ce que tu as ?</h2>
-                         <p className="text-slate-400 text-xs">Sélectionne tes ingrédients ou ajoutes-en un.</p>
+                         <p className="text-[#8d82a8] text-xs">Sélectionne tes ingrédients ou ajoutes-en un.</p>
                     </div>
                     <div className="flex gap-2 mb-8 max-w-md mx-auto relative z-0 items-center">
                         <input 
@@ -1061,27 +1088,27 @@ export default function CuisinePage() {
                             onChange={(e) => setNewIngredientInput(e.target.value)} 
                             onKeyDown={(e) => e.key === 'Enter' && initiateAddIngredient()} 
                             disabled={isDeleteMode || isEditMode} 
-                            className={`flex-1 bg-slate-800 border ${isDeleteMode ? 'border-red-900 opacity-50' : isEditMode ? 'border-blue-900 opacity-50' : 'border-slate-700'} rounded-lg px-4 py-2 text-sm text-white focus:border-orange-500 outline-none transition`}
+                            className={`flex-1 bg-white border ${isDeleteMode ? 'border-red-900 opacity-50' : isEditMode ? 'border-blue-900 opacity-50' : 'border-[#eee5dc]'} rounded-lg px-4 py-2 text-sm text-[#4b3d6d] placeholder:text-[#b9accf] focus:border-[#ef9a79] outline-none transition`}
                         />
-                        <button onClick={initiateAddIngredient} disabled={isDeleteMode || isEditMode} className={`px-3 py-2 rounded-lg text-white transition ${isDeleteMode || isEditMode ? 'bg-slate-800 opacity-50' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                        <button onClick={initiateAddIngredient} disabled={isDeleteMode || isEditMode} className={`px-3 py-2 rounded-lg text-[#4b3d6d] transition ${isDeleteMode || isEditMode ? 'bg-white opacity-50' : 'bg-[#f6f0eb] hover:bg-[#efe7de]'}`}>
                             <Plus size={20}/>
                         </button>
-                        <div className="w-[1px] h-8 bg-slate-700 mx-1"></div>
+                        <div className="w-[1px] h-8 bg-[#f6f0eb] mx-1"></div>
                         <button 
                             onClick={() => { setIsEditMode(!isEditMode); setIsDeleteMode(false); }} 
-                            className={`p-2 rounded-lg transition border ${isEditMode ? 'bg-blue-600 text-white border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
+                            className={`p-2 rounded-lg transition border ${isEditMode ? 'bg-blue-600 text-white border-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.5)]' : 'bg-white text-[#8d82a8] border-[#eee5dc] hover:text-[#4b3d6d]'}`}
                         >
                             <Edit3 size={20}/>
                         </button>
                         <button 
                             onClick={() => { setIsDeleteMode(!isDeleteMode); setIsEditMode(false); }} 
-                            className={`p-2 rounded-lg transition border ${isDeleteMode ? 'bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}`}
+                            className={`p-2 rounded-lg transition border ${isDeleteMode ? 'bg-red-500 text-white border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-white text-[#8d82a8] border-[#eee5dc] hover:text-[#4b3d6d]'}`}
                         >
                             <Trash2 size={20}/>
                         </button>
                     </div>
 
-                    {loadingData ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-orange-500" /></div> : (
+                    {loadingData ? <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#ef9a79]" /></div> : (
                         <DndContext
                             sensors={dragSensors}
                             onDragStart={handleDragStart}
@@ -1093,16 +1120,16 @@ export default function CuisinePage() {
                                 {categories.map((category, idx) => {
                                     const totalItems = category.items.length + (category.subcategories || []).reduce((acc, sub) => acc + sub.items.length, 0);
                                     return (
-                                        <div key={idx} className="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+                                        <div key={idx} className="rounded-2xl border border-[#eee5dc] bg-[#fcf7f2]/60 overflow-hidden">
                                             <FridgeCategoryHeader
                                                 id={`expand:${category.name}`}
                                                 onClick={() => toggleFridgeCategory(category.name)}
-                                                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-slate-800/60 transition"
+                                                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-white/60 transition"
                                             >
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <Tag size={14}/>
-                                                    <span className="text-sm font-bold text-slate-300 uppercase tracking-wider truncate">{category.name}</span>
-                                                    <span className="text-[11px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">{totalItems}</span>
+                                                    <span className="text-sm font-bold text-[#6f628f] uppercase tracking-wider truncate">{category.name}</span>
+                                                    <span className="text-[11px] text-[#b9accf] bg-white px-2 py-0.5 rounded-full">{totalItems}</span>
                                                     {isEditMode && (
                                                         <>
                                                             <button
@@ -1130,11 +1157,11 @@ export default function CuisinePage() {
                                                 </div>
                                                 <ChevronDown
                                                     size={18}
-                                                    className={`text-slate-500 transition-transform ${openFridgeCategories[category.name] ? 'rotate-180' : ''}`}
+                                                    className={`text-[#b9accf] transition-transform ${openFridgeCategories[category.name] ? 'rotate-180' : ''}`}
                                                 />
                                             </FridgeCategoryHeader>
                                             {openFridgeCategories[category.name] && (
-                                                <div className="px-4 pb-4 pt-1 border-t border-slate-800 space-y-3">
+                                                <div className="px-4 pb-4 pt-1 border-t border-[#eee5dc] space-y-3">
                                                     <FridgeDropZoneBlock id={`zone:${category.name}`} active={isEditMode && !isDeleteMode}>
                                                         <div className="flex flex-wrap gap-2 p-2">
                                                             {category.items
@@ -1144,12 +1171,12 @@ export default function CuisinePage() {
                                                                     const chipClass = `
                                                                         px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1
                                                                         ${isDeleteMode 
-                                                                            ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
+                                                                            ? 'bg-[#fcf7f2] border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
                                                                             : isEditMode
-                                                                                ? 'bg-slate-900 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600'
+                                                                                ? 'bg-[#fcf7f2] border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600'
                                                                                 : selectedIngredients.includes(ing) 
-                                                                                    ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
-                                                                                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
+                                                                                    ? 'bg-[#ef9a79] border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
+                                                                                    : 'bg-white border-[#eee5dc] text-[#6f628f] hover:border-slate-500'
                                                                         }
                                                                     `;
                                                                     const onChipClick = () => {
@@ -1182,50 +1209,62 @@ export default function CuisinePage() {
 
                                                     {(category.subcategories || []).map((sub) => (
                                                         <FridgeDropZoneBlock key={sub.name} id={`zone:${category.name}::${sub.name}`} active={isEditMode && !isDeleteMode}>
-                                                            <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-3">
-                                                                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 mb-2">{sub.name}</p>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {sub.items
-                                                                        .slice()
-                                                                        .sort((a, b) => a.localeCompare(b))
-                                                                        .map((ing) => {
-                                                                            const chipClass = `
-                                                                                px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1
-                                                                                ${isDeleteMode 
-                                                                                    ? 'bg-slate-900 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
-                                                                                    : isEditMode
-                                                                                        ? 'bg-slate-900 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600'
-                                                                                        : selectedIngredients.includes(ing) 
-                                                                                            ? 'bg-orange-500 border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
-                                                                                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
+                                                            <div className="rounded-xl border border-[#eee5dc]/60 bg-white/40 p-3">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toggleFridgeSubcategory(category.name, sub.name)}
+                                                                    className="w-full mb-2 flex items-center justify-between text-left"
+                                                                >
+                                                                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8d82a8]">{sub.name}</p>
+                                                                    <ChevronDown
+                                                                        size={14}
+                                                                        className={`text-[#b9accf] transition-transform ${openFridgeSubcategories[`${category.name}::${sub.name}`] ? 'rotate-180' : ''}`}
+                                                                    />
+                                                                </button>
+                                                                {openFridgeSubcategories[`${category.name}::${sub.name}`] && (
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {sub.items
+                                                                            .slice()
+                                                                            .sort((a, b) => a.localeCompare(b))
+                                                                            .map((ing) => {
+                                                                                const chipClass = `
+                                                                                    px-3 py-1.5 rounded-full text-sm font-medium border transition active:scale-95 flex items-center gap-1
+                                                                                    ${isDeleteMode 
+                                                                                        ? 'bg-[#fcf7f2] border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 animate-pulse' 
+                                                                                        : isEditMode
+                                                                                            ? 'bg-[#fcf7f2] border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white hover:border-blue-600'
+                                                                                            : selectedIngredients.includes(ing) 
+                                                                                                ? 'bg-[#ef9a79] border-orange-500 text-slate-900 shadow-lg shadow-orange-500/20' 
+                                                                                                : 'bg-white border-[#eee5dc] text-[#6f628f] hover:border-slate-500'
+                                                                                    }
+                                                                                `;
+                                                                                const onChipClick = () => {
+                                                                                    if (isDeleteMode) deleteIngredient(ing);
+                                                                                    else if (isEditMode) openVariantModal(ing);
+                                                                                    else toggleIngredient(ing);
+                                                                                };
+                                                                                if (isEditMode && !isDeleteMode) {
+                                                                                    return (
+                                                                                        <DraggableIngredientChip
+                                                                                            key={ing}
+                                                                                            id={`ing:${ing}::${category.name}::${sub.name}`}
+                                                                                            label={ing}
+                                                                                            className={chipClass}
+                                                                                            onClick={onChipClick}
+                                                                                        />
+                                                                                    );
                                                                                 }
-                                                                            `;
-                                                                            const onChipClick = () => {
-                                                                                if (isDeleteMode) deleteIngredient(ing);
-                                                                                else if (isEditMode) openVariantModal(ing);
-                                                                                else toggleIngredient(ing);
-                                                                            };
-                                                                            if (isEditMode && !isDeleteMode) {
                                                                                 return (
-                                                                                    <DraggableIngredientChip
-                                                                                        key={ing}
-                                                                                        id={`ing:${ing}::${category.name}::${sub.name}`}
-                                                                                        label={ing}
-                                                                                        className={chipClass}
-                                                                                        onClick={onChipClick}
-                                                                                    />
+                                                                                    <button key={ing} onClick={onChipClick} className={chipClass}>
+                                                                                        {isDeleteMode && <X size={12}/>}
+                                                                                        {isEditMode && <LinkIcon size={12}/>}
+                                                                                        {ing}
+                                                                                        {!isDeleteMode && !isEditMode && aliases[ing]?.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>}
+                                                                                    </button>
                                                                                 );
-                                                                            }
-                                                                            return (
-                                                                                <button key={ing} onClick={onChipClick} className={chipClass}>
-                                                                                    {isDeleteMode && <X size={12}/>}
-                                                                                    {isEditMode && <LinkIcon size={12}/>}
-                                                                                    {ing}
-                                                                                    {!isDeleteMode && !isEditMode && aliases[ing]?.length > 0 && <span className="w-1.5 h-1.5 rounded-full bg-slate-500 ml-1"></span>}
-                                                                                </button>
-                                                                            );
-                                                                        })}
-                                                                </div>
+                                                                            })}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </FridgeDropZoneBlock>
                                                     ))}
@@ -1250,7 +1289,7 @@ export default function CuisinePage() {
                             <button 
                                 onClick={searchFridgeRecipes} 
                                 disabled={selectedIngredients.length === 0} 
-                                className="pointer-events-auto w-full max-w-md bg-orange-500 text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-orange-500/20 active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100"
+                                className="pointer-events-auto w-full max-w-md bg-[#ef9a79] text-white px-8 py-4 rounded-xl font-bold shadow-xl shadow-orange-500/20 active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100"
                             >
                                 <Sparkles size={20}/> Trouver une recette ({selectedIngredients.length})
                             </button>
@@ -1260,20 +1299,20 @@ export default function CuisinePage() {
             ) : (
                 <>
                     <div className="flex items-center justify-between mb-6 pt-4">
-                        <button onClick={resetFridge} className="text-slate-400 hover:text-white flex items-center gap-1 text-sm"><ArrowLeft size={16}/> Changer les ingrédients</button>
-                        <span className="text-orange-500 font-bold text-sm">{fridgeResults.length} recettes trouvées</span>
+                        <button onClick={resetFridge} className="text-[#8d82a8] hover:text-[#4b3d6d] flex items-center gap-1 text-sm"><ArrowLeft size={16}/> Changer les ingrédients</button>
+                        <span className="text-[#ef9a79] font-bold text-sm">{fridgeResults.length} recettes trouvées</span>
                     </div>
                     {fridgeResults.length === 0 ? (
                         <div className="text-center py-10 opacity-50">
-                            <UtensilsCrossed size={48} className="mx-auto mb-4 text-slate-600"/>
+                            <UtensilsCrossed size={48} className="mx-auto mb-4 text-[#b9accf]"/>
                             <p>Aucune recette ne correspond.</p>
                             <p className="text-xs mt-2">Essaie avec moins d&apos;ingrédients.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4">
                             {fridgeResults.map(({ recipe, matchCount }, index) => (
-                                <div key={index} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800 rounded-xl border border-slate-700 cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-24">
-                                    <div className="w-24 bg-slate-700 relative shrink-0">
+                                <div key={index} onClick={() => setSelectedRecipe(recipe)} className="bg-white rounded-xl border border-[#eee5dc] cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-24">
+                                    <div className="w-24 bg-[#f6f0eb] relative shrink-0">
                                         {recipe.image ? <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center opacity-20"><ChefHat size={24}/></div>}
                                     </div>
                                     <div className="p-3 flex flex-col justify-center w-full">
@@ -1281,7 +1320,7 @@ export default function CuisinePage() {
                                         <div className="flex items-center gap-2 mb-2">
                                             <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"><Check size={10}/> {matchCount} ingrédients</span>
                                         </div>
-                                        <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                        <div className="flex items-center gap-3 text-[10px] text-[#8d82a8]">
                                             <span className="flex items-center gap-1"><Clock size={10}/> {recipe.prepTime}</span>
                                         </div>
                                     </div>
@@ -1297,35 +1336,35 @@ export default function CuisinePage() {
       {/* LIVRE RECETTES */}
       {activeTab === 'book' && (
         <div className="px-4 pb-24 animate-in slide-in-from-right-10 duration-300">
-           <div className="sticky top-0 bg-slate-900 z-10 py-4 -mx-4 px-4 border-b border-slate-800 mb-6 shadow-xl">
+           <div className="sticky top-0 bg-[#fcf7f2] z-10 py-4 -mx-4 px-4 border-b border-[#eee5dc] mb-6 shadow-xl">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20}/>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#b9accf]" size={20}/>
                     <input 
                         type="text" 
                         placeholder="Chercher une recette, un ingrédient..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-orange-500 outline-none transition placeholder:text-slate-600"
+                        className="w-full bg-white border border-[#eee5dc] rounded-xl py-3 pl-10 pr-4 text-[#4b3d6d] focus:border-[#ef9a79] outline-none transition placeholder:text-[#b9accf]"
                     />
                 </div>
            </div>
            {loadingRecipes ? (
-               <div className="flex flex-col items-center justify-center py-20 text-slate-500"><Loader2 className="animate-spin mb-4 text-orange-500" size={32}/><p>Ouverture du livre...</p></div>
+               <div className="flex flex-col items-center justify-center py-20 text-[#b9accf]"><Loader2 className="animate-spin mb-4 text-[#ef9a79]" size={32}/><p>Ouverture du livre...</p></div>
            ) : filteredBookRecipes.length === 0 ? (
-               <div className="text-center py-20 opacity-50"><BookOpen size={48} className="mx-auto mb-4 text-slate-600"/><p>Aucune recette trouvée.</p>{searchTerm && <p className="text-sm mt-2">Essaie une autre recherche ?</p>}</div>
+               <div className="text-center py-20 opacity-50"><BookOpen size={48} className="mx-auto mb-4 text-[#b9accf]"/><p>Aucune recette trouvée.</p>{searchTerm && <p className="text-sm mt-2">Essaie une autre recherche ?</p>}</div>
            ) : (
                <div className="grid grid-cols-1 gap-4">
                    {filteredBookRecipes.map((recipe) => (
-                       <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-slate-800 rounded-xl border border-slate-700 cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-28 group">
-                           <div className="w-28 bg-slate-700 relative shrink-0 overflow-hidden">{recipe.image ? <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500"/> : <div className="w-full h-full flex items-center justify-center opacity-20"><ChefHat size={32}/></div>}</div>
+                       <div key={recipe.id} onClick={() => setSelectedRecipe(recipe)} className="bg-white rounded-xl border border-[#eee5dc] cursor-pointer hover:border-orange-500/50 transition active:scale-95 flex overflow-hidden h-28 group">
+                           <div className="w-28 bg-[#f6f0eb] relative shrink-0 overflow-hidden">{recipe.image ? <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-500"/> : <div className="w-full h-full flex items-center justify-center opacity-20"><ChefHat size={32}/></div>}</div>
                            <div className="p-3 flex flex-col justify-between w-full overflow-hidden">
-                               <div><h3 className="font-bold text-base mb-1 line-clamp-1 group-hover:text-orange-500 transition">{recipe.title}</h3><div className="flex items-center gap-3 text-xs text-slate-400 mb-2"><span className="flex items-center gap-1"><Clock size={12}/> {recipe.prepTime}</span><span className="flex items-center gap-1"><Users size={12}/> {recipe.servings} p.</span></div></div>
+                               <div><h3 className="font-bold text-base mb-1 line-clamp-1 group-hover:text-[#ef9a79] transition">{recipe.title}</h3><div className="flex items-center gap-3 text-xs text-[#8d82a8] mb-2"><span className="flex items-center gap-1"><Clock size={12}/> {recipe.prepTime}</span><span className="flex items-center gap-1"><Users size={12}/> {recipe.servings} p.</span></div></div>
                                <div className="flex flex-wrap gap-1">
                                    {recipe.ingredients.slice(0, 3).map((ing, i) => {
                                        const name = typeof ing === 'string' ? ing : ing.name;
-                                       return (<span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-700/50 rounded text-slate-300 truncate max-w-[80px]">{name}</span>);
+                                       return (<span key={i} className="text-[10px] px-1.5 py-0.5 bg-[#f6f0eb]/50 rounded text-[#6f628f] truncate max-w-[80px]">{name}</span>);
                                    })}
-                                   {recipe.ingredients.length > 3 && <span className="text-[10px] text-slate-500 px-1">+{recipe.ingredients.length - 3}</span>}
+                                   {recipe.ingredients.length > 3 && <span className="text-[10px] text-[#b9accf] px-1">+{recipe.ingredients.length - 3}</span>}
                                </div>
                            </div>
                        </div>
@@ -1358,79 +1397,79 @@ export default function CuisinePage() {
 
       {/* --- AUTRES MODALES (Import / Ingrédients / Variantes) --- */}
       {isImportModalOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
-              <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
-                  <button onClick={() => setIsImportModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(76,44,128,0.16)] backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white border border-[#eee5dc] p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative text-[#4b3d6d]">
+                  <button onClick={() => setIsImportModalOpen(false)} className="absolute top-4 right-4 text-[#b9accf] hover:text-[#4b3d6d]"><X size={20}/></button>
                   <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Instagram className="text-pink-500"/> Import Rapide</h3>
-                  <p className="text-slate-400 text-sm mb-4">Copie la description de la vidéo (Insta/TikTok) et colle-la ici :</p>
-                  <textarea value={importText} onChange={e => setImportText(e.target.value)} placeholder="Ingrédients: 200g de pâtes..." className="w-full h-40 bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:border-orange-500 outline-none mb-4 resize-none text-sm"/>
-                  <button onClick={handleTextImport} disabled={!importText.trim()} className="w-full bg-orange-500 text-slate-900 font-bold py-3 rounded-lg flex justify-center gap-2 items-center disabled:opacity-50"><Sparkles size={18}/> Analyser le texte</button>
+                  <p className="text-[#8d82a8] text-sm mb-4">Copie la description de la vidéo (Insta/TikTok) et colle-la ici :</p>
+                  <textarea value={importText} onChange={e => setImportText(e.target.value)} placeholder="Ingrédients: 200g de pâtes..." className="w-full h-40 bg-white border border-[#eee5dc] rounded-xl p-3 text-[#4b3d6d] focus:border-[#ef9a79] outline-none mb-4 resize-none text-sm"/>
+                  <button onClick={handleTextImport} disabled={!importText.trim()} className="w-full bg-[#ef9a79] text-white font-bold py-3 rounded-lg flex justify-center gap-2 items-center disabled:opacity-50"><Sparkles size={18}/> Analyser le texte</button>
               </div>
           </div>
       )}
 
       {(isCategoryModalOpen || currentUnknown) && !isImportModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative">
-                {isCategoryModalOpen && <button onClick={() => setIsCategoryModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20}/></button>}
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(76,44,128,0.16)] backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white border border-[#eee5dc] p-6 rounded-2xl w-[90%] max-w-sm shadow-2xl relative text-[#4b3d6d]">
+                {isCategoryModalOpen && <button onClick={() => setIsCategoryModalOpen(false)} className="absolute top-4 right-4 text-[#b9accf] hover:text-[#4b3d6d]"><X size={20}/></button>}
                 {currentUnknown ? (
                     <div className="text-center mb-4">
-                         <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-orange-500"><HelpCircle size={32}/></div>
+                         <div className="w-16 h-16 bg-[#ef9a79]/20 rounded-full flex items-center justify-center mx-auto mb-4 text-[#ef9a79]"><HelpCircle size={32}/></div>
                          <h3 className="text-xl font-bold mb-1">Nouvel ingrédient !</h3>
-                         <p className="text-slate-400 text-sm">Je ne connais pas encore :</p>
+                         <p className="text-[#8d82a8] text-sm">Je ne connais pas encore :</p>
                          <div className="relative mt-3">
-                            <input type="text" value={cleanNameInput} onChange={(e) => setCleanNameInput(e.target.value)} className="w-full bg-slate-800 border border-slate-600 text-white font-bold text-center py-3 px-4 rounded-xl focus:border-orange-500 outline-none shadow-inner"/>
-                            <Edit3 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"/>
+                            <input type="text" value={cleanNameInput} onChange={(e) => setCleanNameInput(e.target.value)} className="w-full bg-white border border-[#eee5dc] text-[#4b3d6d] font-bold text-center py-3 px-4 rounded-xl focus:border-[#ef9a79] outline-none shadow-inner"/>
+                            <Edit3 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#b9accf]"/>
                          </div>
-                         <p className="text-xs text-slate-500 mt-2 mb-4">Modifie le nom pour enlever les quantités (ex: &quot;200g de Farine&quot; → &quot;Farine&quot;)</p>
+                         <p className="text-xs text-[#b9accf] mt-2 mb-4">Modifie le nom pour enlever les quantités (ex: &quot;200g de Farine&quot; → &quot;Farine&quot;)</p>
                     </div>
                 ) : (
                     <>
                         <h3 className="text-xl font-bold mb-2">Où ranger &quot;{pendingIngredient}&quot; ?</h3>
-                        <p className="text-slate-400 text-sm mb-6">Choisis une catégorie.</p>
+                        <p className="text-[#8d82a8] text-sm mb-6">Choisis une catégorie.</p>
                     </>
                 )}
                 {currentUnknown && !resolveType ? (
                      <div className="grid grid-cols-1 gap-3 mt-4">
-                          <button onClick={() => setResolveType('alias')} className="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-left border border-slate-700 flex items-center gap-3 transition group">
+                          <button onClick={() => setResolveType('alias')} className="p-4 bg-white hover:bg-[#f6f0eb] rounded-xl text-left border border-[#eee5dc] flex items-center gap-3 transition group">
                               <LinkIcon size={24} className="text-blue-400 group-hover:scale-110 transition"/>
-                              <div><div className="font-bold">C&apos;est une variante</div><div className="text-xs text-slate-400">Ex: &quot;{cleanNameInput}&quot; → Champignon</div></div>
+                              <div><div className="font-bold">C&apos;est une variante</div><div className="text-xs text-[#8d82a8]">Ex: &quot;{cleanNameInput}&quot; → Champignon</div></div>
                           </button>
-                          <button onClick={() => setResolveType('new')} className="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-left border border-slate-700 flex items-center gap-3 transition group">
+                          <button onClick={() => setResolveType('new')} className="p-4 bg-white hover:bg-[#f6f0eb] rounded-xl text-left border border-[#eee5dc] flex items-center gap-3 transition group">
                               <Plus size={24} className="text-green-400 group-hover:scale-110 transition"/>
-                              <div><div className="font-bold">C&apos;est nouveau</div><div className="text-xs text-slate-400">Ajouter &quot;{cleanNameInput}&quot; aux catégories</div></div>
+                              <div><div className="font-bold">C&apos;est nouveau</div><div className="text-xs text-[#8d82a8]">Ajouter &quot;{cleanNameInput}&quot; aux catégories</div></div>
                           </button>
-                          <button onClick={skipUnknown} className="p-3 text-slate-500 hover:text-white text-sm font-medium">Ignorer</button>
+                          <button onClick={skipUnknown} className="p-3 text-[#b9accf] hover:text-[#4b3d6d] text-sm font-medium">Ignorer</button>
                      </div>
                 ) : resolveType === 'alias' ? (
                      <div className="space-y-3 mt-2 animate-in slide-in-from-right-10">
                           {!isCreatingMaster ? (
                               <>
-                                <p className="text-sm text-slate-400">C&apos;est une variante de quoi ?</p>
-                                <button onClick={() => { setIsCreatingMaster(true); setNewMasterName(""); }} className="w-full text-left p-3 rounded-xl border-2 border-dashed border-slate-600 text-orange-400 hover:border-orange-500 hover:text-orange-500 transition flex items-center gap-2 mb-2 font-bold"><Plus size={18} /> Créer un nouveau groupe (ex: Épices)</button>
-                                <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2 border-t border-slate-800 pt-2">
+                                <p className="text-sm text-[#8d82a8]">C&apos;est une variante de quoi ?</p>
+                                <button onClick={() => { setIsCreatingMaster(true); setNewMasterName(""); }} className="w-full text-left p-3 rounded-xl border-2 border-dashed border-slate-600 text-orange-400 hover:border-orange-500 hover:text-[#ef9a79] transition flex items-center gap-2 mb-2 font-bold"><Plus size={18} /> Créer un nouveau groupe (ex: Épices)</button>
+                                <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2 border-t border-[#eee5dc] pt-2">
                                    {categories
                                       .flatMap(c => [c.items, ...(c.subcategories || []).map((sub) => sub.items)])
                                       .flat()
                                       .sort()
                                       .map(ing => (
-                                       <button key={ing} onClick={() => linkAsAlias(ing)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 transition font-medium">{ing}</button>
+                                       <button key={ing} onClick={() => linkAsAlias(ing)} className="w-full text-left p-3 rounded-xl bg-white hover:bg-[#f6f0eb] border border-[#eee5dc] transition font-medium">{ing}</button>
                                    ))}
                                 </div>
-                                <button onClick={() => setResolveType(null)} className="w-full py-3 text-slate-400 font-bold">Retour</button>
+                                <button onClick={() => setResolveType(null)} className="w-full py-3 text-[#8d82a8] font-bold">Retour</button>
                               </>
                           ) : (
                               <div className="animate-in slide-in-from-right-10">
                                   <h4 className="font-bold text-lg mb-1">Créer un nouveau groupe</h4>
-                                  <p className="text-xs text-slate-400 mb-4">&quot;{currentUnknown?.name}&quot; sera rangé dedans.</p>
-                                  <div className="space-y-2 mb-4"><label className="text-xs font-bold uppercase text-slate-500">Nom du groupe</label><input autoFocus type="text" placeholder="Ex: Épices, Agrumes..." value={newMasterName} onChange={(e) => setNewMasterName(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"/></div>
-                                  <p className="text-xs font-bold uppercase text-slate-500 mb-2">Dans quelle catégorie ?</p>
+                                  <p className="text-xs text-[#8d82a8] mb-4">&quot;{currentUnknown?.name}&quot; sera rangé dedans.</p>
+                                  <div className="space-y-2 mb-4"><label className="text-xs font-bold uppercase text-[#b9accf]">Nom du groupe</label><input autoFocus type="text" placeholder="Ex: Épices, Agrumes..." value={newMasterName} onChange={(e) => setNewMasterName(e.target.value)} className="w-full bg-white border border-[#eee5dc] rounded-lg p-3 text-[#4b3d6d] focus:border-[#ef9a79] outline-none"/></div>
+                                  <p className="text-xs font-bold uppercase text-[#b9accf] mb-2">Dans quelle catégorie ?</p>
                                   <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2">
                                       {categories.map((cat, idx) => (
-                                          <button key={idx} onClick={() => createMasterAndLink(cat.name)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center justify-between group border border-slate-700/50"><span className="font-medium">{cat.name}</span></button>
+                                          <button key={idx} onClick={() => createMasterAndLink(cat.name)} className="w-full text-left p-3 rounded-xl bg-white hover:bg-[#f6f0eb] transition flex items-center justify-between group border border-[#eee5dc]/50"><span className="font-medium">{cat.name}</span></button>
                                       ))}
                                   </div>
-                                  <button onClick={() => setIsCreatingMaster(false)} className="w-full py-3 text-slate-400 font-bold mt-2">Annuler</button>
+                                  <button onClick={() => setIsCreatingMaster(false)} className="w-full py-3 text-[#8d82a8] font-bold mt-2">Annuler</button>
                               </div>
                           )}
                       </div>
@@ -1438,15 +1477,15 @@ export default function CuisinePage() {
                      !isCreatingCategory ? (
                         <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-2">
                             {categories.map((cat, idx) => (
-                                <button key={idx} onClick={() => addToCategory(cat.name)} className="w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition flex items-center justify-between group"><span className="font-medium">{cat.name}</span></button>
+                                <button key={idx} onClick={() => addToCategory(cat.name)} className="w-full text-left p-3 rounded-xl bg-white hover:bg-[#f6f0eb] transition flex items-center justify-between group"><span className="font-medium">{cat.name}</span></button>
                             ))}
-                            <button onClick={() => setIsCreatingCategory(true)} className="w-full text-left p-3 rounded-xl border-2 border-dashed border-slate-700 text-slate-400 hover:border-orange-500 hover:text-orange-500 transition flex items-center gap-2 mt-4"><FolderPlus size={18} /> Créer une nouvelle catégorie...</button>
-                            {currentUnknown && <button onClick={() => setResolveType(null)} className="w-full py-3 text-slate-400 font-bold mt-2">Retour</button>}
+                            <button onClick={() => setIsCreatingCategory(true)} className="w-full text-left p-3 rounded-xl border-2 border-dashed border-[#eee5dc] text-[#8d82a8] hover:border-orange-500 hover:text-[#ef9a79] transition flex items-center gap-2 mt-4"><FolderPlus size={18} /> Créer une nouvelle catégorie...</button>
+                            {currentUnknown && <button onClick={() => setResolveType(null)} className="w-full py-3 text-[#8d82a8] font-bold mt-2">Retour</button>}
                         </div>
                     ) : (
                         <div className="space-y-4 animate-in slide-in-from-right-10">
-                            <div className="space-y-2"><label className="text-xs font-bold uppercase text-slate-500">Nom de la catégorie</label><input autoFocus type="text" placeholder="Ex: 🍿 Snacks..." value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white focus:border-orange-500 outline-none"/></div>
-                            <div className="flex gap-2"><button onClick={() => setIsCreatingCategory(false)} className="flex-1 py-3 rounded-lg bg-slate-800 text-white font-bold">Retour</button><button onClick={createCategoryAndAdd} disabled={!newCategoryName.trim()} className="flex-1 py-3 rounded-lg bg-orange-500 text-slate-900 font-bold disabled:opacity-50">Créer</button></div>
+                            <div className="space-y-2"><label className="text-xs font-bold uppercase text-[#b9accf]">Nom de la catégorie</label><input autoFocus type="text" placeholder="Ex: 🍿 Snacks..." value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} className="w-full bg-white border border-[#eee5dc] rounded-lg p-3 text-[#4b3d6d] focus:border-[#ef9a79] outline-none"/></div>
+                            <div className="flex gap-2"><button onClick={() => setIsCreatingCategory(false)} className="flex-1 py-3 rounded-lg bg-[#f6f0eb] text-[#4b3d6d] font-bold">Retour</button><button onClick={createCategoryAndAdd} disabled={!newCategoryName.trim()} className="flex-1 py-3 rounded-lg bg-[#ef9a79] text-white font-bold disabled:opacity-50">Créer</button></div>
                         </div>
                     )
                 )}
@@ -1475,3 +1514,4 @@ export default function CuisinePage() {
     </main>
   );
 }
+
