@@ -1,0 +1,37 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "language": "Langue",
+    "french": "Francais",
+    "english": "Anglais"
+  },
+  "login": {
+    "tagline": "L'app du foyer pour partager vos routines, vos envies et vos moments a plusieurs.",
+    "title": "Connexion",
+    "missingFirebase": "Configuration Firebase manquante. Ajoute les variables NEXT_PUBLIC_FIREBASE_* dans .env.local.",
+    "identifier": "Mail / utilisateur",
+    "identifierPlaceholder": "toi@harmohome.app",
+    "password": "Mot de passe",
+    "createAccount": "Creer compte",
+    "forgotPassword": "Mot de passe oublie ?",
+    "submit": "Se connecter",
+    "submitPending": "Patiente...",
+    "google": "Connexion avec Google",
+    "opening": "Connexion a HarmoHome..."
+  },
+  "hub": {
+    "opening": "Ouverture de HarmoHome...",
+    "tabs": {
+      "profile": "Profil",
+      "search": "Recherche",
+      "home": "HH",
+      "household": "Foyer",
+      "settings": "Parametres"
+    },
+    "search": {
+      "kicker": "Recherche",
+      "title": "Explorer",
+      "placeholder": "Cette zone servira a la recherche dans HarmoHome."
+    }
+  }
+}

@@ -19,8 +19,10 @@ import {
   getGoogleProvider,
   isFirebaseConfigured,
 } from "@/lib/firebase/client";
+import { useI18n } from "@/components/I18nProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-function HarmoHomeLogo() {
+function HarmoHomeLogo({ tagline }: { tagline: string }) {
   return (
     <div className="text-center">
       <h1 className="text-[2.6rem] font-semibold leading-none tracking-[-0.05em]">
@@ -28,7 +30,7 @@ function HarmoHomeLogo() {
         <span className="text-[#ef9a79]">Home</span>
       </h1>
       <p className="mx-auto mt-3 max-w-[18rem] text-sm leading-5 text-[#8d82a8]">
-        L&apos;app du foyer pour partager vos routines, vos envies et vos moments a plusieurs.
+        {tagline}
       </p>
     </div>
   );
@@ -57,6 +59,7 @@ export default function Home() {
 }
 
 function LoginPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [identifier, setIdentifier] = useState("");
@@ -210,32 +213,35 @@ function LoginPage() {
     <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] px-5 py-5 text-[#2e1065]">
       <div className="mx-auto flex h-[calc(100dvh-2.5rem)] w-full max-w-sm flex-col justify-between">
         <div className="pt-1">
-          <HarmoHomeLogo />
+          <div className="mb-3 flex justify-end">
+            <LanguageSwitcher compact />
+          </div>
+          <HarmoHomeLogo tagline={t("login.tagline")} />
         </div>
 
         <section className="rounded-[1.8rem] border border-[#eee5dc] bg-white px-4 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
           <h2 className="text-left text-[1.65rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">
-            Connexion
+            {t("login.title")}
           </h2>
 
           {!firebaseReady && (
             <div className="mt-3 rounded-2xl border border-[#f6d5c2] bg-[#fff8f3] px-4 py-3 text-sm text-[#9a5a39]">
-              Configuration Firebase manquante. Ajoute les variables `NEXT_PUBLIC_FIREBASE_*` dans `.env.local`.
+              {t("login.missingFirebase")}
             </div>
           )}
 
           <form className="mt-4 space-y-3" onSubmit={handleEmailAuth}>
             <LoginField
-              label="Mail / utilisateur"
+              label={t("login.identifier")}
               value={identifier}
               onChange={setIdentifier}
-              placeholder="toi@harmohome.app"
+              placeholder={t("login.identifierPlaceholder")}
               icon={Mail}
               autoComplete="email"
             />
 
             <LoginField
-              label="Mot de passe"
+              label={t("login.password")}
               value={password}
               onChange={setPassword}
               placeholder="********"
@@ -246,14 +252,14 @@ function LoginPage() {
 
             <div className="flex items-center justify-between gap-3 pt-1 text-[13px]">
               <Link href="/signup" className="text-left font-medium text-[#7f68b7]">
-                Creer compte
+                {t("login.createAccount")}
               </Link>
               <button
                 type="button"
                 onClick={handleForgotPassword}
                 className="text-right font-medium text-[#c08268]"
               >
-                Mot de passe oublie ?
+                {t("login.forgotPassword")}
               </button>
             </div>
 
@@ -274,7 +280,7 @@ function LoginPage() {
               disabled={isSubmitting}
               className="w-full rounded-2xl bg-[#ef9a79] px-5 py-3.5 text-[15px] font-semibold text-white transition disabled:opacity-60"
             >
-              {isSubmitting ? "Patiente..." : "Se connecter"}
+              {isSubmitting ? t("login.submitPending") : t("login.submit")}
             </button>
 
             <button
@@ -284,7 +290,7 @@ function LoginPage() {
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-5 py-3.5 text-[15px] font-medium text-[#5e4e89] transition disabled:opacity-60"
             >
               <Chrome size={18} className="text-[#ef9a79]" />
-              Connexion avec Google
+              {t("login.google")}
             </button>
           </form>
         </section>
@@ -298,11 +304,12 @@ function LoginPage() {
 }
 
 function LoginLoadingScreen() {
+  const { t } = useI18n();
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-[#fcf7f2] text-[#4c1d95]">
       <div className="text-center">
         <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#efe5ff] border-t-[#ef9a79]" />
-        <p className="text-sm text-[#6b21a8]">Connexion a HarmoHome...</p>
+        <p className="text-sm text-[#6b21a8]">{t("login.opening")}</p>
       </div>
     </main>
   );

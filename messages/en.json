@@ -1,0 +1,37 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "language": "Language",
+    "french": "French",
+    "english": "English"
+  },
+  "login": {
+    "tagline": "The household app to share routines, plans and moments together.",
+    "title": "Sign in",
+    "missingFirebase": "Missing Firebase configuration. Add NEXT_PUBLIC_FIREBASE_* variables in .env.local.",
+    "identifier": "Email / username",
+    "identifierPlaceholder": "you@harmohome.app",
+    "password": "Password",
+    "createAccount": "Create account",
+    "forgotPassword": "Forgot password?",
+    "submit": "Sign in",
+    "submitPending": "Please wait...",
+    "google": "Continue with Google",
+    "opening": "Connecting to HarmoHome..."
+  },
+  "hub": {
+    "opening": "Opening HarmoHome...",
+    "tabs": {
+      "profile": "Profile",
+      "search": "Search",
+      "home": "HH",
+      "household": "Household",
+      "settings": "Settings"
+    },
+    "search": {
+      "kicker": "Search",
+      "title": "Explore",
+      "placeholder": "This area will handle search inside HarmoHome."
+    }
+  }
+}

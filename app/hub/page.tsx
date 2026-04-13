@@ -34,10 +34,12 @@ import {
   removeHouseholdMember,
   type Household,
 } from "@/lib/firebase/households";
+import { useI18n } from "@/components/I18nProvider";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 type HubTab = "profile" | "search" | "hh" | "household" | "settings";
 
-function HarmoHomeLogo() {
+function HarmoHomeLogo({ tagline }: { tagline: string }) {
   return (
     <div className="text-center">
       <h1 className="text-[2.6rem] font-semibold leading-none tracking-[-0.05em]">
@@ -45,13 +47,14 @@ function HarmoHomeLogo() {
         <span className="text-[#ef9a79]">Home</span>
       </h1>
       <p className="mx-auto mt-3 max-w-[18rem] text-sm leading-5 text-[#8d82a8]">
-        L&apos;app du foyer pour partager vos routines, vos envies et vos moments a plusieurs.
+        {tagline}
       </p>
     </div>
   );
 }
 
 export default function HubPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -88,7 +91,7 @@ export default function HubPage() {
       <main className="flex min-h-[100dvh] items-center justify-center bg-[#fcf7f2] text-[#4c1d95]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#efe5ff] border-t-[#ef9a79]" />
-          <p className="text-sm text-[#6b21a8]">Ouverture de HarmoHome...</p>
+          <p className="text-sm text-[#6b21a8]">{t("hub.opening")}</p>
         </div>
       </main>
     );
@@ -98,7 +101,10 @@ export default function HubPage() {
     <main className="min-h-[100dvh] bg-[#fcf7f2] px-5 pb-28 pt-5 text-[#2e1065]">
       <div className="mx-auto w-full max-w-sm">
         <div className="pb-6 pt-1">
-          <HarmoHomeLogo />
+          <div className="mb-3 flex justify-end">
+            <LanguageSwitcher compact />
+          </div>
+          <HarmoHomeLogo tagline={t("login.tagline")} />
         </div>
 
         {activeTab === "profile" && <ProfileView user={user} />}
@@ -111,31 +117,31 @@ export default function HubPage() {
       <nav className="fixed bottom-0 left-0 right-0 border-t border-[#eee5dc] bg-[rgba(252,247,242,0.96)] backdrop-blur">
         <div className="mx-auto grid w-full max-w-sm grid-cols-5 px-5 pb-5 pt-3">
           <BottomTab
-            label="Profil"
+            label={t("hub.tabs.profile")}
             icon={UserRound}
             isActive={activeTab === "profile"}
             onClick={() => setActiveTab("profile")}
           />
           <BottomTab
-            label="Recherche"
+            label={t("hub.tabs.search")}
             icon={Search}
             isActive={activeTab === "search"}
             onClick={() => setActiveTab("search")}
           />
           <BottomTab
-            label="HH"
+            label={t("hub.tabs.home")}
             icon={Home}
             isActive={activeTab === "hh"}
             onClick={() => setActiveTab("hh")}
           />
           <BottomTab
-            label="Foyer"
+            label={t("hub.tabs.household")}
             icon={Users}
             isActive={activeTab === "household"}
             onClick={() => setActiveTab("household")}
           />
           <BottomTab
-            label="Parametres"
+            label={t("hub.tabs.settings")}
             icon={Settings}
             isActive={activeTab === "settings"}
             onClick={() => setActiveTab("settings")}
@@ -147,16 +153,17 @@ export default function HubPage() {
 }
 
 function SearchView() {
+  const { t } = useI18n();
   return (
     <section className="space-y-4 rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">Recherche</p>
-        <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">Explorer</h2>
+        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">{t("hub.search.kicker")}</p>
+        <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">{t("hub.search.title")}</h2>
       </div>
 
       <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
         <p className="text-sm text-[#6f628f]">
-          Cette zone servira a la recherche dans HarmoHome.
+          {t("hub.search.placeholder")}
         </p>
       </div>
     </section>
