@@ -1036,17 +1036,17 @@ export default function CuisinePage() {
   // --- RENDU UI PRINCIPAL ---
   return (
     <main className="min-h-screen bg-[#fcf7f2] text-[#4b3d6d] pb-20">
-      <div className="p-4 flex items-center justify-between bg-[#fcf7f2] sticky top-0 z-10 border-b border-[#eee5dc]">
+      <div className="p-4 flex items-center justify-between bg-[#fcf7f2] sticky top-0 z-10 border-b border-[#ece4f7]">
         <Link href="/" className="text-[#8d82a8] hover:text-[#4b3d6d] transition"><ArrowLeft /></Link>
-        <h1 className="text-xl font-bold flex items-center gap-2 text-[#ef9a79]"><ChefHat /> Cuistot</h1>
+        <h1 className="text-xl font-bold flex items-center gap-2 text-[#7f68b7]"><ChefHat className="text-[#ef9a79]" /> Cuistot</h1>
         <div className="w-6"></div> 
       </div>
 
       <div className="p-4">
-          <div className="flex bg-white p-1 rounded-xl">
-              <button onClick={() => setActiveTab('scan')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'scan' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f]'}`}><Camera size={16} /> Scan</button>
-              <button onClick={() => setActiveTab('fridge')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'fridge' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f]'}`}><Refrigerator size={16} /> Frigo</button>
-              <button onClick={() => setActiveTab('book')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'book' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f]'}`}><BookOpen size={16} /> Livre</button>
+          <div className="flex bg-[#fcfbff] border border-[#ece4f7] p-1 rounded-xl shadow-[0_10px_20px_rgba(111,98,143,0.08)]">
+              <button onClick={() => setActiveTab('scan')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'scan' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f] hover:bg-white'}`}><Camera size={16} /> Scan</button>
+              <button onClick={() => setActiveTab('fridge')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'fridge' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f] hover:bg-white'}`}><Refrigerator size={16} /> Frigo</button>
+              <button onClick={() => setActiveTab('book')} className={`flex-1 py-2 text-xs sm:text-sm font-bold rounded-lg transition flex items-center justify-center gap-2 ${activeTab === 'book' ? 'bg-[#ef9a79] text-white shadow-lg' : 'text-[#8d82a8] hover:text-[#6f628f] hover:bg-white'}`}><BookOpen size={16} /> Livre</button>
           </div>
       </div>
 
@@ -1062,7 +1062,7 @@ export default function CuisinePage() {
                 <div className="flex flex-col gap-3">
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleScanUpload} />
                     <button onClick={() => fileInputRef.current?.click()} disabled={analyzing} className="bg-[#ef9a79] text-white w-full py-4 rounded-xl font-bold shadow-lg shadow-orange-500/20 active:scale-95 transition flex items-center justify-center gap-2">{analyzing ? <Loader2 className="animate-spin" /> : <Camera />} Scanner Photos</button>
-                    <button onClick={() => setIsImportModalOpen(true)} disabled={analyzing} className="bg-[#f6f0eb] text-[#4b3d6d] w-full py-4 rounded-xl font-bold hover:bg-[#efe7de] active:scale-95 transition flex items-center justify-center gap-2"><Instagram size={20} className="text-pink-400"/> Importer Texte / Insta</button>
+                    <button onClick={() => setIsImportModalOpen(true)} disabled={analyzing} className="bg-[#fcfbff] border border-[#ece4f7] text-[#4b3d6d] w-full py-4 rounded-xl font-bold hover:bg-white active:scale-95 transition flex items-center justify-center gap-2"><Instagram size={20} className="text-[#7f68b7]"/> Importer Texte / Insta</button>
                     <button onClick={startManualCreation} disabled={analyzing} className="bg-white border border-[#eee5dc] text-[#6f628f] w-full py-4 rounded-xl font-bold hover:bg-[#f6f0eb] hover:text-[#4b3d6d] active:scale-95 transition flex items-center justify-center gap-2">
                         <Edit3 size={20} /> Créer manuellement
                     </button>
@@ -1120,16 +1120,16 @@ export default function CuisinePage() {
                                 {categories.map((category, idx) => {
                                     const totalItems = category.items.length + (category.subcategories || []).reduce((acc, sub) => acc + sub.items.length, 0);
                                     return (
-                                        <div key={idx} className="rounded-2xl border border-[#eee5dc] bg-[#fcf7f2]/60 overflow-hidden">
+                                        <div key={idx} className="rounded-2xl border border-[#ece4f7] bg-[#fcfbff] overflow-hidden shadow-[0_8px_18px_rgba(111,98,143,0.06)]">
                                             <FridgeCategoryHeader
                                                 id={`expand:${category.name}`}
                                                 onClick={() => toggleFridgeCategory(category.name)}
-                                                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-white/60 transition"
+                                                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-[#f6f2ff] transition"
                                             >
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <Tag size={14}/>
                                                     <span className="text-sm font-bold text-[#6f628f] uppercase tracking-wider truncate">{category.name}</span>
-                                                    <span className="text-[11px] text-[#b9accf] bg-white px-2 py-0.5 rounded-full">{totalItems}</span>
+                                                    <span className="text-[11px] text-[#8d82a8] bg-[#f6f2ff] border border-[#ece4f7] px-2 py-0.5 rounded-full">{totalItems}</span>
                                                     {isEditMode && (
                                                         <>
                                                             <button
@@ -1157,11 +1157,11 @@ export default function CuisinePage() {
                                                 </div>
                                                 <ChevronDown
                                                     size={18}
-                                                    className={`text-[#b9accf] transition-transform ${openFridgeCategories[category.name] ? 'rotate-180' : ''}`}
+                                                    className={`text-[#8d82a8] transition-transform ${openFridgeCategories[category.name] ? 'rotate-180' : ''}`}
                                                 />
                                             </FridgeCategoryHeader>
                                             {openFridgeCategories[category.name] && (
-                                                <div className="px-4 pb-4 pt-1 border-t border-[#eee5dc] space-y-3">
+                                                <div className="px-4 pb-4 pt-1 border-t border-[#ece4f7] space-y-3">
                                                     <FridgeDropZoneBlock id={`zone:${category.name}`} active={isEditMode && !isDeleteMode}>
                                                         <div className="flex flex-wrap gap-2 p-2">
                                                             {category.items
@@ -1209,7 +1209,7 @@ export default function CuisinePage() {
 
                                                     {(category.subcategories || []).map((sub) => (
                                                         <FridgeDropZoneBlock key={sub.name} id={`zone:${category.name}::${sub.name}`} active={isEditMode && !isDeleteMode}>
-                                                            <div className="rounded-xl border border-[#eee5dc]/60 bg-white/40 p-3">
+                                                            <div className="rounded-xl border border-[#ece4f7] bg-[#fcfbff] p-3">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => toggleFridgeSubcategory(category.name, sub.name)}
