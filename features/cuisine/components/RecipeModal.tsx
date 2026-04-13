@@ -126,9 +126,9 @@ export default function RecipeModal({ recipe, isPreview = false, onClose, onUpda
                 
                 <div className="p-4 border-b border-[#eee5dc] flex justify-between items-center bg-white shrink-0">
                     {isEditing ? (
-                         <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-[#f6f0eb] border border-[#eee5dc] text-[#4b3d6d] font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none" placeholder="Nom de la recette"/>
+                         <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-[#f6f0eb] border border-[#eee5dc] text-[#6b45b8] font-bold text-lg rounded px-2 py-1 w-full mr-2 focus:border-orange-500 outline-none" placeholder="Nom de la recette"/>
                     ) : (
-                        <h2 className="text-2xl font-black text-[#4b3d6d] truncate pr-4">{formData.title}</h2>
+                        <h2 className="text-2xl font-black text-[#6b45b8] truncate pr-4">{formData.title}</h2>
                     )}
                     {!isPreview && !isEditing && (
                         <div className="flex gap-2 shrink-0">
