@@ -156,10 +156,10 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
       return (
         <div className="space-y-6 animate-in fade-in">
-          <div className="bg-purple-600 p-8 rounded-[2.5rem] text-white text-center shadow-lg shadow-purple-100">
+          <div className="bg-[#8d7ac6] p-8 rounded-[2.5rem] text-white text-center shadow-[0_12px_24px_rgba(141,122,198,0.35)]">
             <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Mission Photo</p>
             <h3 className="text-2xl font-black leading-tight">{myChallenge.mission}</h3>
-            <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-purple-100">
+            <p className="mt-3 text-xs font-bold uppercase tracking-[0.2em] text-[#ece4f7]">
               Photo pour {getName(participantMap, targetId)}
             </p>
           </div>
@@ -193,7 +193,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
                 disabled={isPhotoBusy}
                 className="flex flex-col items-center text-gray-400 gap-3 disabled:opacity-60"
               >
-                <div className="bg-white p-4 rounded-full shadow-sm text-purple-600">
+                <div className="bg-white p-4 rounded-full shadow-sm text-[#8d7ac6]">
                   {isPreparingImage ? <Loader2 size={32} className="animate-spin" /> : <Camera size={32} />}
                 </div>
                 <span className="font-bold">{isPreparingImage ? 'Traitement de la photo...' : 'Prendre la photo'}</span>
@@ -202,8 +202,8 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
             {isSubmittingPhoto && (
               <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3">
-                <Loader2 className="animate-spin text-purple-600" size={30} />
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-700">Envoi en cours...</p>
+                <Loader2 className="animate-spin text-[#8d7ac6]" size={30} />
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f628f]">Envoi en cours...</p>
               </div>
             )}
           </div>
@@ -243,7 +243,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               <button
                 onClick={resetZoomRandom}
                 disabled={isPhotoBusy}
-                className="w-full bg-purple-100 text-purple-700 font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
+                className="w-full bg-[#f3edf9] text-[#6f628f] font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
               >
                 Regenerer un zoom aleatoire
               </button>
@@ -255,7 +255,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
                   void submitPhoto();
                 }}
                 disabled={isPhotoBusy}
-                className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
+                className="w-full bg-[#8d7ac6] text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
               >
                 {isSubmittingPhoto ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
                 {isSubmittingPhoto ? 'ENVOI EN COURS...' : 'ENVOYER LE DEFI'}
@@ -405,12 +405,12 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
     if (!isAuthor) {
       return (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2.5rem] text-center gap-4 shadow-sm border border-gray-100">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 animate-pulse">
+          <div className="w-16 h-16 bg-[#f3edf9] rounded-full flex items-center justify-center text-[#8d7ac6] animate-pulse">
             <Camera />
           </div>
           <h3 className="font-black text-xl text-gray-800">Attente de la photo...</h3>
           <p className="text-gray-500 font-medium tracking-tight">
-            C'est au tour de <span className="text-purple-600 font-bold">{getName(participantMap, sharedData.authorId)}</span> de jouer.
+            C'est au tour de <span className="text-[#8d7ac6] font-bold">{getName(participantMap, sharedData.authorId)}</span> de jouer.
           </p>
         </div>
       );
@@ -418,7 +418,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
     return (
       <div className="space-y-6 animate-in fade-in">
-        <div className="bg-purple-600 p-8 rounded-[2.5rem] text-white text-center shadow-lg shadow-purple-100">
+        <div className="bg-[#8d7ac6] p-8 rounded-[2.5rem] text-white text-center shadow-[0_12px_24px_rgba(141,122,198,0.35)]">
           <p className="text-[10px] font-black uppercase tracking-widest opacity-70 mb-1">Mission Photo</p>
           <h3 className="text-2xl font-black leading-tight">{sharedData.mission}</h3>
         </div>
@@ -452,7 +452,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               disabled={isPhotoBusy}
               className="flex flex-col items-center text-gray-400 gap-3 disabled:opacity-60"
             >
-              <div className="bg-white p-4 rounded-full shadow-sm text-purple-600">
+              <div className="bg-white p-4 rounded-full shadow-sm text-[#8d7ac6]">
                 {isPreparingImage ? <Loader2 size={32} className="animate-spin" /> : <Camera size={32} />}
               </div>
               <span className="font-bold">{isPreparingImage ? 'Traitement de la photo...' : 'Prendre la photo'}</span>
@@ -461,8 +461,8 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
           {isSubmittingPhoto && (
             <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3">
-              <Loader2 className="animate-spin text-purple-600" size={30} />
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-700">Envoi en cours...</p>
+              <Loader2 className="animate-spin text-[#8d7ac6]" size={30} />
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#6f628f]">Envoi en cours...</p>
             </div>
           )}
         </div>
@@ -502,7 +502,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
             <button
               onClick={resetZoomRandom}
               disabled={isPhotoBusy}
-              className="w-full bg-purple-100 text-purple-700 font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
+              className="w-full bg-[#f3edf9] text-[#6f628f] font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
             >
               Regenerer un zoom aleatoire
             </button>
@@ -514,7 +514,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
                 void submitPhoto();
               }}
               disabled={isPhotoBusy}
-              className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
+              className="w-full bg-[#8d7ac6] text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
             >
               {isSubmittingPhoto ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
               {isSubmittingPhoto ? 'ENVOI EN COURS...' : 'ENVOYER LE DEFI'}
@@ -622,3 +622,5 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
   return null;
 }
+
+

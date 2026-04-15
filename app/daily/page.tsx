@@ -219,47 +219,48 @@ export default function DailyGamePage() {
 
   if (!authReady || !user) {
     return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 size={40} className="animate-spin text-purple-600" />
+      <main className="min-h-[100dvh] bg-[#fcf7f2] flex items-center justify-center">
+        <Loader2 size={40} className="animate-spin text-[#8d7ac6]" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-10 font-sans">
-      <header className="p-4 flex items-center justify-between bg-white border-b sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <Link href="/hub" className="p-2 rounded-2xl bg-gray-100 text-gray-500">
+    <main className="min-h-[100dvh] bg-[#fcf7f2] px-5 pb-10 pt-5 text-[#2e1065]">
+      <div className="mx-auto w-full max-w-md">
+      <header className="sticky top-3 z-20 mb-5 flex items-center justify-between rounded-[1.8rem] border border-[#eee5dc] bg-[rgba(255,255,255,0.94)] p-4 shadow-[0_12px_30px_rgba(111,98,143,0.08)] backdrop-blur">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/hub" className="p-2 rounded-2xl border border-[#ece4f7] bg-white text-[#6f628f] shadow-[0_8px_18px_rgba(111,98,143,0.08)]">
             <ArrowLeft size={22} />
           </Link>
-          <div className="flex flex-col">
-            <span className="font-black text-purple-600 uppercase text-xs">
+          <div className="flex min-w-0 flex-col">
+            <span className="font-black text-[#8d7ac6] uppercase text-xs">
               {isSimulationMode ? 'Mode Simulation' : 'Defi du Jour'}
             </span>
-            <span className="text-[11px] text-gray-500 font-bold">{currentName}</span>
+            <span className="truncate text-[11px] text-[#8d82a8] font-bold">{currentName}</span>
           </div>
         </div>
-        <Link href="/daily/editor" className="text-xs font-bold uppercase text-purple-600">
+        <Link href="/daily/editor" className="text-xs font-bold uppercase text-[#6f628f]">
           Editeur
         </Link>
       </header>
 
-      <div className="max-w-md mx-auto p-6">
+      <div className="space-y-5">
         {loading && !session ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="animate-spin text-purple-600" size={48} />
+          <div className="flex justify-center py-20 rounded-[1.8rem] border border-[#eee5dc] bg-white shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
+            <Loader2 className="animate-spin text-[#8d7ac6]" size={48} />
           </div>
         ) : (
           <>
-            <div className="mb-5 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3 rounded-[1.8rem] border border-[#eee5dc] bg-white p-4 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setMode('daily')}
                   className={`rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-tight transition ${
                     !isSimulationMode
-                      ? 'bg-purple-600 text-white shadow-lg'
-                      : 'bg-white border border-gray-200 text-gray-500'
+                      ? 'bg-[#8d7ac6] text-white shadow-[0_10px_18px_rgba(141,122,198,0.35)]'
+                      : 'bg-[#fcfbff] border border-[#ece4f7] text-[#8d82a8]'
                   }`}
                 >
                   Quotidien
@@ -269,8 +270,8 @@ export default function DailyGamePage() {
                   onClick={() => setMode('simu')}
                   className={`rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-tight transition ${
                     isSimulationMode
-                      ? 'bg-orange-500 text-white shadow-lg'
-                      : 'bg-white border border-gray-200 text-gray-500'
+                      ? 'bg-[#ef9a79] text-white shadow-[0_10px_18px_rgba(239,154,121,0.32)]'
+                      : 'bg-[#fcfbff] border border-[#ece4f7] text-[#8d82a8]'
                   }`}
                 >
                   Simulation
@@ -279,14 +280,14 @@ export default function DailyGamePage() {
 
               {isSimulationMode && (
                 <div className="space-y-2">
-                  <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-orange-500 mb-2">
+                  <div className="rounded-2xl border border-[#f2decf] bg-[#fff8f3] px-4 py-3">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-[#ef9a79] mb-2">
                       Jeu a simuler
                     </label>
                     <select
                       value={simGameId}
                       onChange={(event) => setSimGameId(event.target.value as SimGameFilter)}
-                      className="w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-orange-600 outline-none"
+                      className="w-full rounded-xl border border-[#f2decf] bg-white px-3 py-2 text-sm font-bold text-[#6f628f] outline-none"
                     >
                       {SIM_GAME_OPTIONS.map((option) => (
                         <option key={option.id} value={option.id}>
@@ -299,7 +300,7 @@ export default function DailyGamePage() {
                   <button
                     type="button"
                     onClick={handleGlobalReset}
-                    className="w-full rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-orange-600 flex items-center justify-center gap-2"
+                    className="w-full rounded-2xl border border-[#f2decf] bg-[#fff8f3] px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-[#ef9a79] flex items-center justify-center gap-2"
                   >
                     <RefreshCw size={14} /> Relancer la simulation
                   </button>
@@ -308,18 +309,18 @@ export default function DailyGamePage() {
             </div>
 
             {error && (
-              <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="rounded-2xl border border-[#f8d7cf] bg-[#fff5f2] px-4 py-3 text-sm text-[#b4533d]">
                 {error}
               </div>
             )}
 
             {session?.status === 'waiting_players' && (
-              <div className="bg-white rounded-[2.3rem] border border-gray-100 shadow-xl p-8 text-center space-y-5 animate-in zoom-in-95">
-                <div className="mx-auto w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+              <div className="bg-white rounded-[2.3rem] border border-[#eee5dc] shadow-[0_12px_30px_rgba(111,98,143,0.08)] p-8 text-center space-y-5 animate-in zoom-in-95">
+                <div className="mx-auto w-16 h-16 rounded-full bg-[#f3edf9] text-[#8d7ac6] flex items-center justify-center">
                   <Users size={30} />
                 </div>
-                <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter">En attente de joueurs</h2>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <h2 className="text-2xl font-black text-[#4b3d6d] uppercase tracking-tighter">En attente de joueurs</h2>
+                <p className="text-[#8d82a8] text-sm leading-relaxed">
                   {session?.sharedData?.message || 'Ajoute au moins un autre membre au foyer pour jouer.'}
                 </p>
               </div>
@@ -377,8 +378,8 @@ export default function DailyGamePage() {
 
             {session?.status === 'finished' && (
               <div className="space-y-6 animate-in zoom-in-95 duration-700">
-                <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden">
-                  <div className="bg-green-500 p-10 text-white text-center">
+                <div className="bg-white rounded-[2.5rem] shadow-[0_12px_30px_rgba(111,98,143,0.08)] border border-[#eee5dc] overflow-hidden">
+                  <div className="bg-[linear-gradient(135deg,#8d7ac6,#ef9a79)] p-10 text-white text-center">
                     <Trophy size={60} className="mx-auto mb-2" />
                     <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Termine !</h2>
                     <p className="mt-3 text-sm font-bold uppercase tracking-[0.24em] opacity-80">
@@ -391,47 +392,47 @@ export default function DailyGamePage() {
                       <div
                         key={entry.id}
                         className={`flex items-center justify-between rounded-2xl border p-4 ${
-                          index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-100 bg-gray-50'
+                          index === 0 ? 'border-[#ece4f7] bg-[#fcfbff]' : 'border-[#f0ebe4] bg-[#fffdfa]'
                         }`}
                       >
-                        <p className="font-black text-gray-700">{entry.name}</p>
-                        <p className="text-lg font-black text-gray-900">{entry.score} pts</p>
+                        <p className="font-black text-[#4b3d6d]">{entry.name}</p>
+                        <p className="text-lg font-black text-[#4b3d6d]">{entry.score} pts</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {rankingEntries.length > 0 && (
-                  <div className="bg-gray-900 rounded-[2.5rem] p-8 text-white shadow-2xl">
-                    <h3 className="text-lg font-black uppercase tracking-widest mb-5">Cumul Semaine</h3>
+                  <div className="rounded-[2.5rem] border border-[#eee5dc] bg-white p-8 text-[#4b3d6d] shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
+                    <h3 className="text-lg font-black uppercase tracking-widest mb-5 text-[#6f628f]">Cumul Semaine</h3>
                     <div className="space-y-3">
                       {rankingEntries.map((entry, index) => (
                         <div
                           key={entry.id}
                           className={`flex items-center justify-between p-4 rounded-2xl ${
-                            index === 0 ? 'bg-white/12 border border-white/25' : 'bg-white/6'
+                            index === 0 ? 'bg-[#fcfbff] border border-[#ece4f7]' : 'bg-[#fffdfa] border border-[#f0ebe4]'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">
+                            <span className="w-7 h-7 rounded-full bg-[#f3edf9] text-[#8d7ac6] flex items-center justify-center text-xs font-black">
                               {index + 1}
                             </span>
-                            <span className="font-bold">{entry.name}</span>
+                            <span className="font-bold text-[#4b3d6d]">{entry.name}</span>
                           </div>
-                          <span className="font-black text-yellow-300">{entry.score} pts</span>
+                          <span className="font-black text-[#6f628f]">{entry.score} pts</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div className="bg-blue-600 rounded-[2rem] p-6 text-white flex items-center gap-4 shadow-lg">
-                  <div className="bg-white/20 p-3 rounded-2xl">
+                <div className="rounded-[2rem] border border-[#f2decf] bg-[#fff8f3] p-6 text-[#6f628f] flex items-center gap-4 shadow-[0_12px_24px_rgba(239,154,121,0.15)]">
+                  <div className="bg-[#ffeedd] p-3 rounded-2xl text-[#ef9a79]">
                     <Clock size={24} />
                   </div>
                   <div className="text-left">
-                    <p className="font-black uppercase text-xs tracking-widest mb-1">Session terminee</p>
-                    <p className="text-sm font-medium opacity-90">
+                    <p className="font-black uppercase text-xs tracking-widest mb-1 text-[#ef9a79]">Session terminee</p>
+                    <p className="text-sm font-medium text-[#6f628f]">
                       {isSimulationMode
                         ? 'Tu peux relancer une nouvelle simulation quand tu veux.'
                         : 'Rendez-vous demain pour le prochain jeu.'}
@@ -441,7 +442,7 @@ export default function DailyGamePage() {
 
                 <button
                   onClick={handleGlobalReset}
-                  className="w-full py-4 text-gray-400 font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 opacity-50 hover:opacity-100 transition-all"
+                  className="w-full py-4 text-[#8d82a8] font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 opacity-70 hover:opacity-100 transition-all"
                 >
                   <RefreshCw size={14} /> {isSimulationMode ? 'Relancer la simulation' : 'Recommencer (Reset)'}
                 </button>
@@ -449,6 +450,7 @@ export default function DailyGamePage() {
             )}
           </>
         )}
+      </div>
       </div>
     </main>
   );

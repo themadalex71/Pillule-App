@@ -79,68 +79,6 @@ const GRAMMAR_TEMPLATES = [
   },
 ];
 
-const CADAVRE_THEMES = [
-  "Une catastrophe domestique",
-  "Un secret de famille",
-  "Un rendez-vous bizarre",
-  "Une mission de voisinage",
-  "Un objet maudit",
-  "Un anniversaire qui derape",
-  "Une victoire improbable",
-  "Un malentendu epique",
-];
-
-const CADAVRE_TONES = [
-  "absurde",
-  "dramatique",
-  "romantique",
-  "thriller",
-  "sitcom",
-  "epique",
-  "poetique",
-];
-
-const CADAVRE_PLACES = [
-  "dans un supermarche",
-  "sur un balcon",
-  "dans un ascenseur",
-  "a la mairie",
-  "dans un train de nuit",
-  "dans une cuisine",
-  "sur un terrain de foot",
-];
-
-const CADAVRE_BONUS_WORDS = [
-  "chaussette",
-  "lasagne",
-  "licorne",
-  "parapluie",
-  "micro-ondes",
-  "paillettes",
-  "cactus",
-  "trottinette",
-];
-
-const CADAVRE_STEP_TWISTS = [
-  "fais comme si c'etait tres serieux",
-  "pense a une scene de film",
-  "ajoute un detail du quotidien",
-  "utilise un contraste inattendu",
-  "garde un style tres simple",
-  "transforme la scene en mini drama",
-  "imagine une reaction totalement disproportionnee",
-];
-
-const CADAVRE_STEP_STYLES = [
-  "court et percutant",
-  "theatral",
-  "minimaliste",
-  "poetique",
-  "ironique",
-  "epique",
-  "situation comique",
-];
-
 const DEFAULT_TIER_LIST = [
   {
     id: "demo_fruit",
@@ -154,81 +92,6 @@ const DEFAULT_TIER_LIST = [
     ],
   },
 ];
-
-function randomItem<T>(items: T[], fallback: T): T {
-  if (!Array.isArray(items) || items.length === 0) {
-    return fallback;
-  }
-
-  return items[Math.floor(Math.random() * items.length)];
-}
-
-function shuffleInPlace<T>(items: T[]) {
-  for (let index = items.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [items[index], items[swapIndex]] = [items[swapIndex], items[index]];
-  }
-}
-
-function buildShuffledCycle<T>(items: T[], fallback: T) {
-  const source = Array.isArray(items) && items.length > 0 ? [...items] : [fallback];
-  shuffleInPlace(source);
-  let index = 0;
-
-  return () => {
-    if (source.length === 0) {
-      return fallback;
-    }
-
-    const value = source[index % source.length];
-    index += 1;
-
-    if (index % source.length === 0) {
-      shuffleInPlace(source);
-    }
-
-    return value;
-  };
-}
-
-function buildCadavreInspiration(stepCount: number) {
-  const theme = randomItem(CADAVRE_THEMES, "Une situation imprevisible");
-  const place = randomItem(CADAVRE_PLACES, "dans un lieu inconnu");
-  const safeStepCount = Math.max(1, Number(stepCount) || 1);
-  const pickTone = buildShuffledCycle(CADAVRE_TONES, "absurde");
-  const pickTwist = buildShuffledCycle(CADAVRE_STEP_TWISTS, "ajoute un detail inattendu");
-  const pickBonusWord = buildShuffledCycle(CADAVRE_BONUS_WORDS, "surprise");
-  const pickStyle = buildShuffledCycle(CADAVRE_STEP_STYLES, "court et percutant");
-
-  const stepGuides = Array.from({ length: safeStepCount }).map((_, stepIndex) => {
-    const tone = pickTone();
-    const twist = pickTwist();
-    const bonusWord = pickBonusWord();
-    const style = pickStyle();
-
-    return {
-      stepIndex,
-      tone,
-      twist,
-      bonusWord,
-      style,
-      hook: `Etape ${stepIndex + 1}: ${theme}, ${place}, style ${style}, ambiance ${tone}.`,
-    };
-  });
-
-  const firstGuide = stepGuides[0];
-
-  return {
-    theme,
-    place,
-    tone: firstGuide?.tone || "absurde",
-    bonusWord: firstGuide?.bonusWord || "surprise",
-    twist: firstGuide?.twist || "ajoute un detail inattendu",
-    style: firstGuide?.style || "court et percutant",
-    hook: `${theme} ${place}`,
-    stepGuides,
-  };
-}
 
 function getAuthTokenFromRequest(request: Request) {
   const authHeader = request.headers.get("authorization") || "";
@@ -514,7 +377,6 @@ export async function GET(request: Request) {
       } else if (game.id === "cadavre") {
         const randomTemplate = GRAMMAR_TEMPLATES[Math.floor(Math.random() * GRAMMAR_TEMPLATES.length)];
         const emptyParts = new Array(randomTemplate.steps.length).fill(null);
-        const inspiration = buildCadavreInspiration(randomTemplate.steps.length);
 
         const stories = participantIds.map((_, storyIndex) => ({
           id: `S${storyIndex + 1}`,
@@ -525,7 +387,6 @@ export async function GET(request: Request) {
         sharedData = {
           phase: 0,
           template: randomTemplate,
-          inspiration,
           stories,
           votes: Object.fromEntries(participantIds.map((id) => [id, []])),
           resultsApplied: false,

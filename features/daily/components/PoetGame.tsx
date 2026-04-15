@@ -35,8 +35,8 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
   if (phase === 'WRITE') {
     if (poems[currentUserId]) {
       return (
-        <div className="flex flex-col items-center justify-center p-10 bg-white rounded-[2.5rem] text-center gap-6 shadow-xl animate-in zoom-in-95">
-          <div className="bg-pink-100 p-6 rounded-full text-pink-600 animate-bounce">
+        <div className="flex flex-col items-center justify-center p-10 bg-white rounded-[2.5rem] text-center gap-6 shadow-[0_12px_30px_rgba(111,98,143,0.08)] border border-[#eee5dc] animate-in zoom-in-95">
+          <div className="bg-[#fff1e8] p-6 rounded-full text-[#ef9a79] animate-bounce">
             <Feather size={48} />
           </div>
           <div>
@@ -49,8 +49,8 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
 
     return (
       <div className="space-y-6 animate-in slide-in-from-bottom-4">
-        <div className="bg-pink-50 p-6 rounded-[2rem] border border-pink-100 shadow-md">
-          <div className="flex items-center gap-2 mb-4 text-pink-600">
+        <div className="bg-[#fff8f3] p-6 rounded-[2rem] border border-[#f2decf] shadow-[0_10px_24px_rgba(239,154,121,0.14)]">
+          <div className="flex items-center gap-2 mb-4 text-[#ef9a79]">
             <Feather size={20} />
             <span className="font-black uppercase text-xs tracking-widest">Le Contrat Poetique</span>
           </div>
@@ -62,13 +62,13 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-white p-3 rounded-xl shadow-sm">
                 <span className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Structure</span>
-                <span className="font-bold text-pink-600 text-sm">
+                <span className="font-bold text-[#ef9a79] text-sm">
                   {constraints.structure.label} ({constraints.structure.lines} vers)
                 </span>
               </div>
               <div className="bg-white p-3 rounded-xl shadow-sm">
                 <span className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Rimes</span>
-                <span className="font-bold text-pink-600 text-[10px]">{String(constraints.rhyme).split('(')[0]}</span>
+                <span className="font-bold text-[#ef9a79] text-[10px]">{String(constraints.rhyme).split('(')[0]}</span>
               </div>
             </div>
             <div className="bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
@@ -78,9 +78,9 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-gray-100">
+        <div className="bg-white p-6 rounded-[2rem] shadow-[0_12px_30px_rgba(111,98,143,0.08)] border border-[#eee5dc]">
           <textarea
-            className="w-full h-48 p-4 text-lg font-serif italic text-gray-700 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-pink-500 resize-none placeholder:not-italic placeholder:font-sans placeholder:text-gray-300"
+            className="w-full h-48 p-4 text-lg font-serif italic text-gray-700 bg-[#fffdfa] rounded-2xl outline-none focus:ring-2 focus:ring-[#8d7ac6] resize-none placeholder:not-italic placeholder:font-sans placeholder:text-gray-300"
             placeholder={`Ecris ton ${constraints.structure.label} ici...`}
             value={poemText}
             onChange={(event) => setPoemText(event.target.value)}
@@ -101,7 +101,7 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
         <button
           onClick={() => onAction({ action: 'poet_submit', text: poemText })}
           disabled={!poemText.trim()}
-          className="w-full bg-pink-600 text-white font-black py-5 rounded-[2rem] shadow-lg flex items-center justify-center gap-3 uppercase tracking-tighter active:scale-95 transition-all disabled:opacity-50"
+          className="w-full bg-[#ef9a79] text-white font-black py-5 rounded-[2rem] shadow-[0_12px_24px_rgba(239,154,121,0.35)] flex items-center justify-center gap-3 uppercase tracking-tighter active:scale-95 transition-all disabled:opacity-50"
         >
           <Send size={20} /> Signer l'oeuvre
         </button>
@@ -114,7 +114,7 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
 
     if (hasVoted) {
       return (
-        <div className="p-10 text-center bg-white rounded-[2.5rem] shadow-xl animate-in zoom-in-95">
+        <div className="p-10 text-center bg-white rounded-[2.5rem] shadow-[0_12px_30px_rgba(111,98,143,0.08)] border border-[#eee5dc] animate-in zoom-in-95">
           <h3 className="font-black text-xl mb-2 text-gray-800">Correction envoyee !</h3>
           <p className="text-gray-500 text-sm">Le jury delibere...</p>
         </div>
@@ -123,17 +123,17 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
 
     return (
       <div className="space-y-6 animate-in fade-in pb-10">
-        <div className="bg-gray-900 text-white p-8 rounded-[2rem] text-center shadow-lg relative overflow-hidden">
+        <div className="bg-[#4b3d6d] text-white p-8 rounded-[2rem] text-center shadow-[0_12px_24px_rgba(75,61,109,0.32)] relative overflow-hidden">
           <Feather className="absolute top-4 right-4 text-white/10 w-20 h-20 -rotate-12" />
           <h3 className="uppercase text-[10px] font-bold tracking-[0.2em] text-gray-400 mb-4">Oeuvre de {targetName}</h3>
           <div className="font-serif italic text-xl leading-relaxed whitespace-pre-wrap relative z-10">"{targetPoem}"</div>
         </div>
 
-        <div className="bg-white p-6 rounded-[2rem] shadow-xl">
+        <div className="bg-white p-6 rounded-[2rem] shadow-[0_12px_30px_rgba(111,98,143,0.08)] border border-[#eee5dc]">
           <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
             <p className="text-xs font-black uppercase text-gray-400">Bareme</p>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-black text-pink-600">{currentScore}</span>
+              <span className="text-2xl font-black text-[#ef9a79]">{currentScore}</span>
               <span className="text-xs font-bold text-gray-400 uppercase">/ 5 pts</span>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
 
           <button
             onClick={() => onAction({ action: 'poet_vote', score: currentScore })}
-            className="w-full bg-black text-white font-black py-5 rounded-2xl uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all"
+            className="w-full bg-[#4b3d6d] text-white font-black py-5 rounded-2xl uppercase text-xs tracking-widest shadow-[0_12px_24px_rgba(75,61,109,0.32)] active:scale-95 transition-all"
           >
             Valider la note ({currentScore}/5)
           </button>
@@ -227,11 +227,11 @@ export default function PoetGame({ session, currentUserId, participantMap, onAct
       <div className="space-y-4 animate-in slide-in-from-bottom-8">
         <h2 className="text-center font-black uppercase text-2xl mb-4 text-gray-800">Anthologie du Jour</h2>
         {Object.entries(poems).map(([authorId, text]: any) => (
-          <div key={authorId} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+          <div key={authorId} className="bg-white p-6 rounded-[2rem] shadow-[0_12px_30px_rgba(111,98,143,0.08)] border border-[#eee5dc]">
             <div className="flex justify-between items-center mb-4 border-b border-gray-50 pb-2">
               <span
                 className={`text-xs font-black uppercase px-2 py-1 rounded ${
-                  authorId === currentUserId ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'
+                  authorId === currentUserId ? 'bg-[#f3edf9] text-[#8d7ac6]' : 'bg-[#ece4f7] text-[#6f628f]'
                 }`}
               >
                 {getName(participantMap, authorId)}

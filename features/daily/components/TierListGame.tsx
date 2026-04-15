@@ -58,8 +58,8 @@ function SortableItem({ item, index, isOverlay = false }: { item: any; index?: n
       {...listeners}
       className={`relative p-3 rounded-2xl border-2 flex items-center gap-4 select-none touch-none bg-white shadow-sm transition-all ${
         isOverlay
-          ? 'shadow-2xl scale-105 border-orange-500 z-50 cursor-grabbing bg-orange-50'
-          : 'border-white hover:border-orange-200 cursor-grab'
+          ? 'shadow-2xl scale-105 border-[#ef9a79] z-50 cursor-grabbing bg-[#fff8f3]'
+          : 'border-white hover:border-[#f2decf] cursor-grab'
       }`}
     >
       <div className="text-gray-300">
@@ -220,8 +220,8 @@ export default function TierListGame({ session, currentUserId, participantMap, o
     return (
       <div className="space-y-8 animate-in fade-in pb-20">
         <div className="text-center space-y-2">
-          <BarChart3 size={44} className="mx-auto text-orange-500" />
-          <h2 className="text-2xl font-black uppercase text-orange-600">Resultats</h2>
+          <BarChart3 size={44} className="mx-auto text-[#ef9a79]" />
+          <h2 className="text-2xl font-black uppercase text-[#ef9a79]">Resultats</h2>
           <div className="text-center mt-4">
             <p className="text-xs uppercase font-bold text-gray-400">Ton Score</p>
             <p className="text-3xl font-black text-gray-800">{myScore}/5</p>
@@ -229,7 +229,7 @@ export default function TierListGame({ session, currentUserId, participantMap, o
         </div>
 
         <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-gray-100">
-          <h3 className="text-center font-bold text-sm text-orange-600 mb-4 uppercase">
+          <h3 className="text-center font-bold text-sm text-[#ef9a79] mb-4 uppercase">
             Ta prediction de {getName(participantMap, opponentId)}
           </h3>
           <div className="space-y-2">
@@ -271,8 +271,8 @@ export default function TierListGame({ session, currentUserId, participantMap, o
   if (myData.finished) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-6 animate-in zoom-in">
-        <div className="bg-orange-100 p-6 rounded-full animate-bounce">
-          <BarChart3 size={40} className="text-orange-600" />
+        <div className="bg-[#fff1e8] p-6 rounded-full animate-bounce">
+          <BarChart3 size={40} className="text-[#ef9a79]" />
         </div>
         <div className="text-center">
           <h2 className="text-2xl font-black text-gray-800">C'est valide !</h2>
@@ -287,7 +287,7 @@ export default function TierListGame({ session, currentUserId, participantMap, o
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-8 pb-20">
       <div className="text-center space-y-2">
-        <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+        <span className="bg-[#fff1e8] text-[#c87457] px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
           Etape {localStep + 1}/2
         </span>
         <h2 className="text-xl font-black text-gray-800 leading-tight">
@@ -328,7 +328,7 @@ export default function TierListGame({ session, currentUserId, participantMap, o
         onClick={handleValidate}
         disabled={isSubmitting}
         className={`w-full text-white font-black py-5 rounded-[2rem] shadow-xl uppercase tracking-widest text-sm transition-all ${
-          isSubmitting ? 'bg-gray-400 cursor-wait' : 'bg-orange-600 active:scale-95 shadow-orange-200'
+          isSubmitting ? 'bg-gray-400 cursor-wait' : 'bg-[#ef9a79] active:scale-95 shadow-[0_10px_20px_rgba(239,154,121,0.28)]'
         }`}
       >
         {isSubmitting ? (
@@ -344,3 +344,4 @@ export default function TierListGame({ session, currentUserId, participantMap, o
     </div>
   );
 }
+

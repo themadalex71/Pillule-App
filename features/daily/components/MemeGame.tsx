@@ -294,9 +294,9 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
             </p>
           </div>
           <div className="flex gap-2 mt-4">
-            <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-            <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-            <div className="w-3 h-3 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+            <div className="w-3 h-3 bg-[#b5a6d6] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+            <div className="w-3 h-3 bg-[#b5a6d6] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+            <div className="w-3 h-3 bg-[#b5a6d6] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
           </div>
         </div>
       );
@@ -304,7 +304,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
 
     return (
       <div className="space-y-8 animate-in fade-in">
-        <div className="bg-blue-600 p-6 rounded-[2rem] text-white text-center shadow-lg">
+        <div className="bg-[#8d7ac6] p-6 rounded-[2rem] text-white text-center shadow-lg">
           <h3 className="text-xl font-black uppercase tracking-tighter">A toi de jouer !</h3>
           <p className="opacity-90 text-sm">Remplis les cases vides pour faire rire {targetName}.</p>
         </div>
@@ -324,7 +324,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => addCustomZone(index)}
-                    className="flex items-center gap-1 text-[10px] font-bold bg-blue-50 px-3 py-1.5 rounded-full text-blue-700 transition-colors"
+                    className="flex items-center gap-1 text-[10px] font-bold bg-[#f3edf9] px-3 py-1.5 rounded-full text-[#6f628f] transition-colors"
                   >
                     <Plus size={12} /> Ajouter une case
                   </button>
@@ -393,7 +393,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                           textShadow: '0 1px 3px rgba(0,0,0,0.8)',
                         }}
                         className={`w-full h-full bg-transparent border-2 rounded-lg p-1 resize-none outline-none font-black text-center leading-tight placeholder:text-white/30 overflow-hidden ${
-                          isActive ? 'border-blue-400' : 'border-white/50 border-dashed'
+                          isActive ? 'border-[#8d7ac6]' : 'border-white/50 border-dashed'
                         }`}
                       />
                     </div>
@@ -640,7 +640,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
             }
           }}
           disabled={isSubmitting}
-          className="w-full bg-blue-600 text-white font-black py-5 rounded-[2rem] shadow-lg flex items-center justify-center gap-3 uppercase tracking-tighter active:scale-95 transition-all disabled:opacity-60"
+          className="w-full bg-[#8d7ac6] text-white font-black py-5 rounded-[2rem] shadow-lg flex items-center justify-center gap-3 uppercase tracking-tighter active:scale-95 transition-all disabled:opacity-60"
         >
           {isSubmitting ? (
             <Loader2 className="animate-spin" />
@@ -724,17 +724,21 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                 {EMOJIS.map((emoji) => (
                   <button
                     key={emoji.label}
+                    aria-label={`Noter ${emoji.score} points (${emoji.label})`}
                     onClick={() => {
                       const nextVotes = [...votes];
                       nextVotes[index] = emoji.score;
                       setVotes(nextVotes);
                     }}
                     className={`flex flex-col items-center p-2 rounded-xl transition-all active:scale-90 ${
-                      votes[index] === emoji.score ? 'bg-white shadow-md scale-110' : 'opacity-50 grayscale'
+                      votes[index] === emoji.score
+                        ? 'bg-white text-gray-900 shadow-md scale-110'
+                        : 'bg-gray-100 text-gray-600 opacity-75'
                     }`}
                   >
-                    <span className="text-2xl">{emoji.icon}</span>
+                    <span className="text-2xl leading-none">{emoji.icon}</span>
                     <span className="text-[8px] font-black uppercase mt-1">{emoji.score} pts</span>
+                    <span className="text-[8px] font-bold mt-0.5">{emoji.label}</span>
                   </button>
                 ))}
               </div>
@@ -752,7 +756,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
             }
           }}
           disabled={isSubmitting}
-          className="w-full bg-black text-white font-black py-5 rounded-[2rem] shadow-lg flex items-center justify-center gap-3 uppercase tracking-tighter active:scale-95 transition-all disabled:opacity-60"
+          className="w-full bg-[#4b3d6d] text-white font-black py-5 rounded-[2rem] shadow-lg flex items-center justify-center gap-3 uppercase tracking-tighter active:scale-95 transition-all disabled:opacity-60"
         >
           {isSubmitting ? (
             <Loader2 className="animate-spin" />
@@ -768,4 +772,5 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
 
   return null;
 }
+
 
