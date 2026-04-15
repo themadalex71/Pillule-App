@@ -20,12 +20,23 @@ type RankingEntry = {
 };
 
 type DailySessionMode = 'daily' | 'simu';
+type SimGameFilter = 'random' | 'zoom' | 'meme' | 'cadavre' | 'poet' | 'tierlist';
+
+const SIM_GAME_OPTIONS: Array<{ id: SimGameFilter; label: string }> = [
+  { id: 'random', label: 'Aleatoire' },
+  { id: 'zoom', label: 'Zoom' },
+  { id: 'meme', label: 'Meme' },
+  { id: 'cadavre', label: 'Cadavre' },
+  { id: 'poet', label: 'Poete' },
+  { id: 'tierlist', label: 'Tier List' },
+];
 
 export default function DailyGamePage() {
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [mode, setMode] = useState<DailySessionMode>('daily');
+  const [simGameId, setSimGameId] = useState<SimGameFilter>('random');
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,6 +56,7 @@ export default function DailyGamePage() {
   const currentName =
     (user?.uid && participantMap[user.uid]) || user?.displayName || user?.email || 'Utilisateur';
   const isSimulationMode = mode === 'simu';
+  const gameComponentKey = `${mode}:${simGameId}:${session?.sessionId || session?.date || 'none'}:${session?.game?.id || 'none'}`;
 
   const fetchWithAuth = async (path: string, init?: RequestInit) => {
     if (!user) throw new Error('Utilisateur non connecte.');
@@ -64,7 +76,12 @@ export default function DailyGamePage() {
     if (showLoading) setLoading(true);
 
     try {
-      const res = await fetchWithAuth(`/api/daily-game/init?mode=${mode}`);
+      const query = new URLSearchParams({ mode });
+      if (mode === 'simu' && simGameId !== 'random') {
+        query.set('gameId', simGameId);
+      }
+
+      const res = await fetchWithAuth(`/api/daily-game/init?${query.toString()}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -101,7 +118,12 @@ export default function DailyGamePage() {
 
     setLoading(true);
     try {
-      const res = await fetchWithAuth(`/api/daily-game/init?mode=${mode}&forceReset=true`);
+      const query = new URLSearchParams({ mode, forceReset: 'true' });
+      if (mode === 'simu' && simGameId !== 'random') {
+        query.set('gameId', simGameId);
+      }
+
+      const res = await fetchWithAuth(`/api/daily-game/init?${query.toString()}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -169,7 +191,7 @@ export default function DailyGamePage() {
     if (!user) return;
     setSession(null);
     void fetchSession();
-  }, [user, mode]);
+  }, [user, mode, simGameId]);
 
   useEffect(() => {
     if (!user || !session || session.status === 'finished' || session.status === 'waiting_players') {
@@ -256,13 +278,32 @@ export default function DailyGamePage() {
               </div>
 
               {isSimulationMode && (
-                <button
-                  type="button"
-                  onClick={handleGlobalReset}
-                  className="w-full rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-orange-600 flex items-center justify-center gap-2"
-                >
-                  <RefreshCw size={14} /> Relancer la simulation
-                </button>
+                <div className="space-y-2">
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.22em] text-orange-500 mb-2">
+                      Jeu a simuler
+                    </label>
+                    <select
+                      value={simGameId}
+                      onChange={(event) => setSimGameId(event.target.value as SimGameFilter)}
+                      className="w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-bold text-orange-600 outline-none"
+                    >
+                      {SIM_GAME_OPTIONS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGlobalReset}
+                    className="w-full rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-orange-600 flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={14} /> Relancer la simulation
+                  </button>
+                </div>
               )}
             </div>
 
@@ -288,6 +329,7 @@ export default function DailyGamePage() {
               <>
                 {session.game.id === 'zoom' && (
                   <ZoomGame
+                    key={gameComponentKey}
                     session={session}
                     currentUserId={user.uid}
                     participantMap={participantMap}
@@ -296,6 +338,7 @@ export default function DailyGamePage() {
                 )}
                 {session.game.id === 'meme' && (
                   <MemeGame
+                    key={gameComponentKey}
                     session={session}
                     currentUserId={user.uid}
                     participantMap={participantMap}
@@ -304,6 +347,7 @@ export default function DailyGamePage() {
                 )}
                 {session.game.id === 'cadavre' && (
                   <CadavreGame
+                    key={gameComponentKey}
                     session={session}
                     currentUserId={user.uid}
                     participantMap={participantMap}
@@ -312,6 +356,7 @@ export default function DailyGamePage() {
                 )}
                 {session.game.id === 'poet' && (
                   <PoetGame
+                    key={gameComponentKey}
                     session={session}
                     currentUserId={user.uid}
                     participantMap={participantMap}
@@ -320,6 +365,7 @@ export default function DailyGamePage() {
                 )}
                 {session.game.id === 'tierlist' && (
                   <TierListGame
+                    key={gameComponentKey}
                     session={session}
                     currentUserId={user.uid}
                     participantMap={participantMap}

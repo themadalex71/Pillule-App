@@ -211,6 +211,11 @@ function normalizeMode(value: string | null): DailyMode {
   return value === "simu" ? "simu" : "daily";
 }
 
+function getRequestedGameId(value: string | null) {
+  if (!value) return null;
+  return GAMES_LIST.some((game) => game.id === value) ? value : null;
+}
+
 function getSessionKey(mode: DailyMode, dateKey: string, householdId: string) {
   if (mode === "simu") {
     return `daily_session:simu:${householdId}`;
@@ -232,6 +237,7 @@ export async function GET(request: Request) {
   const dateKey = getDailySeed();
   const forceReset = searchParams.get("forceReset") === "true";
   const mode = normalizeMode(searchParams.get("mode"));
+  const requestedGameId = mode === "simu" ? getRequestedGameId(searchParams.get("gameId")) : null;
 
   try {
     const context = await getDailyContext(request);
@@ -242,6 +248,17 @@ export async function GET(request: Request) {
     }
 
     let session: any = await kv.get(sessionKey);
+
+    if (
+      mode === "simu" &&
+      requestedGameId &&
+      session &&
+      session.game?.id &&
+      session.game.id !== requestedGameId
+    ) {
+      await kv.del(sessionKey);
+      session = null;
+    }
 
     if (!session) {
       if (context.participants.length < 2) {
@@ -267,7 +284,9 @@ export async function GET(request: Request) {
       }
 
       const participantIds = context.participants.map((participant) => participant.id);
-      const game = GAMES_LIST[Math.floor(Math.random() * GAMES_LIST.length)];
+      const game =
+        (requestedGameId && GAMES_LIST.find((candidate) => candidate.id === requestedGameId)) ||
+        GAMES_LIST[Math.floor(Math.random() * GAMES_LIST.length)];
       const ringTargets = buildRingTargets(participantIds);
       let sharedData: Record<string, any> = {};
 
@@ -396,6 +415,7 @@ export async function GET(request: Request) {
       }
 
       session = {
+        sessionId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         date: dateKey,
         householdId: context.householdId,
         mode,

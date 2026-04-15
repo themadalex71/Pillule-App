@@ -220,7 +220,7 @@ export default function TierListGame({ session, currentUserId, participantMap, o
     return (
       <div className="space-y-8 animate-in fade-in pb-20">
         <div className="text-center space-y-2">
-          <span className="text-4xl">??</span>
+          <BarChart3 size={44} className="mx-auto text-orange-500" />
           <h2 className="text-2xl font-black uppercase text-orange-600">Resultats</h2>
           <div className="text-center mt-4">
             <p className="text-xs uppercase font-bold text-gray-400">Ton Score</p>

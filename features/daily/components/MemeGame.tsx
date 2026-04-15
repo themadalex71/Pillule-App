@@ -4,11 +4,11 @@ import { useMemo, useState } from 'react';
 import { RefreshCw, Send, Loader2, Check, Star } from 'lucide-react';
 
 const EMOJIS = [
-  { label: 'Null', icon: '??', score: 0 },
-  { label: 'Pas drole', icon: '??', score: 1 },
-  { label: 'Bof', icon: '??', score: 2 },
-  { label: 'Drole', icon: '??', score: 3 },
-  { label: 'Mort de rire', icon: '??', score: 4 },
+  { label: 'Nul', icon: ':/', score: 0 },
+  { label: 'Pas drole', icon: ':|', score: 1 },
+  { label: 'Bof', icon: ':)', score: 2 },
+  { label: 'Drole', icon: ':D', score: 3 },
+  { label: 'Excellent', icon: 'LOL', score: 4 },
 ];
 
 type Props = {
