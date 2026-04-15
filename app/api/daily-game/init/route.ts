@@ -355,6 +355,7 @@ export async function GET(request: Request) {
             rerolls: [2, 2],
             inputs: [{}, {}],
             zoneOverrides: [{}, {}],
+            extraZones: [[], []],
             finished: false,
             votesReceived: [],
           };

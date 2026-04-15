@@ -1,7 +1,7 @@
 'use client';
 
 import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw, Send, Loader2, Check, Star, Move, Expand } from 'lucide-react';
+import { RefreshCw, Send, Loader2, Check, Star, Move, Expand, Plus, Minus } from 'lucide-react';
 
 const EMOJIS = [
   { label: 'Nul', icon: ':/', score: 0 },
@@ -36,6 +36,15 @@ type ActiveZone = {
 };
 
 type DragMode = 'move' | 'resize';
+type ControlMode = 'slider' | 'step';
+
+type StepperRowProps = {
+  label: string;
+  value: number;
+  unit?: string;
+  onMinus: () => void;
+  onPlus: () => void;
+};
 
 type ActiveDrag = {
   memeIndex: number;
@@ -63,6 +72,26 @@ const DEFAULT_LAYOUT: ZoneLayout = {
   fontFamily: 'Impact, Arial Black, sans-serif',
 };
 
+function StepperRow({ label, value, unit, onMinus, onPlus }: StepperRowProps) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-2 py-2">
+      <span className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">{label}</span>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onMinus} className="w-7 h-7 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
+          <Minus size={12} />
+        </button>
+        <span className="text-xs font-black text-gray-800 min-w-[68px] text-center">
+          {Number(value.toFixed(1))}
+          {unit || ''}
+        </span>
+        <button type="button" onClick={onPlus} className="w-7 h-7 rounded-full bg-gray-900 text-white flex items-center justify-center">
+          <Plus size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function getName(participantMap: Record<string, string>, id?: string | null) {
   if (!id) return 'Un membre';
   return participantMap[id] || `Membre ${id.slice(0, 6)}`;
@@ -82,6 +111,10 @@ function round1(value: number) {
 
 function zoneKey(rawId: unknown) {
   return String(rawId);
+}
+
+function isCustomZone(zone: any) {
+  return zoneKey(zone?.id).startsWith('custom_');
 }
 
 function normalizeLayout(raw: any, fallback: ZoneLayout = DEFAULT_LAYOUT): ZoneLayout {
@@ -106,6 +139,20 @@ function mergeLayout(base: any, override: any): ZoneLayout {
   return normalizeLayout({ ...normalizedBase, ...(override || {}) }, normalizedBase);
 }
 
+function createCustomZone() {
+  const uid = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  return {
+    id: `custom_${uid}`,
+    top: 38,
+    left: 20,
+    width: 60,
+    height: 20,
+    fontSize: 24,
+    color: '#ffffff',
+    fontFamily: 'Impact, Arial Black, sans-serif',
+  };
+}
+
 export default function MemeGame({ session, currentUserId, participantMap, onAction }: Props) {
   const { phase, players = {}, targetByPlayer = {}, votesByPlayer = {} } = session.sharedData;
   const myData = players[currentUserId];
@@ -119,8 +166,12 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
   const [localZoneOverrides, setLocalZoneOverrides] = useState<any[]>(() =>
     Array.isArray(myData?.zoneOverrides) ? myData.zoneOverrides : [{}, {}],
   );
+  const [localExtraZones, setLocalExtraZones] = useState<any[]>(() =>
+    Array.isArray(myData?.extraZones) ? myData.extraZones : [[], []],
+  );
   const [activeZone, setActiveZone] = useState<ActiveZone | null>(null);
   const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+  const [controlMode, setControlMode] = useState<ControlMode>('slider');
   const [votes, setVotes] = useState<number[]>([2, 2]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -184,6 +235,26 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
     };
   }, [activeDrag]);
 
+  useEffect(() => {
+    if (!activeZone || typeof document === 'undefined') return;
+
+    const body = document.body;
+    const html = document.documentElement;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyTouchAction = body.style.touchAction;
+    const previousHtmlOverflow = html.style.overflow;
+
+    body.style.overflow = 'hidden';
+    body.style.touchAction = 'none';
+    html.style.overflow = 'hidden';
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      body.style.touchAction = previousBodyTouchAction;
+      html.style.overflow = previousHtmlOverflow;
+    };
+  }, [activeZone]);
+
   if (!myData) {
     return (
       <div className="p-10 text-center bg-white rounded-[2.5rem] shadow-xl text-gray-500">
@@ -191,6 +262,12 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
       </div>
     );
   }
+
+  const getCreationZones = (meme: any, memeIndex: number) => {
+    const base = Array.isArray(meme?.zones) ? meme.zones : [];
+    const extras = Array.isArray(localExtraZones?.[memeIndex]) ? localExtraZones[memeIndex] : [];
+    return [...base, ...extras];
+  };
 
   const getResolvedLayout = (memeIndex: number, zone: any) => {
     const override = localZoneOverrides?.[memeIndex]?.[zoneKey(zone?.id)];
@@ -214,6 +291,79 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
       next[memeIndex] = byZone;
       return next;
     });
+  };
+
+  const adjustZoneValue = (memeIndex: number, zone: any, field: keyof ZoneLayout, delta: number) => {
+    updateZoneLayout(memeIndex, zone, (current) => {
+      if (field === 'left') {
+        return { left: clamp(current.left + delta, 0, 100 - current.width) };
+      }
+      if (field === 'top') {
+        return { top: clamp(current.top + delta, 0, 100 - current.height) };
+      }
+      if (field === 'width') {
+        return { width: clamp(current.width + delta, 12, 100 - current.left) };
+      }
+      if (field === 'height') {
+        return { height: clamp(current.height + delta, 8, 100 - current.top) };
+      }
+      if (field === 'fontSize') {
+        return { fontSize: clamp(current.fontSize + delta, 10, 100) };
+      }
+      return {};
+    });
+  };
+
+  const addCustomZone = (memeIndex: number) => {
+    const zone = createCustomZone();
+
+    setLocalExtraZones((previous) => {
+      const next = [...previous];
+      const current = Array.isArray(next[memeIndex]) ? [...next[memeIndex]] : [];
+      current.push(zone);
+      next[memeIndex] = current;
+      return next;
+    });
+
+    setLocalInputs((previous) => {
+      const next = [...previous];
+      const current = { ...(next[memeIndex] || {}) };
+      current[zone.id] = '';
+      next[memeIndex] = current;
+      return next;
+    });
+
+    setActiveZone({ memeIndex, zoneId: zoneKey(zone.id) });
+  };
+
+  const removeSelectedCustomZone = (memeIndex: number, zone: any) => {
+    if (!isCustomZone(zone)) return;
+    const key = zoneKey(zone?.id);
+
+    setLocalExtraZones((previous) => {
+      const next = [...previous];
+      const current = Array.isArray(next[memeIndex]) ? [...next[memeIndex]] : [];
+      next[memeIndex] = current.filter((candidate: any) => zoneKey(candidate?.id) !== key);
+      return next;
+    });
+
+    setLocalZoneOverrides((previous) => {
+      const next = [...previous];
+      const byZone = { ...(next[memeIndex] || {}) };
+      delete byZone[key];
+      next[memeIndex] = byZone;
+      return next;
+    });
+
+    setLocalInputs((previous) => {
+      const next = [...previous];
+      const current = { ...(next[memeIndex] || {}) };
+      delete current[zone?.id];
+      next[memeIndex] = current;
+      return next;
+    });
+
+    setActiveZone(null);
   };
 
   const startDrag = (event: ReactPointerEvent<HTMLButtonElement>, memeIndex: number, zone: any, mode: DragMode) => {
@@ -264,7 +414,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
         </div>
 
         {(myData.memes || []).map((meme: any, index: number) => {
-          const zones = Array.isArray(meme?.zones) ? meme.zones : [];
+          const zones = getCreationZones(meme, index);
           const selectedZoneForMeme =
             activeZone?.memeIndex === index
               ? zones.find((zone: any) => zoneKey(zone?.id) === activeZone.zoneId) || null
@@ -275,28 +425,40 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
             <div key={meme.id + index} className="bg-white p-4 rounded-[2rem] shadow-xl border border-gray-100 space-y-4">
               <div className="flex justify-between items-center px-2">
                 <span className="font-black text-gray-400 text-[10px] uppercase tracking-widest">Meme #{index + 1}</span>
-                {myData.rerolls?.[index] > 0 && (
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={async () => {
-                      const nextInputs = [...localInputs];
-                      nextInputs[index] = {};
-                      setLocalInputs(nextInputs);
-
-                      const nextOverrides = [...localZoneOverrides];
-                      nextOverrides[index] = {};
-                      setLocalZoneOverrides(nextOverrides);
-
-                      if (activeZone?.memeIndex === index) {
-                        setActiveZone(null);
-                      }
-
-                      await Promise.resolve(onAction({ action: 'meme_reroll', memeIndex: index }));
-                    }}
-                    className="flex items-center gap-1 text-[10px] font-bold bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 text-gray-600 transition-colors"
+                    onClick={() => addCustomZone(index)}
+                    className="flex items-center gap-1 text-[10px] font-bold bg-blue-50 px-3 py-1.5 rounded-full text-blue-700 transition-colors"
                   >
-                    <RefreshCw size={12} /> Changer ({myData.rerolls[index]})
+                    <Plus size={12} /> Ajouter une case
                   </button>
-                )}
+                  {myData.rerolls?.[index] > 0 && (
+                    <button
+                      onClick={async () => {
+                        const nextInputs = [...localInputs];
+                        nextInputs[index] = {};
+                        setLocalInputs(nextInputs);
+
+                        const nextOverrides = [...localZoneOverrides];
+                        nextOverrides[index] = {};
+                        setLocalZoneOverrides(nextOverrides);
+
+                        const nextExtras = [...localExtraZones];
+                        nextExtras[index] = [];
+                        setLocalExtraZones(nextExtras);
+
+                        if (activeZone?.memeIndex === index) {
+                          setActiveZone(null);
+                        }
+
+                        await Promise.resolve(onAction({ action: 'meme_reroll', memeIndex: index }));
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-bold bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 text-gray-600 transition-colors"
+                    >
+                      <RefreshCw size={12} /> Changer ({myData.rerolls[index]})
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div
@@ -368,106 +530,201 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
 
               {selectedZoneForMeme && selectedLayout && (
                 <div className="bg-gray-50 rounded-2xl p-4 space-y-3 border border-gray-100">
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
-                    Reglages Zone
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
-                      Gauche
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={selectedLayout.left}
-                        onChange={(event) =>
-                          updateZoneLayout(index, selectedZoneForMeme, (current) => ({
-                            left: clamp(Number(event.target.value), 0, 100 - current.width),
-                          }))
-                        }
-                        className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                      />
-                    </label>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
-                      Haut
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={selectedLayout.top}
-                        onChange={(event) =>
-                          updateZoneLayout(index, selectedZoneForMeme, (current) => ({
-                            top: clamp(Number(event.target.value), 0, 100 - current.height),
-                          }))
-                        }
-                        className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                      />
-                    </label>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">Reglages Zone</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setControlMode('slider')}
+                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${
+                          controlMode === 'slider' ? 'bg-white text-gray-800 border border-gray-200' : 'text-gray-500'
+                        }`}
+                      >
+                        Barres
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setControlMode('step')}
+                        className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${
+                          controlMode === 'step' ? 'bg-white text-gray-800 border border-gray-200' : 'text-gray-500'
+                        }`}
+                      >
+                        +/- precis
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveZone(null)}
+                        className="text-[10px] font-black uppercase px-2 py-1 rounded-lg text-gray-500 bg-white border border-gray-200"
+                      >
+                        Desel.
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
-                      Largeur
-                      <input
-                        type="range"
-                        min="12"
-                        max="95"
-                        value={selectedLayout.width}
-                        onChange={(event) =>
-                          updateZoneLayout(index, selectedZoneForMeme, (current) => ({
-                            width: clamp(Number(event.target.value), 12, 100 - current.left),
-                          }))
-                        }
-                        className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                      />
-                    </label>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
-                      Hauteur
-                      <input
-                        type="range"
-                        min="8"
-                        max="70"
-                        value={selectedLayout.height}
-                        onChange={(event) =>
-                          updateZoneLayout(index, selectedZoneForMeme, (current) => ({
-                            height: clamp(Number(event.target.value), 8, 100 - current.top),
-                          }))
-                        }
-                        className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                      />
-                    </label>
-                  </div>
+                  {isCustomZone(selectedZoneForMeme) && (
+                    <button
+                      type="button"
+                      onClick={() => removeSelectedCustomZone(index, selectedZoneForMeme)}
+                      className="w-full rounded-xl bg-red-50 text-red-600 border border-red-100 py-2 text-[10px] font-black uppercase tracking-[0.16em]"
+                    >
+                      Supprimer cette case
+                    </button>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
-                      Taille Police
-                      <input
-                        type="range"
-                        min="10"
-                        max="100"
-                        value={selectedLayout.fontSize}
-                        onChange={(event) =>
-                          updateZoneLayout(index, selectedZoneForMeme, {
-                            fontSize: Number(event.target.value),
-                          })
-                        }
-                        className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
-                      />
-                    </label>
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
-                      Couleur
-                      <input
-                        type="color"
-                        value={selectedLayout.color}
-                        onChange={(event) =>
-                          updateZoneLayout(index, selectedZoneForMeme, {
-                            color: event.target.value,
-                          })
-                        }
-                        className="w-full h-8 cursor-pointer bg-transparent"
-                      />
-                    </label>
-                  </div>
+                  {controlMode === 'slider' ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
+                          Gauche
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={selectedLayout.left}
+                            onChange={(event) =>
+                              updateZoneLayout(index, selectedZoneForMeme, (current) => ({
+                                left: clamp(Number(event.target.value), 0, 100 - current.width),
+                              }))
+                            }
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                          />
+                        </label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
+                          Haut
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={selectedLayout.top}
+                            onChange={(event) =>
+                              updateZoneLayout(index, selectedZoneForMeme, (current) => ({
+                                top: clamp(Number(event.target.value), 0, 100 - current.height),
+                              }))
+                            }
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
+                          Largeur
+                          <input
+                            type="range"
+                            min="12"
+                            max="95"
+                            value={selectedLayout.width}
+                            onChange={(event) =>
+                              updateZoneLayout(index, selectedZoneForMeme, (current) => ({
+                                width: clamp(Number(event.target.value), 12, 100 - current.left),
+                              }))
+                            }
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                          />
+                        </label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
+                          Hauteur
+                          <input
+                            type="range"
+                            min="8"
+                            max="70"
+                            value={selectedLayout.height}
+                            onChange={(event) =>
+                              updateZoneLayout(index, selectedZoneForMeme, (current) => ({
+                                height: clamp(Number(event.target.value), 8, 100 - current.top),
+                              }))
+                            }
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
+                          Taille Police
+                          <input
+                            type="range"
+                            min="10"
+                            max="100"
+                            value={selectedLayout.fontSize}
+                            onChange={(event) =>
+                              updateZoneLayout(index, selectedZoneForMeme, {
+                                fontSize: Number(event.target.value),
+                              })
+                            }
+                            className="w-full h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                          />
+                        </label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1">
+                          Couleur
+                          <input
+                            type="color"
+                            value={selectedLayout.color}
+                            onChange={(event) =>
+                              updateZoneLayout(index, selectedZoneForMeme, {
+                                color: event.target.value,
+                              })
+                            }
+                            className="w-full h-8 cursor-pointer bg-transparent"
+                          />
+                        </label>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <StepperRow
+                          label="Gauche"
+                          value={selectedLayout.left}
+                          unit="%"
+                          onMinus={() => adjustZoneValue(index, selectedZoneForMeme, 'left', -0.5)}
+                          onPlus={() => adjustZoneValue(index, selectedZoneForMeme, 'left', 0.5)}
+                        />
+                        <StepperRow
+                          label="Haut"
+                          value={selectedLayout.top}
+                          unit="%"
+                          onMinus={() => adjustZoneValue(index, selectedZoneForMeme, 'top', -0.5)}
+                          onPlus={() => adjustZoneValue(index, selectedZoneForMeme, 'top', 0.5)}
+                        />
+                        <StepperRow
+                          label="Largeur"
+                          value={selectedLayout.width}
+                          unit="%"
+                          onMinus={() => adjustZoneValue(index, selectedZoneForMeme, 'width', -0.5)}
+                          onPlus={() => adjustZoneValue(index, selectedZoneForMeme, 'width', 0.5)}
+                        />
+                        <StepperRow
+                          label="Hauteur"
+                          value={selectedLayout.height}
+                          unit="%"
+                          onMinus={() => adjustZoneValue(index, selectedZoneForMeme, 'height', -0.5)}
+                          onPlus={() => adjustZoneValue(index, selectedZoneForMeme, 'height', 0.5)}
+                        />
+                        <StepperRow
+                          label="Police"
+                          value={selectedLayout.fontSize}
+                          unit="px"
+                          onMinus={() => adjustZoneValue(index, selectedZoneForMeme, 'fontSize', -1)}
+                          onPlus={() => adjustZoneValue(index, selectedZoneForMeme, 'fontSize', 1)}
+                        />
+                      </div>
+
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1 block">
+                        Couleur
+                        <input
+                          type="color"
+                          value={selectedLayout.color}
+                          onChange={(event) =>
+                            updateZoneLayout(index, selectedZoneForMeme, {
+                              color: event.target.value,
+                            })
+                          }
+                          className="w-full h-8 cursor-pointer bg-transparent"
+                        />
+                      </label>
+                    </>
+                  )}
 
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.14em] space-y-1 block">
                     Police
@@ -502,6 +759,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                   action: 'meme_submit_creation',
                   inputs: localInputs,
                   zoneOverrides: localZoneOverrides,
+                  extraZones: localExtraZones,
                 }),
               );
             } finally {
@@ -556,7 +814,9 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
         </div>
 
         {(targetData.memes || []).map((meme: any, index: number) => {
-          const zones = Array.isArray(meme?.zones) ? meme.zones : [];
+          const baseZones = Array.isArray(meme?.zones) ? meme.zones : [];
+          const extraZones = Array.isArray(targetData.extraZones?.[index]) ? targetData.extraZones[index] : [];
+          const zones = [...baseZones, ...extraZones];
 
           return (
             <div key={meme.id + '_vote'} className="bg-white p-4 rounded-[2rem] shadow-xl border border-gray-100">
