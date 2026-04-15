@@ -236,7 +236,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
   }, [activeDrag]);
 
   useEffect(() => {
-    if (!activeZone || typeof document === 'undefined') return;
+    if (!activeDrag || typeof document === 'undefined') return;
 
     const body = document.body;
     const html = document.documentElement;
@@ -253,7 +253,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
       body.style.touchAction = previousBodyTouchAction;
       html.style.overflow = previousHtmlOverflow;
     };
-  }, [activeZone]);
+  }, [activeDrag]);
 
   if (!myData) {
     return (
