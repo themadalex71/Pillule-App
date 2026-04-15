@@ -1,22 +1,45 @@
-import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
-import { GAMES_LIST, getDailySeed } from '@/features/daily/services/dailyGameLogic';
+import { NextResponse } from "next/server";
+import { kv } from "@vercel/kv";
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin";
+import { GAMES_LIST, getDailySeed } from "@/features/daily/services/dailyGameLogic";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// --- CONFIG CADAVRE EXQUIS (GRAMMAIRE) ---
+type DailyParticipant = {
+  id: string;
+  name: string;
+};
+
+type HouseholdMember = {
+  uid: string;
+  email?: string;
+  displayName?: string;
+};
+
+type HouseholdDocument = {
+  memberIds?: string[];
+  members?: HouseholdMember[];
+};
+
+type UserHouseholdRecord = {
+  householdId?: string | null;
+};
+
+type DailyMode = "daily" | "simu";
+
 const GRAMMAR_TEMPLATES = [
   {
     id: "classique",
     title: "La Phrase Complexe",
     steps: [
-      { label: "Un Groupe Nominal (Sujet)", placeholder: "Ex: Le vieux grille-pain, Une saucisse masquée..." },
-      { label: "Un Adjectif (qui s'accorde)", placeholder: "Ex: poilu, dépressive, fluorescent..." },
-      { label: "Un Verbe d'action (transitif)", placeholder: "Ex: dévore, chatouille, pulvérise..." },
-      { label: "Un Adverbe (Manière)", placeholder: "Ex: violemment, tendrement, illégalement..." },
-      { label: "Un Complément d'Objet (COD)", placeholder: "Ex: un inspecteur des impôts, la Tour Eiffel..." },
-      { label: "Un Complément de Lieu", placeholder: "Ex: dans la baignoire, sur la lune..." }
-    ]
+      { label: "Un Groupe Nominal (Sujet)", placeholder: "Ex: Le vieux grille-pain, Une saucisse masquee..." },
+      { label: "Un Adjectif (qui s'accorde)", placeholder: "Ex: poilu, depressive, fluorescent..." },
+      { label: "Un Verbe d'action (transitif)", placeholder: "Ex: devore, chatouille, pulverise..." },
+      { label: "Un Adverbe (Maniere)", placeholder: "Ex: violemment, tendrement, illegalement..." },
+      { label: "Un Complement d'Objet (COD)", placeholder: "Ex: un inspecteur des impots, la Tour Eiffel..." },
+      { label: "Un Complement de Lieu", placeholder: "Ex: dans la baignoire, sur la lune..." },
+    ],
   },
   {
     id: "condition",
@@ -24,11 +47,11 @@ const GRAMMAR_TEMPLATES = [
     steps: [
       { label: "Si... (Sujet)", placeholder: "Ex: Si un lama unijambiste..." },
       { label: "Verbe (Imparfait)", placeholder: "Ex: mangeait, pilotait, insultait..." },
-      { label: "Complément (Quoi/Qui ?)", placeholder: "Ex: une raclette, son patron..." },
-      { label: "Alors... (Nouveau Sujet)", placeholder: "Ex: alors le pape, alors ma belle-mère..." },
+      { label: "Complement (Quoi/Qui ?)", placeholder: "Ex: une raclette, son patron..." },
+      { label: "Alors... (Nouveau Sujet)", placeholder: "Ex: alors le pape, alors ma belle-mere..." },
       { label: "Verbe (Conditionnel)", placeholder: "Ex: exploserait, vomirait, danserait..." },
-      { label: "Conclusion", placeholder: "Ex: avec joie, pour toujours..." }
-    ]
+      { label: "Conclusion", placeholder: "Ex: avec joie, pour toujours..." },
+    ],
   },
   {
     id: "relative",
@@ -37,26 +60,25 @@ const GRAMMAR_TEMPLATES = [
       { label: "Quelqu'un ou quelque chose", placeholder: "Ex: Un dictateur, Une crotte de nez..." },
       { label: "Qui... (Action 1)", placeholder: "Ex: qui vole des bonbons..." },
       { label: "Et qui... (Action 2)", placeholder: "Ex: et qui se frotte contre les murs..." },
-      { label: "A rencontré...", placeholder: "Ex: a rencontré Batman, a vu une loutre..." },
+      { label: "A rencontre...", placeholder: "Ex: a rencontre Batman, a vu une loutre..." },
       { label: "Pour lui donner...", placeholder: "Ex: pour lui donner un bisou, une gifle..." },
-      { label: "Conséquence", placeholder: "Ex: et c'était gênant, et ils se marièrent..." }
-    ]
+      { label: "Consequence", placeholder: "Ex: et c'etait genant, et ils se marierent..." },
+    ],
   },
   {
     id: "comparaison",
     title: "La Comparaison Absurde",
     steps: [
-      { label: "Sujet 1", placeholder: "Ex: Ton pied gauche, Le président..." },
+      { label: "Sujet 1", placeholder: "Ex: Ton pied gauche, Le president..." },
       { label: "Est beaucoup plus... (Adjectif)", placeholder: "Ex: est beaucoup plus gluant, intelligent..." },
-      { label: "Que... (Sujet 2)", placeholder: "Ex: qu'un parpaing, que ma dignité..." },
+      { label: "Que... (Sujet 2)", placeholder: "Ex: qu'un parpaing, que ma dignite..." },
       { label: "Parce qu'il...", placeholder: "Ex: parce qu'il sent le fromage..." },
       { label: "Quand il...", placeholder: "Ex: quand il dort, quand il cuisine..." },
-      { label: "Avec...", placeholder: "Ex: avec une cuillère, avec passion..." }
-    ]
-  }
+      { label: "Avec...", placeholder: "Ex: avec une cuillere, avec passion..." },
+    ],
+  },
 ];
 
-// --- FALLBACK TIER LIST (NOUVEAU) ---
 const DEFAULT_TIER_LIST = [
   {
     id: "demo_fruit",
@@ -66,169 +88,345 @@ const DEFAULT_TIER_LIST = [
       { id: 2, label: "Banane", url: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Banana-Single.jpg" },
       { id: 3, label: "Fraise", url: "https://upload.wikimedia.org/wikipedia/commons/2/29/PerfectStrawberry.jpg" },
       { id: 4, label: "Kiwi", url: "https://upload.wikimedia.org/wikipedia/commons/b/b8/Kiwi_%28Actinidia_chinensis%29_1_Luc_Viatour.jpg" },
-      { id: 5, label: "Orange", url: "https://upload.wikimedia.org/wikipedia/commons/c/c4/Orange-Fruit-Pieces.jpg" }
-    ]
-  }
+      { id: 5, label: "Orange", url: "https://upload.wikimedia.org/wikipedia/commons/c/c4/Orange-Fruit-Pieces.jpg" },
+    ],
+  },
 ];
 
-// --- HELPER MEME MAKER ---
+function getAuthTokenFromRequest(request: Request) {
+  const authHeader = request.headers.get("authorization") || "";
+  const [scheme, token] = authHeader.split(" ");
+
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    throw new Error("Non autorise.");
+  }
+
+  return token;
+}
+
+async function getDailyContext(request: Request) {
+  const token = getAuthTokenFromRequest(request);
+  const decoded = await getFirebaseAdminAuth().verifyIdToken(token);
+  const uid = decoded.uid;
+  const fallbackName = (decoded.name as string | undefined) || decoded.email || "Utilisateur";
+
+  const db = getFirebaseAdminDb();
+  const userSnapshot = await db.collection("users").doc(uid).get();
+
+  if (!userSnapshot.exists) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+      hasHousehold: false,
+      participants: [{ id: uid, name: fallbackName }],
+    };
+  }
+
+  const userRecord = userSnapshot.data() as UserHouseholdRecord;
+
+  if (!userRecord.householdId) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+      hasHousehold: false,
+      participants: [{ id: uid, name: fallbackName }],
+    };
+  }
+
+  const householdSnapshot = await db.collection("households").doc(userRecord.householdId).get();
+
+  if (!householdSnapshot.exists) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+      hasHousehold: false,
+      participants: [{ id: uid, name: fallbackName }],
+    };
+  }
+
+  const household = householdSnapshot.data() as HouseholdDocument;
+  const memberIds = Array.from(new Set(Array.isArray(household.memberIds) ? household.memberIds : [])).filter(Boolean);
+
+  if (!memberIds.includes(uid)) {
+    throw new Error("Acces refuse a ce foyer.");
+  }
+
+  const memberNameMap = new Map<string, string>();
+  (household.members || []).forEach((member) => {
+    if (!member?.uid) return;
+    memberNameMap.set(member.uid, member.displayName || member.email || `Membre ${member.uid.slice(0, 6)}`);
+  });
+
+  const participants = memberIds.map((memberId) => ({
+    id: memberId,
+    name: memberNameMap.get(memberId) || (memberId === uid ? fallbackName : `Membre ${memberId.slice(0, 6)}`),
+  }));
+
+  return {
+    uid,
+    householdId: householdSnapshot.id,
+    hasHousehold: true,
+    participants,
+  };
+}
+
+function buildRingTargets(participantIds: string[]) {
+  const targets: Record<string, string> = {};
+
+  if (participantIds.length === 0) {
+    return targets;
+  }
+
+  participantIds.forEach((id, index) => {
+    targets[id] = participantIds[(index + 1) % participantIds.length];
+  });
+
+  return targets;
+}
+
 function getRandomMemes(allMemes: any[], count: number, excludeIds: number[] = []) {
-  const pool = allMemes.filter(m => !excludeIds.includes(m.id));
+  const pool = allMemes.filter((m) => !excludeIds.includes(m.id));
   const source = pool.length < count ? allMemes : pool;
   const shuffled = [...source].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }
 
+function toWeeklyRanking(raw: Record<string, any>, participants: DailyParticipant[]) {
+  const nameMap = new Map(participants.map((participant) => [participant.id, participant.name]));
+
+  return Object.entries(raw || {})
+    .map(([id, score]) => ({
+      id,
+      name: nameMap.get(id) || `Membre ${id.slice(0, 6)}`,
+      score: Number(score || 0),
+    }))
+    .sort((a, b) => b.score - a.score);
+}
+
+function weeklyScoresKey(householdId: string) {
+  return `weekly_scores_current:${householdId}`;
+}
+
+function normalizeMode(value: string | null): DailyMode {
+  return value === "simu" ? "simu" : "daily";
+}
+
+function getSessionKey(mode: DailyMode, dateKey: string, householdId: string) {
+  if (mode === "simu") {
+    return `daily_session:simu:${householdId}`;
+  }
+
+  return `daily_session:${dateKey}:${householdId}`;
+}
+
+function getZoomLastAuthorKey(mode: DailyMode, householdId: string) {
+  return `daily_zoom_last_author:${mode}:${householdId}`;
+}
+
+function getSessionTtl(mode: DailyMode) {
+  return mode === "simu" ? 86400 * 7 : 86400;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const dateKey = getDailySeed();
-  const sessionKey = `daily_session:${dateKey}`;
-  const forceReset = searchParams.get('forceReset') === 'true';
+  const forceReset = searchParams.get("forceReset") === "true";
+  const mode = normalizeMode(searchParams.get("mode"));
 
   try {
-    if (forceReset) await kv.del(sessionKey);
+    const context = await getDailyContext(request);
+    const sessionKey = getSessionKey(mode, dateKey, context.householdId);
+
+    if (forceReset) {
+      await kv.del(sessionKey);
+    }
 
     let session: any = await kv.get(sessionKey);
 
-    // Si pas de session, on en crée une nouvelle
     if (!session) {
-      // 1. CHOIX DU JEU
-      const game = GAMES_LIST[Math.floor(Math.random() * GAMES_LIST.length)];
-      
-      let sharedData = {};
+      if (context.participants.length < 2) {
+        const weeklyRaw = (await kv.hgetall(weeklyScoresKey(context.householdId))) || {};
+        const weeklyRanking = toWeeklyRanking(weeklyRaw as Record<string, any>, context.participants);
 
-      // --- INITIALISATION ZOOM ---
-      if (game.id === 'zoom') {
-        let missionsPool = await kv.get<string[]>('missions:zoom') || [];
+        return NextResponse.json({
+          date: dateKey,
+          householdId: context.householdId,
+          mode,
+          status: "waiting_players",
+          participants: context.participants,
+          game: null,
+          sharedData: {
+            message:
+              mode === "simu"
+                ? "Ajoute au moins un autre membre au foyer pour lancer une simulation."
+                : "Ajoute au moins un autre membre au foyer pour lancer le Defi du Jour.",
+          },
+          players: Object.fromEntries(context.participants.map((participant) => [participant.id, { score: 0 }])),
+          weeklyRanking: mode === "daily" ? weeklyRanking : [],
+        });
+      }
+
+      const participantIds = context.participants.map((participant) => participant.id);
+      const game = GAMES_LIST[Math.floor(Math.random() * GAMES_LIST.length)];
+      const ringTargets = buildRingTargets(participantIds);
+      let sharedData: Record<string, any> = {};
+
+      if (game.id === "zoom") {
+        let missionsPool = (await kv.get<string[]>("missions:zoom")) || [];
         if (missionsPool.length === 0) {
-           missionsPool = ["Un objet en bois", "Un truc qui brille", "Quelque chose de bleu"];
+          missionsPool = ["Un objet en bois", "Un truc qui brille", "Quelque chose de bleu"];
         }
+
         const mission = missionsPool[Math.floor(Math.random() * missionsPool.length)];
-        const lastAuthor = await kv.get('zoom_last_author');
-        const author = lastAuthor === 'Moi' ? 'Chéri(e)' : 'Moi';
-        
+        const lastAuthor = (await kv.get<string>(getZoomLastAuthorKey(mode, context.householdId))) || null;
+        const lastAuthorIndex = lastAuthor ? participantIds.indexOf(lastAuthor) : -1;
+        const authorId = participantIds[(lastAuthorIndex + 1 + participantIds.length) % participantIds.length];
+        const guessOrder = participantIds.filter((id) => id !== authorId);
+
         sharedData = {
-          step: 'PHOTO',
-          mission: mission,
-          author: author,
-          guesser: author === 'Moi' ? 'Chéri(e)' : 'Moi',
+          step: "PHOTO",
+          mission,
+          authorId,
+          guessOrder,
+          guessIndex: 0,
+          currentGuesserId: guessOrder[0] || null,
           image: null,
-          currentGuess: null
+          currentGuess: null,
+          resultsApplied: false,
         };
-      } 
-      
-      // --- INITIALISATION MEME ---
-      else if (game.id === 'meme') {
-        let allMemes = await kv.get<any[]>('missions:meme') || [];
-        // Fallback fake data si vide pour éviter crash
+
+        await kv.set(getZoomLastAuthorKey(mode, context.householdId), authorId, { ex: 86400 * 30 });
+      } else if (game.id === "meme") {
+        let allMemes = (await kv.get<any[]>("missions:meme")) || [];
         if (allMemes.length === 0) {
           allMemes = [
-             { id: 1, name: "Exemple 1", url: "https://i.imgflip.com/1ur9b0.jpg", zones: [{id:1, top:10, left:10, width:40, height:20, fontSize:20, color:'#fff'}] },
-             { id: 2, name: "Exemple 2", url: "https://i.imgflip.com/261o3j.jpg", zones: [{id:1, top:10, left:10, width:40, height:20, fontSize:20, color:'#fff'}] }
+            { id: 1, name: "Exemple 1", url: "https://i.imgflip.com/1ur9b0.jpg", zones: [{ id: 1, top: 10, left: 10, width: 40, height: 20, fontSize: 20, color: "#fff" }] },
+            { id: 2, name: "Exemple 2", url: "https://i.imgflip.com/261o3j.jpg", zones: [{ id: 1, top: 10, left: 10, width: 40, height: 20, fontSize: 20, color: "#fff" }] },
           ];
         }
-        const memesMoi = getRandomMemes(allMemes, 2);
-        const memesCherie = getRandomMemes(allMemes, 2, memesMoi.map(m => m.id));
+
+        const playersData: Record<string, any> = {};
+        let usedIds: number[] = [];
+
+        participantIds.forEach((participantId) => {
+          const memes = getRandomMemes(allMemes, 2, usedIds);
+          usedIds = [...usedIds, ...memes.map((m) => m.id)];
+
+          playersData[participantId] = {
+            memes,
+            rerolls: [2, 2],
+            inputs: [{}, {}],
+            finished: false,
+            votesReceived: [],
+          };
+        });
 
         sharedData = {
-          phase: 'CREATION',
-          players: {
-            "Moi": { memes: memesMoi, rerolls: [2, 2], inputs: [{}, {}], finished: false, votesReceived: [] },
-            "Chéri(e)": { memes: memesCherie, rerolls: [2, 2], inputs: [{}, {}], finished: false, votesReceived: [] }
-          }
+          phase: "CREATION",
+          targetByPlayer: ringTargets,
+          votesByPlayer: Object.fromEntries(participantIds.map((id) => [id, null])),
+          players: playersData,
+          resultsApplied: false,
         };
-      } 
-      
-      // --- INITIALISATION CADAVRE ---
-      else if (game.id === 'cadavre') {
+      } else if (game.id === "cadavre") {
         const randomTemplate = GRAMMAR_TEMPLATES[Math.floor(Math.random() * GRAMMAR_TEMPLATES.length)];
         const emptyParts = new Array(randomTemplate.steps.length).fill(null);
-        
-        // Alternance des auteurs
-        const authorsA = emptyParts.map((_, i) => i % 2 === 0 ? "Moi" : "Chéri(e)");
-        const authorsB = emptyParts.map((_, i) => i % 2 === 0 ? "Chéri(e)" : "Moi");
+
+        const stories = participantIds.map((_, storyIndex) => ({
+          id: `S${storyIndex + 1}`,
+          parts: [...emptyParts],
+          authors: emptyParts.map((__, stepIndex) => participantIds[(storyIndex + stepIndex) % participantIds.length]),
+        }));
 
         sharedData = {
           phase: 0,
           template: randomTemplate,
-          stories: [
-            { id: 'A', parts: [...emptyParts], authors: authorsA },
-            { id: 'B', parts: [...emptyParts], authors: authorsB }
-          ],
-          votes: { "Moi": [], "Chéri(e)": [] }
+          stories,
+          votes: Object.fromEntries(participantIds.map((id) => [id, []])),
+          resultsApplied: false,
         };
-      }
-
-      // --- INITIALISATION POÈTE DU DIMANCHE (MIX & MATCH) ---
-      else if (game.id === 'poet') {
-        // 1. Récupération des 4 catégories séparées
-        const themes = await kv.get<string[]>('poet:themes') || ["Le Fromage", "L'Amour", "Le Métro"];
-        const structures = await kv.get<any[]>('poet:structures') || [{ label: "Quatrain", lines: 4 }, { label: "Tercet", lines: 3 }];
-        const syllables = await kv.get<string[]>('poet:syllables') || ["Alexandrins", "Vers Libres", "Octosyllabes"];
-        const rhymes = await kv.get<string[]>('poet:rhymes') || ["Croisées (ABAB)", "Libres", "Suivies (AABB)"];
-
-        // 2. Tirage aléatoire indépendant pour chaque catégorie
-        const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-        const randomStructure = structures[Math.floor(Math.random() * structures.length)];
-        const randomSyllable = syllables[Math.floor(Math.random() * syllables.length)];
-        const randomRhyme = rhymes[Math.floor(Math.random() * rhymes.length)];
+      } else if (game.id === "poet") {
+        const themes = (await kv.get<string[]>("poet:themes")) || ["Le Fromage", "L'Amour", "Le Metro"];
+        const structures = (await kv.get<any[]>("poet:structures")) || [{ label: "Quatrain", lines: 4 }, { label: "Tercet", lines: 3 }];
+        const syllables = (await kv.get<string[]>("poet:syllables")) || ["Alexandrins", "Vers Libres", "Octosyllabes"];
+        const rhymes = (await kv.get<string[]>("poet:rhymes")) || ["Croisees (ABAB)", "Libres", "Suivies (AABB)"];
 
         sharedData = {
-          phase: 'WRITE', // WRITE -> VOTE -> RESULTS
+          phase: "WRITE",
           constraints: {
-            theme: randomTheme,
-            structure: randomStructure, // { label, lines }
-            syllable: randomSyllable,
-            rhyme: randomRhyme
+            theme: themes[Math.floor(Math.random() * themes.length)],
+            structure: structures[Math.floor(Math.random() * structures.length)],
+            syllable: syllables[Math.floor(Math.random() * syllables.length)],
+            rhyme: rhymes[Math.floor(Math.random() * rhymes.length)],
           },
-          poems: {
-            "Moi": null,
-            "Chéri(e)": null
-          },
-          votes: { "Moi": [], "Chéri(e)": [] }
+          targetByPlayer: ringTargets,
+          poems: Object.fromEntries(participantIds.map((id) => [id, null])),
+          votesByPlayer: Object.fromEntries(participantIds.map((id) => [id, null])),
+          votes: Object.fromEntries(participantIds.map((id) => [id, []])),
+          resultsApplied: false,
         };
-      }
+      } else if (game.id === "tierlist") {
+        let missionsPool = (await kv.get<any[]>("missions:tierlist")) || [];
+        if (missionsPool.length === 0) {
+          missionsPool = DEFAULT_TIER_LIST;
+        }
 
-      // --- INITIALISATION TIER LIST (AJOUT MANQUANT) ---
-      else if (game.id === 'tierlist') {
-        let missionsPool = await kv.get<any[]>('missions:tierlist') || [];
-        if (missionsPool.length === 0) missionsPool = DEFAULT_TIER_LIST;
-        
-        // Sélection aléatoire
         const mission = missionsPool[Math.floor(Math.random() * missionsPool.length)];
-        
-        // On mélange l'ordre initial pour que le joueur doive le ranger
         const shuffledItems = [...mission.items].sort(() => 0.5 - Math.random());
 
         sharedData = {
-            phase: 'INPUT', // INPUT -> RESULTS
-            mission: {
-                ...mission,
-                initialItems: shuffledItems // Pour l'affichage initial
-            },
-            players: {
-                "Moi": { realOrder: null, guessOrder: null, finished: false },
-                "Chéri(e)": { realOrder: null, guessOrder: null, finished: false }
-            }
+          phase: "INPUT",
+          mission: {
+            ...mission,
+            initialItems: shuffledItems,
+          },
+          players: Object.fromEntries(
+            participantIds.map((id) => [
+              id,
+              {
+                realOrder: null,
+                guessOrder: null,
+                targetId: ringTargets[id],
+                finished: false,
+              },
+            ]),
+          ),
+          resultsApplied: false,
         };
       }
 
       session = {
         date: dateKey,
-        game: game,
-        status: 'in_progress',
+        householdId: context.householdId,
+        mode,
+        participants: context.participants,
+        game,
+        status: "in_progress",
         sharedData,
-        players: { "Moi": { score: 0 }, "Chéri(e)": { score: 0 } }
+        players: Object.fromEntries(participantIds.map((id) => [id, { score: 0 }])),
       };
 
-      await kv.set(sessionKey, session, { ex: 86400 });
+      await kv.set(sessionKey, session, { ex: getSessionTtl(mode) });
     }
 
-    const weeklyRanking = await kv.hgetall(`weekly_scores_current`) || {};
-    return NextResponse.json({ ...session, weeklyRanking });
+    const weeklyRaw = mode === "daily" ? (await kv.hgetall(weeklyScoresKey(context.householdId))) || {} : {};
+    const weeklyRanking =
+      mode === "daily"
+        ? toWeeklyRanking(weeklyRaw as Record<string, any>, session.participants || context.participants)
+        : [];
 
+    return NextResponse.json({
+      ...session,
+      mode,
+      currentUserId: context.uid,
+      weeklyRanking,
+      hasHousehold: context.hasHousehold,
+    });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur Serveur";
+    const status = message === "Non autorise." ? 401 : message === "Acces refuse a ce foyer." ? 403 : 500;
+
     console.error("Init Error:", error);
-    return NextResponse.json({ error: "Erreur Serveur" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status });
   }
 }

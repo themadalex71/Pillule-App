@@ -1,217 +1,458 @@
-import { NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
-import { getDailySeed } from '@/features/daily/services/dailyGameLogic';
+import { NextResponse } from "next/server";
+import { kv } from "@vercel/kv";
+import { getFirebaseAdminAuth, getFirebaseAdminDb } from "@/lib/firebase/admin";
+import { getDailySeed } from "@/features/daily/services/dailyGameLogic";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Helper pour le Meme Maker
+type UserHouseholdRecord = {
+  householdId?: string | null;
+};
+
+type HouseholdDocument = {
+  memberIds?: string[];
+};
+
+type DailyMode = "daily" | "simu";
+
+function getAuthTokenFromRequest(request: Request) {
+  const authHeader = request.headers.get("authorization") || "";
+  const [scheme, token] = authHeader.split(" ");
+
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    throw new Error("Non autorise.");
+  }
+
+  return token;
+}
+
+async function getDailyContext(request: Request) {
+  const token = getAuthTokenFromRequest(request);
+  const decoded = await getFirebaseAdminAuth().verifyIdToken(token);
+  const uid = decoded.uid;
+
+  const db = getFirebaseAdminDb();
+  const userSnapshot = await db.collection("users").doc(uid).get();
+
+  if (!userSnapshot.exists) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+    };
+  }
+
+  const userRecord = userSnapshot.data() as UserHouseholdRecord;
+
+  if (!userRecord.householdId) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+    };
+  }
+
+  const householdSnapshot = await db.collection("households").doc(userRecord.householdId).get();
+
+  if (!householdSnapshot.exists) {
+    return {
+      uid,
+      householdId: `solo:${uid}`,
+    };
+  }
+
+  const household = householdSnapshot.data() as HouseholdDocument;
+  const memberIds = Array.isArray(household.memberIds) ? household.memberIds : [];
+
+  if (!memberIds.includes(uid)) {
+    throw new Error("Acces refuse a ce foyer.");
+  }
+
+  return {
+    uid,
+    householdId: householdSnapshot.id,
+  };
+}
+
+function weeklyScoresKey(householdId: string) {
+  return `weekly_scores_current:${householdId}`;
+}
+
+function normalizeMode(value: unknown): DailyMode {
+  return value === "simu" ? "simu" : "daily";
+}
+
+function getSessionKey(mode: DailyMode, dateKey: string, householdId: string) {
+  if (mode === "simu") {
+    return `daily_session:simu:${householdId}`;
+  }
+
+  return `daily_session:${dateKey}:${householdId}`;
+}
+
+function getParticipantIds(session: any): string[] {
+  const idsFromParticipants = Array.isArray(session?.participants)
+    ? session.participants
+        .map((participant: any) => participant?.id)
+        .filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
+    : [];
+
+  if (idsFromParticipants.length > 0) {
+    return idsFromParticipants;
+  }
+
+  return Object.keys(session?.players || {}).filter((id) => Boolean(id));
+}
+
+function getRingTarget(participantIds: string[], playerId: string) {
+  if (participantIds.length === 0) return null;
+
+  const index = participantIds.indexOf(playerId);
+  if (index === -1) return participantIds[0];
+
+  return participantIds[(index + 1) % participantIds.length];
+}
+
+async function addScore(
+  session: any,
+  householdId: string,
+  playerId: string,
+  points: number,
+  shouldUpdateWeekly: boolean,
+) {
+  if (!session.players[playerId]) {
+    session.players[playerId] = { score: 0 };
+  }
+
+  session.players[playerId].score += points;
+  if (shouldUpdateWeekly) {
+    await kv.hincrby(weeklyScoresKey(householdId), playerId, points);
+  }
+}
+
 async function getNewRandomMeme(excludeIds: number[]) {
-  const allMemes = await kv.get<any[]>('missions:meme') || [];
-  const pool = allMemes.filter(m => !excludeIds.includes(m.id));
-  if (pool.length === 0) return allMemes[Math.floor(Math.random() * allMemes.length)];
-  return pool[Math.floor(Math.random() * pool.length)];
+  const allMemes = (await kv.get<any[]>("missions:meme")) || [];
+
+  if (allMemes.length === 0) {
+    return null;
+  }
+
+  const pool = allMemes.filter((m) => !excludeIds.includes(m.id));
+  const source = pool.length > 0 ? pool : allMemes;
+  return source[Math.floor(Math.random() * source.length)];
+}
+
+function applyTierListScores(session: any) {
+  if (session.sharedData?.resultsApplied) {
+    return [] as Array<{ playerId: string; score: number }>;
+  }
+
+  const participantIds = getParticipantIds(session);
+  const results: Array<{ playerId: string; score: number }> = [];
+
+  participantIds.forEach((playerId) => {
+    const playerData = session.sharedData?.players?.[playerId];
+    if (!playerData) return;
+
+    const targetId = playerData.targetId || getRingTarget(participantIds, playerId);
+    const targetData = targetId ? session.sharedData?.players?.[targetId] : null;
+
+    const guessOrder = Array.isArray(playerData.guessOrder) ? playerData.guessOrder : [];
+    const realOrder = Array.isArray(targetData?.realOrder) ? targetData.realOrder : [];
+
+    let score = 0;
+    guessOrder.forEach((id: any, index: number) => {
+      if (realOrder[index] && String(id) === String(realOrder[index])) {
+        score += 1;
+      }
+    });
+
+    results.push({ playerId, score });
+  });
+
+  session.sharedData.resultsApplied = true;
+  return results;
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, player, sharedData, status, ...payload } = body;
+    const { action, sharedData, status, mode: modeFromBody, ...payload } = body;
+    const mode = normalizeMode(modeFromBody);
 
-    const sessionKey = `daily_session:${getDailySeed()}`;
-    let session: any = await kv.get(sessionKey);
+    const context = await getDailyContext(request);
+    const playerId = context.uid;
+    const shouldUpdateWeekly = mode === "daily";
 
-    if (!session) return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+    const sessionKey = getSessionKey(mode, getDailySeed(), context.householdId);
+    const session: any = await kv.get(sessionKey);
 
-    // =========================================================
-    // 🆕 GESTION GÉNÉRIQUE (POUR TIER LIST ET FUTURS JEUX)
-    // =========================================================
+    if (!session) {
+      return NextResponse.json({ error: "Session introuvable" }, { status: 404 });
+    }
+
+    const participantIds = getParticipantIds(session);
+    if (!participantIds.includes(playerId)) {
+      return NextResponse.json({ error: "Acces refuse a cette session." }, { status: 403 });
+    }
+
     if (sharedData) {
-        // 1. Mise à jour des données
-        session.sharedData = {
-            ...session.sharedData,
-            ...sharedData
-        };
+      session.sharedData = {
+        ...session.sharedData,
+        ...sharedData,
+      };
 
-        // 2. Mise à jour du statut
-        if (status) {
-            session.status = status;
+      if (status) {
+        session.status = status;
 
-            // --- CAS SPÉCIAL : SCORE TIER LIST (SÉCURISÉ) ---
-            if (session.game.id === 'tierlist' && status === 'finished') {
-                const p1 = session.sharedData.players["Moi"];
-                const p2 = session.sharedData.players["Chéri(e)"];
-
-                // Score P1 (Moi devine Chérie)
-                let scoreP1 = 0;
-                if (p1?.guessOrder && p2?.realOrder) {
-                    p1.guessOrder.forEach((id: any, i: number) => { 
-                        // On vérifie que p2.realOrder[i] existe avant de comparer
-                        if (p2.realOrder[i] && String(id) === String(p2.realOrder[i])) scoreP1++; 
-                    });
-                }
-
-                // Score P2 (Chérie devine Moi)
-                let scoreP2 = 0;
-                if (p2?.guessOrder && p1?.realOrder) {
-                    p2.guessOrder.forEach((id: any, i: number) => { 
-                        if (p1.realOrder[i] && String(id) === String(p1.realOrder[i])) scoreP2++; 
-                    });
-                }
-
-                // Application des scores
-                session.players["Moi"].score += scoreP1;
-                session.players["Chéri(e)"].score += scoreP2;
-
-                await kv.hincrby(`weekly_scores_current`, "Moi", scoreP1);
-                await kv.hincrby(`weekly_scores_current`, "Chéri(e)", scoreP2);
-            }
+        if (session.game?.id === "tierlist" && status === "finished") {
+          const scores = applyTierListScores(session);
+          for (const scoreEntry of scores) {
+            await addScore(session, context.householdId, scoreEntry.playerId, scoreEntry.score, shouldUpdateWeekly);
+          }
         }
+      }
 
-        await kv.set(sessionKey, session);
-        return NextResponse.json({ success: true, session });
-    }
-
-    // =========================================================
-    // 🕰️ ANCIENNE GESTION (ACTIONS SPÉCIFIQUES)
-    // =========================================================
-    
-    if (action === 'start_game') {
-      session.status = 'in_progress';
       await kv.set(sessionKey, session);
+      return NextResponse.json({ success: true, session });
     }
 
-    // --- ZOOM ---
-    if (session.game.id === 'zoom') {
-      if (action === 'zoom_submit_photo') {
+    if (action === "start_game") {
+      session.status = "in_progress";
+      await kv.set(sessionKey, session);
+      return NextResponse.json({ success: true, session });
+    }
+
+    if (session.game?.id === "zoom") {
+      if (action === "zoom_submit_photo") {
         session.sharedData.image = payload.image;
-        session.sharedData.step = 'GUESS';
-        await kv.set(sessionKey, session);
+        session.sharedData.step = "GUESS";
+        session.sharedData.currentGuess = null;
+        session.sharedData.guessIndex = 0;
+        session.sharedData.currentGuesserId = session.sharedData.guessOrder?.[0] || null;
       }
-      if (action === 'zoom_submit_guess') {
+
+      if (action === "zoom_submit_guess") {
+        if (session.sharedData.currentGuesserId !== playerId) {
+          return NextResponse.json({ error: "Ce n'est pas ton tour de deviner." }, { status: 400 });
+        }
+
         session.sharedData.currentGuess = payload.guess;
-        session.sharedData.step = 'VALIDATION';
-        await kv.set(sessionKey, session);
+        session.sharedData.step = "VALIDATION";
       }
-      if (action === 'zoom_validate') {
-        const { isValid } = payload;
-        if (isValid) {
-          session.players[session.sharedData.guesser].score += 1;
-          session.status = 'finished';
-          await kv.hincrby(`weekly_scores_current`, session.sharedData.guesser, 1);
+
+      if (action === "zoom_validate") {
+        const isValid = Boolean(payload.isValid);
+        const currentGuesserId = session.sharedData.currentGuesserId;
+
+        if (isValid && currentGuesserId) {
+          if (!session.sharedData.resultsApplied) {
+            await addScore(session, context.householdId, currentGuesserId, 1, shouldUpdateWeekly);
+            session.sharedData.resultsApplied = true;
+          }
+          session.status = "finished";
         } else {
-          session.sharedData.currentGuess = null;
-          session.sharedData.step = 'GUESS';
+          const nextIndex = Number(session.sharedData.guessIndex || 0) + 1;
+          const nextGuesserId = session.sharedData.guessOrder?.[nextIndex] || null;
+
+          if (!nextGuesserId) {
+            session.sharedData.resultsApplied = true;
+            session.status = "finished";
+          } else {
+            session.sharedData.currentGuess = null;
+            session.sharedData.guessIndex = nextIndex;
+            session.sharedData.currentGuesserId = nextGuesserId;
+            session.sharedData.step = "GUESS";
+          }
         }
-        await kv.set(sessionKey, session);
       }
+
+      await kv.set(sessionKey, session);
+      return NextResponse.json({ success: true, session });
     }
 
-    // --- MEME ---
-    if (session.game.id === 'meme') {
-      if (action === 'meme_reroll') {
-        const { memeIndex } = payload;
-        const playerData = session.sharedData.players[player];
-        if (playerData.rerolls[memeIndex] > 0) {
-          const usedIds = [
-            ...session.sharedData.players["Moi"].memes.map((m: any) => m.id),
-            ...session.sharedData.players["Chéri(e)"].memes.map((m: any) => m.id)
-          ];
+    if (session.game?.id === "meme") {
+      if (action === "meme_reroll") {
+        const memeIndex = Number(payload.memeIndex);
+        const playerData = session.sharedData.players?.[playerId];
+
+        if (!playerData) {
+          return NextResponse.json({ error: "Joueur introuvable." }, { status: 400 });
+        }
+
+        if (playerData.rerolls?.[memeIndex] > 0) {
+          const usedIds = Object.entries(session.sharedData.players || {}).flatMap(([id, data]: [string, any]) => {
+            const memes = Array.isArray(data?.memes) ? data.memes : [];
+            return memes
+              .map((meme: any, index: number) => (id === playerId && index === memeIndex ? null : meme?.id))
+              .filter(Boolean) as number[];
+          });
+
           const newMeme = await getNewRandomMeme(usedIds);
-          playerData.memes[memeIndex] = newMeme;
-          playerData.rerolls[memeIndex] -= 1;
-          playerData.inputs[memeIndex] = {}; 
-          await kv.set(sessionKey, session);
+          if (newMeme) {
+            playerData.memes[memeIndex] = newMeme;
+            playerData.rerolls[memeIndex] -= 1;
+            playerData.inputs[memeIndex] = {};
+          }
         }
       }
-      if (action === 'meme_submit_creation') {
-        const { inputs } = payload;
-        session.sharedData.players[player].inputs = inputs;
-        session.sharedData.players[player].finished = true;
-        const p1 = session.sharedData.players["Moi"];
-        const p2 = session.sharedData.players["Chéri(e)"];
-        if (p1.finished && p2.finished) session.sharedData.phase = 'VOTE';
-        await kv.set(sessionKey, session);
-      }
-      if (action === 'meme_submit_vote') {
-        const { votes } = payload; 
-        const opponent = player === "Moi" ? "Chéri(e)" : "Moi";
-        session.sharedData.players[opponent].votesReceived = votes;
-        const p1 = session.sharedData.players["Moi"];
-        const p2 = session.sharedData.players["Chéri(e)"];
-        if (p1.votesReceived.length > 0 && p2.votesReceived.length > 0) {
-          session.sharedData.phase = 'RESULTS';
-          session.status = 'finished';
-          const scoreP1 = p1.votesReceived.reduce((a:number, b:number) => a + b, 0);
-          const scoreP2 = p2.votesReceived.reduce((a:number, b:number) => a + b, 0);
-          session.players["Moi"].score += scoreP1;
-          session.players["Chéri(e)"].score += scoreP2;
-          await kv.hincrby(`weekly_scores_current`, "Moi", scoreP1);
-          await kv.hincrby(`weekly_scores_current`, "Chéri(e)", scoreP2);
+
+      if (action === "meme_submit_creation") {
+        const inputs = payload.inputs;
+        const playerData = session.sharedData.players?.[playerId];
+
+        if (!playerData) {
+          return NextResponse.json({ error: "Joueur introuvable." }, { status: 400 });
         }
-        await kv.set(sessionKey, session);
+
+        playerData.inputs = inputs;
+        playerData.finished = true;
+
+        const everyoneFinished = participantIds.every((id) => session.sharedData.players?.[id]?.finished);
+        if (everyoneFinished) {
+          session.sharedData.phase = "VOTE";
+        }
       }
+
+      if (action === "meme_submit_vote") {
+        const votes = Array.isArray(payload.votes) ? payload.votes : [];
+        const targetId = session.sharedData.targetByPlayer?.[playerId] || getRingTarget(participantIds, playerId);
+
+        if (!session.sharedData.votesByPlayer) {
+          session.sharedData.votesByPlayer = Object.fromEntries(participantIds.map((id) => [id, null]));
+        }
+
+        session.sharedData.votesByPlayer[playerId] = votes;
+
+        if (targetId && session.sharedData.players?.[targetId]) {
+          session.sharedData.players[targetId].votesReceived = votes;
+        }
+
+        const everyoneVoted = participantIds.every((id) => Array.isArray(session.sharedData.votesByPlayer?.[id]));
+
+        if (everyoneVoted) {
+          session.sharedData.phase = "RESULTS";
+          session.status = "finished";
+
+          if (!session.sharedData.resultsApplied) {
+            for (const id of participantIds) {
+              const votesReceived = session.sharedData.players?.[id]?.votesReceived || [];
+              const score = votesReceived.reduce((sum: number, value: number) => sum + Number(value || 0), 0);
+              await addScore(session, context.householdId, id, score, shouldUpdateWeekly);
+            }
+            session.sharedData.resultsApplied = true;
+          }
+        }
+      }
+
+      await kv.set(sessionKey, session);
+      return NextResponse.json({ success: true, session });
     }
 
-    // --- CADAVRE ---
-    if (session.game.id === 'cadavre') {
-      if (action === 'cadavre_submit_step') {
-        const { text } = payload;
-        const currentStep = session.sharedData.phase;
-        const totalSteps = session.sharedData.template.steps.length;
-        const storyToEdit = session.sharedData.stories.find((s: any) => s.authors[currentStep] === player);
-        if (storyToEdit) storyToEdit.parts[currentStep] = text;
-        const stepComplete = session.sharedData.stories.every((s: any) => s.parts[currentStep] !== null);
+    if (session.game?.id === "cadavre") {
+      if (action === "cadavre_submit_step") {
+        const text = String(payload.text || "");
+        const currentStep = Number(session.sharedData.phase);
+        const totalSteps = session.sharedData.template?.steps?.length || 0;
+
+        const storyToEdit = (session.sharedData.stories || []).find(
+          (story: any) => story.authors?.[currentStep] === playerId && story.parts?.[currentStep] === null,
+        );
+
+        if (storyToEdit) {
+          storyToEdit.parts[currentStep] = text;
+        }
+
+        const stepComplete = (session.sharedData.stories || []).every((story: any) => story.parts?.[currentStep] !== null);
         if (stepComplete) {
           session.sharedData.phase += 1;
-          if (session.sharedData.phase >= totalSteps) session.sharedData.phase = 'VOTE';
+          if (session.sharedData.phase >= totalSteps) {
+            session.sharedData.phase = "VOTE";
+          }
         }
-        await kv.set(sessionKey, session);
       }
-      if (action === 'cadavre_vote') {
-        const { score } = payload;
-        session.sharedData.votes[player].push(score);
-        if (session.sharedData.votes["Moi"].length > 0 && session.sharedData.votes["Chéri(e)"].length > 0) {
-            session.sharedData.phase = 'RESULTS';
-            session.status = 'finished';
-            session.players["Moi"].score += 1;
-            session.players["Chéri(e)"].score += 1;
-            await kv.hincrby(`weekly_scores_current`, "Moi", 1);
-            await kv.hincrby(`weekly_scores_current`, "Chéri(e)", 1);
+
+      if (action === "cadavre_vote") {
+        const score = Number(payload.score || 1);
+
+        if (!session.sharedData.votes[playerId]) {
+          session.sharedData.votes[playerId] = [];
         }
-        await kv.set(sessionKey, session);
+
+        session.sharedData.votes[playerId].push(score);
+
+        const everyoneVoted = participantIds.every((id) => (session.sharedData.votes?.[id] || []).length > 0);
+        if (everyoneVoted) {
+          session.sharedData.phase = "RESULTS";
+          session.status = "finished";
+
+          if (!session.sharedData.resultsApplied) {
+            for (const id of participantIds) {
+              await addScore(session, context.householdId, id, 1, shouldUpdateWeekly);
+            }
+            session.sharedData.resultsApplied = true;
+          }
+        }
       }
+
+      await kv.set(sessionKey, session);
+      return NextResponse.json({ success: true, session });
     }
 
-    // --- POET ---
-    if (session.game.id === 'poet') {
-        if (action === 'poet_submit') {
-            const { text } = payload;
-            session.sharedData.poems[player] = text;
-            if (session.sharedData.poems["Moi"] && session.sharedData.poems["Chéri(e)"]) {
-                session.sharedData.phase = 'VOTE';
-            }
-            await kv.set(sessionKey, session);
+    if (session.game?.id === "poet") {
+      if (action === "poet_submit") {
+        const text = String(payload.text || "");
+        session.sharedData.poems[playerId] = text;
+
+        const everyoneSubmitted = participantIds.every((id) => Boolean(session.sharedData.poems?.[id]));
+        if (everyoneSubmitted) {
+          session.sharedData.phase = "VOTE";
         }
-        if (action === 'poet_vote') {
-            const { score } = payload;
-            session.sharedData.votes[player].push(score);
-            if (session.sharedData.votes["Moi"].length > 0 && session.sharedData.votes["Chéri(e)"].length > 0) {
-                session.sharedData.phase = 'RESULTS';
-                session.status = 'finished';
-                const scoreForMoi = session.sharedData.votes["Chéri(e)"][0] || 0;
-                const scoreForCherie = session.sharedData.votes["Moi"][0] || 0;
-                session.players["Moi"].score += scoreForMoi;
-                session.players["Chéri(e)"].score += scoreForCherie;
-                await kv.hincrby(`weekly_scores_current`, "Moi", scoreForMoi);
-                await kv.hincrby(`weekly_scores_current`, "Chéri(e)", scoreForCherie);
-            }
-            await kv.set(sessionKey, session);
+      }
+
+      if (action === "poet_vote") {
+        const score = Number(payload.score || 0);
+        const targetId = session.sharedData.targetByPlayer?.[playerId] || getRingTarget(participantIds, playerId);
+
+        if (!session.sharedData.votesByPlayer) {
+          session.sharedData.votesByPlayer = Object.fromEntries(participantIds.map((id) => [id, null]));
         }
+
+        session.sharedData.votesByPlayer[playerId] = score;
+
+        if (targetId) {
+          if (!session.sharedData.votes[targetId]) {
+            session.sharedData.votes[targetId] = [];
+          }
+          session.sharedData.votes[targetId].push(score);
+        }
+
+        const everyoneVoted = participantIds.every((id) => session.sharedData.votesByPlayer?.[id] !== null);
+        if (everyoneVoted) {
+          session.sharedData.phase = "RESULTS";
+          session.status = "finished";
+
+          if (!session.sharedData.resultsApplied) {
+            for (const id of participantIds) {
+              const receivedVotes = session.sharedData.votes?.[id] || [];
+              const total = receivedVotes.reduce((sum: number, value: number) => sum + Number(value || 0), 0);
+              await addScore(session, context.householdId, id, total, shouldUpdateWeekly);
+            }
+            session.sharedData.resultsApplied = true;
+          }
+        }
+      }
+
+      await kv.set(sessionKey, session);
+      return NextResponse.json({ success: true, session });
     }
 
+    await kv.set(sessionKey, session);
     return NextResponse.json({ success: true, session });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur Action";
+    const status = message === "Non autorise." ? 401 : message === "Acces refuse a ce foyer." ? 403 : 500;
+
     console.error("Erreur Action:", error);
-    return NextResponse.json({ error: "Erreur Action" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status });
   }
 }
