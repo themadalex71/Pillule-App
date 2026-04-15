@@ -224,10 +224,6 @@ function getSessionKey(mode: DailyMode, dateKey: string, householdId: string) {
   return `daily_session:${dateKey}:${householdId}`;
 }
 
-function getZoomLastAuthorKey(mode: DailyMode, householdId: string) {
-  return `daily_zoom_last_author:${mode}:${householdId}`;
-}
-
 function getSessionTtl(mode: DailyMode) {
   return mode === "simu" ? 86400 * 7 : 86400;
 }
@@ -296,25 +292,37 @@ export async function GET(request: Request) {
           missionsPool = ["Un objet en bois", "Un truc qui brille", "Quelque chose de bleu"];
         }
 
-        const mission = missionsPool[Math.floor(Math.random() * missionsPool.length)];
-        const lastAuthor = (await kv.get<string>(getZoomLastAuthorKey(mode, context.householdId))) || null;
-        const lastAuthorIndex = lastAuthor ? participantIds.indexOf(lastAuthor) : -1;
-        const authorId = participantIds[(lastAuthorIndex + 1 + participantIds.length) % participantIds.length];
-        const guessOrder = participantIds.filter((id) => id !== authorId);
+        const sourceByPlayer: Record<string, string> = {};
+        participantIds.forEach((authorId) => {
+          const targetId = ringTargets[authorId];
+          if (targetId) {
+            sourceByPlayer[targetId] = authorId;
+          }
+        });
+
+        const challengesByPlayer = Object.fromEntries(
+          participantIds.map((authorId) => [
+            authorId,
+            {
+              targetId: ringTargets[authorId],
+              mission: missionsPool[Math.floor(Math.random() * missionsPool.length)],
+              image: null,
+              guess: null,
+              isValid: null,
+            },
+          ]),
+        );
 
         sharedData = {
-          step: "PHOTO",
-          mission,
-          authorId,
-          guessOrder,
-          guessIndex: 0,
-          currentGuesserId: guessOrder[0] || null,
-          image: null,
-          currentGuess: null,
+          phase: "PHOTO",
+          targetByPlayer: ringTargets,
+          sourceByPlayer,
+          challengesByPlayer,
+          submittedPhotosByPlayer: Object.fromEntries(participantIds.map((id) => [id, false])),
+          submittedGuessesByPlayer: Object.fromEntries(participantIds.map((id) => [id, false])),
+          submittedValidationsByPlayer: Object.fromEntries(participantIds.map((id) => [id, false])),
           resultsApplied: false,
         };
-
-        await kv.set(getZoomLastAuthorKey(mode, context.householdId), authorId, { ex: 86400 * 30 });
       } else if (game.id === "meme") {
         let allMemes = (await kv.get<any[]>("missions:meme")) || [];
         if (allMemes.length === 0) {

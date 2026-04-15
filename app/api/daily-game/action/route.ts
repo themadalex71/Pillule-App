@@ -223,6 +223,102 @@ export async function POST(request: Request) {
     }
 
     if (session.game?.id === "zoom") {
+      const isMultiPhotoFlow = Boolean(session.sharedData?.challengesByPlayer);
+
+      if (isMultiPhotoFlow) {
+        const zoomData = session.sharedData;
+        const challengesByPlayer = zoomData.challengesByPlayer || {};
+        const targetByPlayer = zoomData.targetByPlayer || {};
+        const sourceByPlayer =
+          zoomData.sourceByPlayer ||
+          Object.fromEntries(
+            participantIds
+              .map((id) => {
+                const targetId = targetByPlayer[id];
+                return targetId ? [targetId, id] : null;
+              })
+              .filter(Boolean) as Array<[string, string]>,
+          );
+
+        if (!zoomData.submittedPhotosByPlayer) {
+          zoomData.submittedPhotosByPlayer = Object.fromEntries(participantIds.map((id) => [id, false]));
+        }
+        if (!zoomData.submittedGuessesByPlayer) {
+          zoomData.submittedGuessesByPlayer = Object.fromEntries(participantIds.map((id) => [id, false]));
+        }
+        if (!zoomData.submittedValidationsByPlayer) {
+          zoomData.submittedValidationsByPlayer = Object.fromEntries(participantIds.map((id) => [id, false]));
+        }
+
+        if (action === "zoom_submit_photo") {
+          const myChallenge = challengesByPlayer[playerId];
+          if (!myChallenge) {
+            return NextResponse.json({ error: "Defi photo introuvable pour ce joueur." }, { status: 400 });
+          }
+
+          myChallenge.image = payload.image;
+          zoomData.submittedPhotosByPlayer[playerId] = true;
+
+          const everyoneSubmitted = participantIds.every(
+            (id) => Boolean(zoomData.submittedPhotosByPlayer[id]) && Boolean(challengesByPlayer[id]?.image),
+          );
+          if (everyoneSubmitted) {
+            zoomData.phase = "GUESS";
+          }
+        }
+
+        if (action === "zoom_submit_guess") {
+          const sourceId = sourceByPlayer[playerId];
+          const incomingChallenge = sourceId ? challengesByPlayer[sourceId] : null;
+          const guess = String(payload.guess || "").trim();
+
+          if (!incomingChallenge || !incomingChallenge.image) {
+            return NextResponse.json({ error: "La photo a deviner n'est pas encore disponible." }, { status: 400 });
+          }
+
+          if (!guess) {
+            return NextResponse.json({ error: "La proposition ne peut pas etre vide." }, { status: 400 });
+          }
+
+          incomingChallenge.guess = guess;
+          zoomData.submittedGuessesByPlayer[playerId] = true;
+
+          const everyoneGuessed = participantIds.every((id) => Boolean(zoomData.submittedGuessesByPlayer[id]));
+          if (everyoneGuessed) {
+            zoomData.phase = "VALIDATION";
+          }
+        }
+
+        if (action === "zoom_validate") {
+          const myChallenge = challengesByPlayer[playerId];
+          if (!myChallenge || !myChallenge.guess) {
+            return NextResponse.json({ error: "Aucune proposition a valider pour ce joueur." }, { status: 400 });
+          }
+
+          myChallenge.isValid = Boolean(payload.isValid);
+          zoomData.submittedValidationsByPlayer[playerId] = true;
+
+          const everyoneValidated = participantIds.every((id) => Boolean(zoomData.submittedValidationsByPlayer[id]));
+          if (everyoneValidated) {
+            zoomData.phase = "RESULTS";
+            if (!zoomData.resultsApplied) {
+              for (const authorId of participantIds) {
+                const challenge = challengesByPlayer[authorId];
+                if (challenge?.isValid === true && challenge?.targetId) {
+                  await addScore(session, context.householdId, challenge.targetId, 1, shouldUpdateWeekly);
+                }
+              }
+              zoomData.resultsApplied = true;
+            }
+            session.status = "finished";
+          }
+        }
+
+        await kv.set(sessionKey, session);
+        return NextResponse.json({ success: true, session });
+      }
+
+      // Legacy fallback for already-created old Zoom sessions.
       if (action === "zoom_submit_photo") {
         session.sharedData.image = payload.image;
         session.sharedData.step = "GUESS";
