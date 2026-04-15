@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Plus, Trash2, Loader2, Sparkles, Type, Feather, List, Hash, Music, AlignLeft, BookOpen, X, BarChart3, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Trash2, List, Hash, Music, AlignLeft, BookOpen, X, BarChart3, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
+import MemeTemplatesEditor from '@/features/daily/components/editor/MemeTemplatesEditor';
 
 const GAMES_CONFIG = [
   { id: 'zoom', title: 'Zoom', emoji: '🔍', color: 'bg-purple-500' },
@@ -18,8 +19,6 @@ const POET_CATEGORIES = [
   { id: 'syllables', label: 'Métrique', icon: <Hash size={14}/> },
   { id: 'rhymes', label: 'Rimes', icon: <Music size={14}/> },
 ];
-
-interface Zone { id: number; top: number; left: number; width: number; height: number; fontSize: number; color: string; }
 
 export default function EditorPage() {
   const [selectedGame, setSelectedGame] = useState<string>('zoom');
@@ -41,12 +40,6 @@ export default function EditorPage() {
   const [tierTitle, setTierTitle] = useState('');
   const [tierItems, setTierItems] = useState<{url:string, label:string}[]>(Array(5).fill({ url: '', label: '' }));
 
-  // États Meme Maker
-  const [isCreatingMeme, setIsCreatingMeme] = useState(false);
-  const [newMeme, setNewMeme] = useState({ name: '', url: '', zones: [] as Zone[] });
-  const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const imageRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -136,24 +129,6 @@ export default function EditorPage() {
     await saveToRedis(updated);
   };
 
-  const handleEditMeme = (meme: any) => { setNewMeme({ name: meme.name, url: meme.url, zones: meme.zones || [] }); setEditingId(meme.id); setIsCreatingMeme(true); };
-  const addZone = () => { const id = Date.now(); setNewMeme({ ...newMeme, zones: [...newMeme.zones, { id, top: 10, left: 10, width: 40, height: 15, fontSize: 24, color: '#ffffff' }] }); setSelectedZoneId(id); };
-  const updateZone = (id: number | null, fields: Partial<Zone>) => { if (id === null) return; setNewMeme({ ...newMeme, zones: newMeme.zones.map(z => z.id === id ? { ...z, ...fields } : z) }); };
-  const handleImageClick = (e: React.MouseEvent) => {
-    if (selectedZoneId === null || !imageRef.current) return;
-    const rect = imageRef.current.getBoundingClientRect();
-    const left = ((e.clientX - rect.left) / rect.width) * 100;
-    const top = ((e.clientY - rect.top) / rect.height) * 100;
-    const zone = newMeme.zones.find(z => z.id === selectedZoneId);
-    if (zone) { updateZone(selectedZoneId, { left: Math.max(0, Math.min(left, 100 - zone.width)), top: Math.max(0, Math.min(top, 100 - zone.height)) }); }
-  };
-  const saveFullMeme = async () => {
-    if (!newMeme.url || !newMeme.name || newMeme.zones.length === 0) return alert("Incomplet");
-    let updated = editingId ? items.map(i => i.id === editingId ? { ...newMeme, id: editingId } : i) : [{ ...newMeme, id: Date.now() }, ...items];
-    setItems(updated); await saveToRedis(updated); setIsCreatingMeme(false); setNewMeme({ name: '', url: '', zones: [] }); setEditingId(null); setSelectedZoneId(null);
-  };
-  const resetEditor = () => { setIsCreatingMeme(false); setNewMeme({ name: '', url: '', zones: [] }); setEditingId(null); setSelectedZoneId(null); };
-
   return (
     <main className="min-h-screen bg-gray-50 font-sans pb-10">
       <header className="bg-white border-b px-4 h-16 flex items-center sticky top-0 z-40">
@@ -163,7 +138,7 @@ export default function EditorPage() {
 
       <nav className="bg-white border-b overflow-x-auto py-4 px-6 flex gap-4 sticky top-16 z-30 no-scrollbar shadow-sm">
         {GAMES_CONFIG.map((game) => (
-          <button key={game.id} onClick={() => { setSelectedGame(game.id); setIsCreatingMeme(false); }}
+          <button key={game.id} onClick={() => { setSelectedGame(game.id); }}
             className={`px-6 py-2.5 rounded-full font-black text-sm uppercase tracking-tighter transition-all border-2 whitespace-nowrap
               ${selectedGame === game.id ? `${game.color} text-white border-transparent scale-105 shadow-lg` : 'bg-white text-gray-400 border-gray-100 hover:border-gray-200'}`}>
             <span>{game.emoji}</span> {game.title}
@@ -257,7 +232,14 @@ export default function EditorPage() {
 
         {/* --- UI MEME --- */}
         {selectedGame === 'meme' && (
-          isCreatingMeme ? (<div className="space-y-6 animate-in slide-in-from-bottom-4"><div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-200"><div ref={imageRef} onClick={handleImageClick} className="relative aspect-square bg-gray-900 flex items-center justify-center overflow-hidden">{newMeme.url ? <img src={newMeme.url} className="w-full h-full object-contain pointer-events-none"/> : <Type size={40} className="text-white/20"/>}{newMeme.zones.map((zone, idx) => ( <div key={zone.id} onClick={(e) => { e.stopPropagation(); setSelectedZoneId(zone.id); }} style={{ top: `${zone.top}%`, left: `${zone.left}%`, width: `${zone.width}%`, height: `${zone.height}%`, fontSize: `${zone.fontSize / 2}px`, color: zone.color }} className={`absolute border-2 flex items-center justify-center font-black uppercase shadow-lg ${selectedZoneId === zone.id ? 'border-blue-500 bg-blue-500/20' : 'border-white/40'}`}><span className="scale-75 text-white">Zone {idx + 1}</span></div> ))}</div><div className="p-4 bg-white border-t"><input placeholder="URL Image" className="w-full p-3 bg-gray-50 rounded-xl text-xs outline-none font-bold" value={newMeme.url} onChange={e => setNewMeme({...newMeme, url: e.target.value})} /></div></div><div className="space-y-3">{newMeme.zones.map((zone, idx) => ( <div key={zone.id} onClick={() => setSelectedZoneId(zone.id)} className={`bg-white p-4 rounded-2xl border-2 ${selectedZoneId === zone.id ? 'border-blue-500' : 'border-gray-100'}`}><div className="flex justify-between items-center mb-4"><span className="text-[10px] font-black bg-gray-900 text-white px-2 py-0.5 rounded uppercase">Zone {idx+1}</span>{selectedZoneId === zone.id && <button onClick={(e) => { e.stopPropagation(); setNewMeme({...newMeme, zones: newMeme.zones.filter(z => z.id !== zone.id)}); }} className="text-red-400"><Trash2 size={16}/></button>}</div>{selectedZoneId === zone.id && (<div className="grid grid-cols-2 gap-4"><input type="range" min="10" max="100" value={zone.fontSize} onChange={e => updateZone(zone.id, { fontSize: parseInt(e.target.value) })} className="w-full h-1.5 bg-gray-100 rounded-lg cursor-pointer"/><input type="color" value={zone.color} onChange={e => updateZone(zone.id, { color: e.target.value })} className="w-full h-6 cursor-pointer bg-transparent"/></div>)}</div> ))}<button onClick={addZone} className="w-full border-2 border-dashed border-gray-300 rounded-2xl py-5 text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">Ajouter Zone</button></div><div className="p-6 bg-white rounded-[2rem] shadow-xl space-y-4 border border-gray-100"><input placeholder="Nom du Template" className="w-full p-4 bg-gray-50 rounded-xl font-bold border-none outline-none" value={newMeme.name} onChange={e => setNewMeme({...newMeme, name: e.target.value})} /><div className="flex gap-2"><button onClick={resetEditor} className="flex-1 bg-gray-100 text-gray-500 font-black py-4 rounded-xl uppercase text-xs">Annuler</button><button onClick={saveFullMeme} className="flex-[2] bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 uppercase text-xs tracking-widest">Enregistrer</button></div></div></div>) : (<div className="space-y-6"><button onClick={() => { resetEditor(); setIsCreatingMeme(true); }} className="w-full bg-blue-600 text-white font-black py-5 rounded-[2rem] shadow-lg flex items-center justify-center gap-3 uppercase"><Plus size={24}/> Créer Template</button><div className="grid gap-4 mt-6">{items.map((meme, i) => (<div key={meme.id || i} onClick={() => handleEditMeme(meme)} className="bg-white rounded-[2.5rem] overflow-hidden border shadow-sm group relative cursor-pointer"><img src={meme.url} className="w-full h-48 object-cover"/><div className="absolute bottom-0 left-0 right-0 p-5 flex justify-between items-end"><span className="text-white font-black uppercase text-sm">{meme.name}</span><button onClick={(e) => { e.stopPropagation(); handleDelete(i); }} className="bg-red-500 text-white p-2.5 rounded-2xl shadow-lg"><Trash2 size={18}/></button></div></div>))}</div></div>)
+          <MemeTemplatesEditor
+            items={items}
+            onDeleteItem={handleDelete}
+            onSaveItems={async (nextItems) => {
+              setItems(nextItems);
+              await saveToRedis(nextItems);
+            }}
+          />
         )}
       </div>
       <style jsx global>{` .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; } `}</style>

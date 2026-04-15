@@ -109,6 +109,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                     height: `${zone.height}%`,
                     fontSize: `${Math.max(10, zone.fontSize / 2)}px`,
                     color: zone.color,
+                    fontFamily: zone.fontFamily || 'Impact, Arial Black, sans-serif',
                     textShadow: '0 1px 3px rgba(0,0,0,0.8)',
                   }}
                   className="absolute bg-transparent border-2 border-dashed border-white/50 focus:border-blue-400 rounded-lg p-1 resize-none outline-none font-black text-center leading-tight placeholder:text-white/30 overflow-hidden"
@@ -179,6 +180,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                     height: `${zone.height}%`,
                     fontSize: `${Math.max(10, zone.fontSize / 2)}px`,
                     color: zone.color,
+                    fontFamily: zone.fontFamily || 'Impact, Arial Black, sans-serif',
                     textShadow: '0 2px 4px rgba(0,0,0,1)',
                   }}
                   className="absolute flex items-center justify-center text-center font-black leading-tight break-words whitespace-pre-wrap"

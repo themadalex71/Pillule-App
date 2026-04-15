@@ -318,7 +318,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               placeholder="Qu'est-ce que c'est ?"
               value={guess}
               onChange={(event) => setGuess(event.target.value)}
-              className="w-full p-5 rounded-2xl border-2 border-gray-100 text-center font-bold text-xl outline-none shadow-inner"
+              className="w-full p-5 rounded-2xl border-2 border-gray-100 text-center font-bold text-xl text-gray-900 placeholder:text-gray-400 caret-blue-600 outline-none shadow-inner"
             />
             <button
               onClick={() => {
@@ -560,7 +560,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
             placeholder="Qu'est-ce que c'est ?"
             value={guess}
             onChange={(event) => setGuess(event.target.value)}
-            className="w-full p-5 rounded-2xl border-2 border-gray-100 text-center font-bold text-xl outline-none shadow-inner"
+            className="w-full p-5 rounded-2xl border-2 border-gray-100 text-center font-bold text-xl text-gray-900 placeholder:text-gray-400 caret-blue-600 outline-none shadow-inner"
           />
           <button
             onClick={() => onAction({ action: 'zoom_submit_guess', guess })}

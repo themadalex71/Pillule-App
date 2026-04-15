@@ -328,8 +328,18 @@ export async function GET(request: Request) {
         let allMemes = (await kv.get<any[]>("missions:meme")) || [];
         if (allMemes.length === 0) {
           allMemes = [
-            { id: 1, name: "Exemple 1", url: "https://i.imgflip.com/1ur9b0.jpg", zones: [{ id: 1, top: 10, left: 10, width: 40, height: 20, fontSize: 20, color: "#fff" }] },
-            { id: 2, name: "Exemple 2", url: "https://i.imgflip.com/261o3j.jpg", zones: [{ id: 1, top: 10, left: 10, width: 40, height: 20, fontSize: 20, color: "#fff" }] },
+            {
+              id: 1,
+              name: "Exemple 1",
+              url: "https://i.imgflip.com/1ur9b0.jpg",
+              zones: [{ id: 1, top: 10, left: 10, width: 40, height: 20, fontSize: 20, color: "#fff", fontFamily: "Impact, Arial Black, sans-serif" }],
+            },
+            {
+              id: 2,
+              name: "Exemple 2",
+              url: "https://i.imgflip.com/261o3j.jpg",
+              zones: [{ id: 1, top: 10, left: 10, width: 40, height: 20, fontSize: 20, color: "#fff", fontFamily: "Impact, Arial Black, sans-serif" }],
+            },
           ];
         }
 
