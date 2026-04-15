@@ -19,6 +19,42 @@ type ZoomPoint = { x: number; y: number };
 
 const ZOOM_MIN_PERCENT = 8;
 const ZOOM_MAX_PERCENT = 92;
+const DEFAULT_MEMES = [
+  {
+    id: 1,
+    name: "Exemple 1",
+    url: "https://i.imgflip.com/1ur9b0.jpg",
+    zones: [
+      {
+        id: 1,
+        top: 10,
+        left: 10,
+        width: 40,
+        height: 20,
+        fontSize: 20,
+        color: "#fff",
+        fontFamily: "Impact, Arial Black, sans-serif",
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: "Exemple 2",
+    url: "https://i.imgflip.com/261o3j.jpg",
+    zones: [
+      {
+        id: 1,
+        top: 10,
+        left: 10,
+        width: 40,
+        height: 20,
+        fontSize: 20,
+        color: "#fff",
+        fontFamily: "Impact, Arial Black, sans-serif",
+      },
+    ],
+  },
+];
 
 function getAuthTokenFromRequest(request: Request) {
   const authHeader = request.headers.get("authorization") || "";
@@ -158,7 +194,10 @@ function normalizeMemeId(id: unknown) {
 }
 
 async function getNewRandomMeme(excludeIds: Array<string | number>, currentId?: unknown) {
-  const allMemes = (await kv.get<any[]>("missions:meme")) || [];
+  let allMemes = (await kv.get<any[]>("missions:meme")) || [];
+  if (allMemes.length === 0) {
+    allMemes = DEFAULT_MEMES;
+  }
 
   if (allMemes.length === 0) {
     return null;
