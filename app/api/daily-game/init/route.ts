@@ -354,6 +354,7 @@ export async function GET(request: Request) {
             memes,
             rerolls: [2, 2],
             inputs: [{}, {}],
+            zoneOverrides: [{}, {}],
             finished: false,
             votesReceived: [],
           };

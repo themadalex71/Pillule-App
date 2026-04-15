@@ -413,12 +413,17 @@ export async function POST(request: Request) {
             playerData.memes[memeIndex] = newMeme;
             playerData.rerolls[memeIndex] -= 1;
             playerData.inputs[memeIndex] = {};
+            if (!Array.isArray(playerData.zoneOverrides)) {
+              playerData.zoneOverrides = [];
+            }
+            playerData.zoneOverrides[memeIndex] = {};
           }
         }
       }
 
       if (action === "meme_submit_creation") {
         const inputs = payload.inputs;
+        const zoneOverrides = Array.isArray(payload.zoneOverrides) ? payload.zoneOverrides : [];
         const playerData = session.sharedData.players?.[playerId];
 
         if (!playerData) {
@@ -426,6 +431,7 @@ export async function POST(request: Request) {
         }
 
         playerData.inputs = inputs;
+        playerData.zoneOverrides = zoneOverrides;
         playerData.finished = true;
 
         const everyoneFinished = participantIds.every((id) => session.sharedData.players?.[id]?.finished);
