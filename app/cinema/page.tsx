@@ -967,7 +967,7 @@ export default function CinemaPage() {
         {activeTab === 'catalogue' && (
           <div className="animate-in fade-in duration-300">
             {catalogueMovies.length > 0 && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {catalogueMovies.map(movie => (
                   <button key={movie.id} onClick={() => openMovieDetails(movie.id)} className="text-left active:scale-95 transition">
                     <div className="aspect-[2/3] rounded-2xl overflow-hidden bg-white border border-[#eee5dc] shadow-[0_8px_18px_rgba(111,98,143,0.12)]">
@@ -992,7 +992,7 @@ export default function CinemaPage() {
               <div className="space-y-3">
                 {savedMovies.map(movie => (
                   <button key={movie.id} onClick={() => openMovieDetails(movie.id)} className="w-full bg-white rounded-2xl border border-[#eee5dc] overflow-hidden flex text-left active:scale-[0.98] transition shadow-[0_8px_18px_rgba(111,98,143,0.08)]">
-                    <div className="w-24 h-32 shrink-0 bg-[#f4efea]">
+                    <div className="w-20 h-28 shrink-0 bg-[#f4efea] sm:w-24 sm:h-32">
                       {movie.poster_path ? <img src={movie.poster_path} alt={movie.title} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Popcorn size={24} className="text-[#b9accf]"/></div>}
                     </div>
                     <div className="flex-1 p-3 min-w-0">

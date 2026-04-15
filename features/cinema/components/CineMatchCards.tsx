@@ -36,7 +36,7 @@ const CineMatchCardItem = memo(function CineMatchCardItem({
       className="absolute inset-0 w-full touch-pan-y"
     >
       <div
-        className="relative h-[68vh] w-full rounded-[2rem] overflow-hidden shadow-[0_18px_40px_rgba(111,98,143,0.2)] border-2 border-[#efe4d8] bg-white will-change-transform"
+        className="relative h-[60vh] min-h-[24rem] max-h-[39rem] w-full rounded-[2rem] overflow-hidden shadow-[0_18px_40px_rgba(111,98,143,0.2)] border-2 border-[#efe4d8] bg-white will-change-transform sm:h-[66vh]"
         style={{
           zIndex: stackIndex + 1,
           transform: `scale(${1 - stackIndex * 0.03}) translateY(${stackIndex * 10}px)`,
