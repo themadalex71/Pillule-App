@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Clock, Loader2, RefreshCw, Trophy, Users } from 'lucide-react';
+import { Clock, Loader2, RefreshCw, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
@@ -12,6 +12,7 @@ import CadavreGame from '@/features/daily/components/CadavreGame';
 import PoetGame from '@/features/daily/components/PoetGame';
 import TierListGame from '@/features/daily/components/TierListGame';
 import { getFirebaseAuth } from '@/lib/firebase/client';
+import AppMiniHeader from '@/components/AppMiniHeader';
 
 type RankingEntry = {
   id: string;
@@ -226,25 +227,10 @@ export default function DailyGamePage() {
   }
 
   return (
-    <main className="min-h-[100dvh] bg-[#fcf7f2] px-5 pb-10 pt-5 text-[#2e1065]">
-      <div className="mx-auto w-full max-w-md">
-      <header className="sticky top-3 z-20 mb-5 flex items-center justify-between rounded-[1.8rem] border border-[#eee5dc] bg-[rgba(255,255,255,0.94)] p-4 shadow-[0_12px_30px_rgba(111,98,143,0.08)] backdrop-blur">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link href="/hub" className="p-2 rounded-2xl border border-[#ece4f7] bg-white text-[#6f628f] shadow-[0_8px_18px_rgba(111,98,143,0.08)]">
-            <ArrowLeft size={22} />
-          </Link>
-          <div className="flex min-w-0 flex-col">
-            <span className="font-black text-[#8d7ac6] uppercase text-xs">
-              {isSimulationMode ? 'Mode Simulation' : 'Defi du Jour'}
-            </span>
-            <span className="truncate text-[11px] text-[#8d82a8] font-bold">{currentName}</span>
-          </div>
-        </div>
-        <Link href="/daily/editor" className="text-xs font-bold uppercase text-[#6f628f]">
-          Editeur
-        </Link>
-      </header>
+    <main className="min-h-[100dvh] bg-[#fcf7f2] pb-10 text-[#2e1065]">
+      <AppMiniHeader title="Jeux" />
 
+      <div className="mx-auto w-full max-w-md px-5 pt-5">
       <div className="space-y-5">
         {loading && !session ? (
           <div className="flex justify-center py-20 rounded-[1.8rem] border border-[#eee5dc] bg-white shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
@@ -253,6 +239,15 @@ export default function DailyGamePage() {
         ) : (
           <>
             <div className="space-y-3 rounded-[1.8rem] border border-[#eee5dc] bg-white p-4 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8d82a8]">
+                  {isSimulationMode ? 'Mode Simulation' : 'Defi du Jour'} · {currentName}
+                </p>
+                <Link href="/daily/editor" className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6f628f]">
+                  Editeur
+                </Link>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"

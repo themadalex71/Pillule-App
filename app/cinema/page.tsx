@@ -2,9 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Home, Library, Popcorn, Flame, Loader2, LayoutGrid, SlidersHorizontal, Trash2, ChevronRight, Eye, Heart, FileUp, CircleOff } from 'lucide-react';
+import { ArrowLeft, Library, Popcorn, Flame, Loader2, LayoutGrid, SlidersHorizontal, Trash2, ChevronRight, Eye, Heart, FileUp, CircleOff } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import Papa from 'papaparse'; 
 
@@ -14,6 +13,7 @@ import CineMatchCards from '@/features/cinema/components/CineMatchCards';
 import MovieDetailsModal from '@/features/cinema/components/MovieDetailsModal';
 import { getFirebaseAuth } from '@/lib/firebase/client';
 import { getUserHousehold, type Household } from '@/lib/firebase/households';
+import AppMiniHeader from '@/components/AppMiniHeader';
 
 export default function CinemaPage() {
   const router = useRouter();
@@ -881,34 +881,32 @@ export default function CinemaPage() {
         </div>
       )}
 
-      <div className="px-4 pt-safe shrink-0 z-10 bg-[#fcf7f2]">
+      <AppMiniHeader title="Cinema" />
+
+      <div className="px-4 shrink-0 z-10 bg-[#fcf7f2]">
         <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-3">
-                {isInsideListView ? (
+                {isInsideListView && (
                   <button onClick={() => setActiveTab('hub')} className="p-2 rounded-full border border-[#ece4f7] bg-white text-[#6f628f] active:scale-95 transition">
                     <ArrowLeft size={20}/>
                   </button>
-                ) : (
-                  <Link href="/" className="p-2 rounded-full border border-[#ece4f7] bg-white text-[#6f628f] active:scale-95 transition" aria-label="Menu HarmoHome">
-                    <Home size={20}/>
-                  </Link>
                 )}
-                <div className="flex items-center">
-                    <h1 className="text-xl font-semibold text-[#4b3d6d] tracking-[-0.02em]">
-                    {activeTab === 'cinematch' && <><Flame className="inline text-[#ef9a79] mr-2" fill="currentColor"/>CineMatch</>}
-                    {activeTab === 'hub' && <><Library className="text-[#7f68b7] inline mr-2"/>Mes Listes</>}
-                    {activeTab === 'catalogue' && <><LayoutGrid className="text-[#7f68b7] inline mr-2"/>Catalogue</>}
-                    {activeTab === 'list-wishlist' && <><Popcorn className="text-[#d4a642] inline mr-2"/>A voir</>}
-                    {activeTab === 'list-history' && <><Eye className="text-[#4fa070] inline mr-2"/>Deja vus</>}
-                    {activeTab === 'list-dismissed' && <><CircleOff className="text-[#d2778b] inline mr-2"/>Pas envie</>}
-                    {activeTab === 'list-matches' && <><Heart className="text-[#d27295] fill-[#d27295] inline mr-2"/>Nos Matchs</>}
-                    </h1>
-                    {(activeTab === 'cinematch' || activeTab === 'catalogue') && (
-                        <button onClick={() => setShowFilters(true)} className={`ml-2 p-2 rounded-full border transition ${showFilters || (filters.genre || filters.minYear) ? 'bg-[#ef9a79] border-[#ef9a79] text-white' : 'bg-white border-[#ece4f7] text-[#8d82a8] hover:text-[#6f628f]'}`}><SlidersHorizontal size={18} /></button>
-                    )}
-                </div>
+                <h2 className="text-xl font-semibold text-[#4b3d6d] tracking-[-0.02em]">
+                  {activeTab === 'cinematch' && <><Flame className="inline text-[#ef9a79] mr-2" fill="currentColor"/>CineMatch</>}
+                  {activeTab === 'hub' && <><Library className="text-[#7f68b7] inline mr-2"/>Mes Listes</>}
+                  {activeTab === 'catalogue' && <><LayoutGrid className="text-[#7f68b7] inline mr-2"/>Catalogue</>}
+                  {activeTab === 'list-wishlist' && <><Popcorn className="text-[#d4a642] inline mr-2"/>A voir</>}
+                  {activeTab === 'list-history' && <><Eye className="text-[#4fa070] inline mr-2"/>Deja vus</>}
+                  {activeTab === 'list-dismissed' && <><CircleOff className="text-[#d2778b] inline mr-2"/>Pas envie</>}
+                  {activeTab === 'list-matches' && <><Heart className="text-[#d27295] fill-[#d27295] inline mr-2"/>Nos Matchs</>}
+                </h2>
             </div>
-            <div />
+
+            {(activeTab === 'cinematch' || activeTab === 'catalogue') ? (
+              <button onClick={() => setShowFilters(true)} className={`p-2 rounded-full border transition ${showFilters || (filters.genre || filters.minYear) ? 'bg-[#ef9a79] border-[#ef9a79] text-white' : 'bg-white border-[#ece4f7] text-[#8d82a8] hover:text-[#6f628f]'}`}><SlidersHorizontal size={18} /></button>
+            ) : (
+              <div className="w-10" />
+            )}
         </div>
       </div>
 

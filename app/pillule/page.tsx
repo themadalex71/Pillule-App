@@ -1,19 +1,14 @@
-import Link from 'next/link';
-import { ArrowLeft, HeartPulse, Sparkles } from 'lucide-react';
+import { HeartPulse, Sparkles } from 'lucide-react';
 
 import CalendrierView from '@/features/pilule/components/CalendrierView';
+import AppMiniHeader from '@/components/AppMiniHeader';
 
 export default function PillPage() {
   return (
-    <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] px-5 py-5 text-[#2e1065]">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 self-start rounded-full border border-[#ece4f7] bg-white px-4 py-2 text-sm font-semibold text-[#6f628f] shadow-[0_8px_18px_rgba(111,98,143,0.08)] transition active:scale-[0.98]"
-        >
-          <ArrowLeft size={18} />
-          Retour au menu
-        </Link>
+    <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] text-[#2e1065]">
+      <AppMiniHeader title="Pilule" />
+
+      <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-5 py-5">
 
         <section className="relative overflow-hidden rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-6 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
           <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#fff1e8]" />

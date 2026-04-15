@@ -13,6 +13,7 @@ import {
 import { Recipe, IngredientItem, Category, INITIAL_CATEGORIES } from '@/features/cuisine/types';
 import RecipeModal from '@/features/cuisine/components/RecipeModal';
 import VariantModal from '@/features/cuisine/components/VariantModal';
+import AppMiniHeader from '@/components/AppMiniHeader';
 
 type FridgeDropZone = {
   categoryName: string;
@@ -1036,11 +1037,7 @@ export default function CuisinePage() {
   // --- RENDU UI PRINCIPAL ---
   return (
     <main className="min-h-screen bg-[#fcf7f2] text-[#4b3d6d] pb-20">
-      <div className="p-4 flex items-center justify-between bg-[#fcf7f2] sticky top-0 z-10 border-b border-[#ece4f7]">
-        <Link href="/" className="text-[#8d82a8] hover:text-[#4b3d6d] transition"><ArrowLeft /></Link>
-        <h1 className="text-xl font-bold flex items-center gap-2 text-[#7f68b7]"><ChefHat className="text-[#ef9a79]" /> Cuistot</h1>
-        <div className="w-6"></div> 
-      </div>
+      <AppMiniHeader title="Cuistot" />
 
       <div className="p-4">
           <div className="flex bg-[#fcfbff] border border-[#ece4f7] p-1 rounded-xl shadow-[0_10px_20px_rgba(111,98,143,0.08)]">
