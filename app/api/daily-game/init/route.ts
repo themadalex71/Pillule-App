@@ -307,6 +307,7 @@ export async function GET(request: Request) {
               targetId: ringTargets[authorId],
               mission: missionsPool[Math.floor(Math.random() * missionsPool.length)],
               image: null,
+              zoom: null,
               guess: null,
               isValid: null,
             },

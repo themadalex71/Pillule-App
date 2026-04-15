@@ -15,6 +15,10 @@ type HouseholdDocument = {
 };
 
 type DailyMode = "daily" | "simu";
+type ZoomPoint = { x: number; y: number };
+
+const ZOOM_MIN_PERCENT = 8;
+const ZOOM_MAX_PERCENT = 92;
 
 function getAuthTokenFromRequest(request: Request) {
   const authHeader = request.headers.get("authorization") || "";
@@ -79,6 +83,25 @@ function weeklyScoresKey(householdId: string) {
 
 function normalizeMode(value: unknown): DailyMode {
   return value === "simu" ? "simu" : "daily";
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function parseZoomPoint(raw: unknown): ZoomPoint {
+  if (!raw || typeof raw !== "object") {
+    return { x: 50, y: 50 };
+  }
+
+  const source = raw as { x?: unknown; y?: unknown };
+  const x = typeof source.x === "number" ? source.x : 50;
+  const y = typeof source.y === "number" ? source.y : 50;
+
+  return {
+    x: Math.round(clamp(x, ZOOM_MIN_PERCENT, ZOOM_MAX_PERCENT) * 10) / 10,
+    y: Math.round(clamp(y, ZOOM_MIN_PERCENT, ZOOM_MAX_PERCENT) * 10) / 10,
+  };
 }
 
 function getSessionKey(mode: DailyMode, dateKey: string, householdId: string) {
@@ -257,6 +280,7 @@ export async function POST(request: Request) {
           }
 
           myChallenge.image = payload.image;
+          myChallenge.zoom = parseZoomPoint(payload.zoom);
           zoomData.submittedPhotosByPlayer[playerId] = true;
 
           const everyoneSubmitted = participantIds.every(
@@ -321,6 +345,7 @@ export async function POST(request: Request) {
       // Legacy fallback for already-created old Zoom sessions.
       if (action === "zoom_submit_photo") {
         session.sharedData.image = payload.image;
+        session.sharedData.zoom = parseZoomPoint(payload.zoom);
         session.sharedData.step = "GUESS";
         session.sharedData.currentGuess = null;
         session.sharedData.guessIndex = 0;

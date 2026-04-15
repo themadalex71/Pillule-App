@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { type MouseEvent, useRef, useState } from 'react';
 import { Camera, Send, Check, X, Clock } from 'lucide-react';
 
 type Props = {
@@ -9,6 +9,50 @@ type Props = {
   participantMap: Record<string, string>;
   onAction: (payload: any) => void;
 };
+
+type ZoomPoint = {
+  x: number;
+  y: number;
+};
+
+const ZOOM_MIN_PERCENT = 8;
+const ZOOM_MAX_PERCENT = 92;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function roundPercent(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function getRandomZoomPoint(): ZoomPoint {
+  const range = ZOOM_MAX_PERCENT - ZOOM_MIN_PERCENT;
+  return {
+    x: roundPercent(ZOOM_MIN_PERCENT + Math.random() * range),
+    y: roundPercent(ZOOM_MIN_PERCENT + Math.random() * range),
+  };
+}
+
+function normalizeZoomPoint(raw: unknown, fallback: ZoomPoint = { x: 50, y: 50 }): ZoomPoint {
+  if (!raw || typeof raw !== 'object') {
+    return fallback;
+  }
+
+  const source = raw as { x?: unknown; y?: unknown };
+  const x = typeof source.x === 'number' ? source.x : fallback.x;
+  const y = typeof source.y === 'number' ? source.y : fallback.y;
+
+  return {
+    x: roundPercent(clamp(x, ZOOM_MIN_PERCENT, ZOOM_MAX_PERCENT)),
+    y: roundPercent(clamp(y, ZOOM_MIN_PERCENT, ZOOM_MAX_PERCENT)),
+  };
+}
+
+function getZoomOrigin(raw: unknown) {
+  const point = normalizeZoomPoint(raw);
+  return `${point.x}% ${point.y}%`;
+}
 
 function getName(participantMap: Record<string, string>, id?: string | null) {
   if (!id) return 'Un membre';
@@ -19,7 +63,34 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
   const { sharedData } = session;
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [guess, setGuess] = useState('');
+  const [zoomPoint, setZoomPoint] = useState<ZoomPoint | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleZoomPick = (event: MouseEvent<HTMLDivElement>) => {
+    if (!imageSrc) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    setZoomPoint(normalizeZoomPoint({ x, y }));
+  };
+
+  const resetZoomRandom = () => {
+    setZoomPoint(getRandomZoomPoint());
+  };
+
+  const currentZoomPoint = zoomPoint ?? { x: 50, y: 50 };
+
+  const submitPhoto = () => {
+    if (!imageSrc) return;
+
+    const finalZoom = normalizeZoomPoint(zoomPoint ?? getRandomZoomPoint());
+    onAction({ action: 'zoom_submit_photo', image: imageSrc, zoom: finalZoom });
+    setImageSrc(null);
+    setZoomPoint(null);
+  };
 
   const isMultiPhotoFlow = Boolean(sharedData?.challengesByPlayer);
 
@@ -39,6 +110,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
     const targetId = targetByPlayer[currentUserId];
     const sourceId = sourceByPlayer[currentUserId];
     const incomingChallenge = sourceId ? challengesByPlayer[sourceId] : null;
+    const incomingZoomOrigin = getZoomOrigin(incomingChallenge?.zoom);
 
     const submittedPhotosByPlayer = sharedData.submittedPhotosByPlayer || {};
     const submittedGuessesByPlayer = sharedData.submittedGuessesByPlayer || {};
@@ -82,9 +154,26 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
             </p>
           </div>
 
-          <div className="relative aspect-square bg-gray-100 rounded-[2.5rem] overflow-hidden border-4 border-dashed border-gray-200 flex items-center justify-center">
+          <div
+            className="relative aspect-square bg-gray-100 rounded-[2.5rem] overflow-hidden border-4 border-dashed border-gray-200 flex items-center justify-center"
+            onClick={imageSrc ? handleZoomPick : undefined}
+          >
             {imageSrc ? (
-              <img src={imageSrc} className="w-full h-full object-cover" alt="Preview" />
+              <>
+                <img src={imageSrc} className="w-full h-full object-cover" alt="Preview" />
+                <div
+                  className="absolute w-10 h-10 rounded-full border-2 border-white shadow-[0_0_0_2px_rgba(0,0,0,0.2)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${currentZoomPoint.x}%`, top: `${currentZoomPoint.y}%` }}
+                />
+                <div className="absolute bottom-3 right-3 w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-black/30 pointer-events-none">
+                  <img
+                    src={imageSrc}
+                    className="w-full h-full object-cover scale-[4.5]"
+                    style={{ transformOrigin: `${currentZoomPoint.x}% ${currentZoomPoint.y}%` }}
+                    alt="Apercu du zoom"
+                  />
+                </div>
+              </>
             ) : (
               <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 gap-3">
                 <div className="bg-white p-4 rounded-full shadow-sm text-purple-600">
@@ -106,21 +195,32 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               if (!file) return;
 
               const reader = new FileReader();
-              reader.onloadend = () => setImageSrc(reader.result as string);
+              reader.onloadend = () => {
+                setImageSrc(reader.result as string);
+                setZoomPoint(getRandomZoomPoint());
+              };
               reader.readAsDataURL(file);
             }}
           />
 
           {imageSrc && (
-            <button
-              onClick={() => {
-                onAction({ action: 'zoom_submit_photo', image: imageSrc });
-                setImageSrc(null);
-              }}
-              className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all"
-            >
-              <Send size={20} /> ENVOYER LE DEFI
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={resetZoomRandom}
+                className="w-full bg-purple-100 text-purple-700 font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
+              >
+                Regenerer un zoom aleatoire
+              </button>
+              <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+                Touche l'image pour deplacer le zoom
+              </p>
+              <button
+                onClick={submitPhoto}
+                className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all"
+              >
+                <Send size={20} /> ENVOYER LE DEFI
+              </button>
+            </div>
           )}
         </div>
       );
@@ -158,7 +258,12 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
       return (
         <div className="space-y-6 animate-in slide-in-from-bottom-4">
           <div className="aspect-square rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-black relative">
-            <img src={incomingChallenge.image} className="w-full h-full object-cover scale-[5.0] origin-center" alt="Zoomed" />
+            <img
+              src={incomingChallenge.image}
+              className="w-full h-full object-cover scale-[5.0]"
+              style={{ transformOrigin: incomingZoomOrigin }}
+              alt="Zoomed"
+            />
             <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
               Zoom 500%
             </div>
@@ -253,6 +358,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
   const isAuthor = currentUserId === sharedData.authorId;
   const isCurrentGuesser = currentUserId === sharedData.currentGuesserId;
+  const legacyZoomOrigin = getZoomOrigin(sharedData?.zoom);
 
   if (sharedData.step === 'PHOTO') {
     if (!isAuthor) {
@@ -276,9 +382,26 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
           <h3 className="text-2xl font-black leading-tight">{sharedData.mission}</h3>
         </div>
 
-        <div className="relative aspect-square bg-gray-100 rounded-[2.5rem] overflow-hidden border-4 border-dashed border-gray-200 flex items-center justify-center">
+        <div
+          className="relative aspect-square bg-gray-100 rounded-[2.5rem] overflow-hidden border-4 border-dashed border-gray-200 flex items-center justify-center"
+          onClick={imageSrc ? handleZoomPick : undefined}
+        >
           {imageSrc ? (
-            <img src={imageSrc} className="w-full h-full object-cover" alt="Preview" />
+            <>
+              <img src={imageSrc} className="w-full h-full object-cover" alt="Preview" />
+              <div
+                className="absolute w-10 h-10 rounded-full border-2 border-white shadow-[0_0_0_2px_rgba(0,0,0,0.2)] pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${currentZoomPoint.x}%`, top: `${currentZoomPoint.y}%` }}
+              />
+              <div className="absolute bottom-3 right-3 w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-lg bg-black/30 pointer-events-none">
+                <img
+                  src={imageSrc}
+                  className="w-full h-full object-cover scale-[4.5]"
+                  style={{ transformOrigin: `${currentZoomPoint.x}% ${currentZoomPoint.y}%` }}
+                  alt="Apercu du zoom"
+                />
+              </div>
+            </>
           ) : (
             <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 gap-3">
               <div className="bg-white p-4 rounded-full shadow-sm text-purple-600">
@@ -300,18 +423,32 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onloadend = () => setImageSrc(reader.result as string);
+            reader.onloadend = () => {
+              setImageSrc(reader.result as string);
+              setZoomPoint(getRandomZoomPoint());
+            };
             reader.readAsDataURL(file);
           }}
         />
 
         {imageSrc && (
-          <button
-            onClick={() => onAction({ action: 'zoom_submit_photo', image: imageSrc })}
-            className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all"
-          >
-            <Send size={20} /> ENVOYER LE DEFI
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={resetZoomRandom}
+              className="w-full bg-purple-100 text-purple-700 font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
+            >
+              Regenerer un zoom aleatoire
+            </button>
+            <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-gray-400">
+              Touche l'image pour deplacer le zoom
+            </p>
+            <button
+              onClick={submitPhoto}
+              className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all"
+            >
+              <Send size={20} /> ENVOYER LE DEFI
+            </button>
+          </div>
         )}
       </div>
     );
@@ -335,7 +472,12 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
     return (
       <div className="space-y-6 animate-in slide-in-from-bottom-4">
         <div className="aspect-square rounded-[2.5rem] overflow-hidden border-8 border-white shadow-2xl bg-black relative">
-          <img src={sharedData.image} className="w-full h-full object-cover scale-[5.0] origin-center" alt="Zoomed" />
+          <img
+            src={sharedData.image}
+            className="w-full h-full object-cover scale-[5.0]"
+            style={{ transformOrigin: legacyZoomOrigin }}
+            alt="Zoomed"
+          />
           <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
             Zoom 500%
           </div>
