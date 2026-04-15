@@ -967,14 +967,16 @@ export default function CinemaPage() {
         {activeTab === 'catalogue' && (
           <div className="animate-in fade-in duration-300">
             {catalogueMovies.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-3">
                 {catalogueMovies.map(movie => (
-                  <button key={movie.id} onClick={() => openMovieDetails(movie.id)} className="text-left active:scale-95 transition">
+                  <button key={movie.id} onClick={() => openMovieDetails(movie.id)} className="text-left active:scale-95 transition flex flex-col">
                     <div className="aspect-[2/3] rounded-2xl overflow-hidden bg-white border border-[#eee5dc] shadow-[0_8px_18px_rgba(111,98,143,0.12)]">
                       {movie.poster_path ? <img src={movie.poster_path} alt={movie.title} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Popcorn size={32} className="text-[#b9accf]"/></div>}
                     </div>
-                    <p className="font-semibold text-sm mt-2 line-clamp-2 px-1 text-[#4b3d6d]">{movie.title}</p>
-                    <p className="text-[#d4a642] text-xs font-semibold px-1">{movie.vote}/10</p>
+                    <div className="mt-2 px-1 min-h-[3.2rem]">
+                      <p className="font-semibold text-sm line-clamp-2 text-[#4b3d6d]">{movie.title}</p>
+                      <p className="text-[#d4a642] text-xs font-semibold mt-1">{movie.vote}/10</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -992,7 +994,7 @@ export default function CinemaPage() {
               <div className="space-y-3">
                 {savedMovies.map(movie => (
                   <button key={movie.id} onClick={() => openMovieDetails(movie.id)} className="w-full bg-white rounded-2xl border border-[#eee5dc] overflow-hidden flex text-left active:scale-[0.98] transition shadow-[0_8px_18px_rgba(111,98,143,0.08)]">
-                    <div className="w-20 h-28 shrink-0 bg-[#f4efea] sm:w-24 sm:h-32">
+                    <div className="w-20 aspect-[2/3] shrink-0 bg-[#f4efea] sm:w-24">
                       {movie.poster_path ? <img src={movie.poster_path} alt={movie.title} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center"><Popcorn size={24} className="text-[#b9accf]"/></div>}
                     </div>
                     <div className="flex-1 p-3 min-w-0">
