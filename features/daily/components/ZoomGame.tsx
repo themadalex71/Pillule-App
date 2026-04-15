@@ -1,13 +1,13 @@
 'use client';
 
 import { type MouseEvent, useRef, useState } from 'react';
-import { Camera, Send, Check, X, Clock } from 'lucide-react';
+import { Camera, Send, Check, X, Clock, Loader2 } from 'lucide-react';
 
 type Props = {
   session: any;
   currentUserId: string;
   participantMap: Record<string, string>;
-  onAction: (payload: any) => void;
+  onAction: (payload: any) => void | Promise<void>;
 };
 
 type ZoomPoint = {
@@ -64,10 +64,12 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [guess, setGuess] = useState('');
   const [zoomPoint, setZoomPoint] = useState<ZoomPoint | null>(null);
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
+  const [isSubmittingPhoto, setIsSubmittingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleZoomPick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!imageSrc) return;
+    if (!imageSrc || isPreparingImage || isSubmittingPhoto) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
@@ -83,13 +85,19 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
 
   const currentZoomPoint = zoomPoint ?? { x: 50, y: 50 };
 
-  const submitPhoto = () => {
-    if (!imageSrc) return;
+  const submitPhoto = async () => {
+    if (!imageSrc || isSubmittingPhoto || isPreparingImage) return;
 
     const finalZoom = normalizeZoomPoint(zoomPoint ?? getRandomZoomPoint());
-    onAction({ action: 'zoom_submit_photo', image: imageSrc, zoom: finalZoom });
-    setImageSrc(null);
-    setZoomPoint(null);
+    setIsSubmittingPhoto(true);
+
+    try {
+      await Promise.resolve(onAction({ action: 'zoom_submit_photo', image: imageSrc, zoom: finalZoom }));
+      setImageSrc(null);
+      setZoomPoint(null);
+    } finally {
+      setIsSubmittingPhoto(false);
+    }
   };
 
   const isMultiPhotoFlow = Boolean(sharedData?.challengesByPlayer);
@@ -119,6 +127,8 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
     const submittedPhotoCount = participantIds.filter((id) => Boolean(submittedPhotosByPlayer[id])).length;
     const submittedGuessCount = participantIds.filter((id) => Boolean(submittedGuessesByPlayer[id])).length;
     const submittedValidationCount = participantIds.filter((id) => Boolean(submittedValidationsByPlayer[id])).length;
+
+    const isPhotoBusy = isPreparingImage || isSubmittingPhoto;
 
     if (phase === 'PHOTO') {
       if (!myChallenge) {
@@ -175,12 +185,26 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
                 </div>
               </>
             ) : (
-              <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 gap-3">
+              <button
+                onClick={() => {
+                  if (isPhotoBusy) return;
+                  fileInputRef.current?.click();
+                }}
+                disabled={isPhotoBusy}
+                className="flex flex-col items-center text-gray-400 gap-3 disabled:opacity-60"
+              >
                 <div className="bg-white p-4 rounded-full shadow-sm text-purple-600">
-                  <Camera size={32} />
+                  {isPreparingImage ? <Loader2 size={32} className="animate-spin" /> : <Camera size={32} />}
                 </div>
-                <span className="font-bold">Prendre la photo</span>
+                <span className="font-bold">{isPreparingImage ? 'Traitement de la photo...' : 'Prendre la photo'}</span>
               </button>
+            )}
+
+            {isSubmittingPhoto && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3">
+                <Loader2 className="animate-spin text-purple-600" size={30} />
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-700">Envoi en cours...</p>
+              </div>
             )}
           </div>
 
@@ -194,10 +218,21 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               const file = event.target.files?.[0];
               if (!file) return;
 
+              setIsPreparingImage(true);
               const reader = new FileReader();
               reader.onloadend = () => {
                 setImageSrc(reader.result as string);
                 setZoomPoint(getRandomZoomPoint());
+                setIsPreparingImage(false);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+              };
+              reader.onerror = () => {
+                setIsPreparingImage(false);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
               };
               reader.readAsDataURL(file);
             }}
@@ -207,6 +242,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
             <div className="space-y-3">
               <button
                 onClick={resetZoomRandom}
+                disabled={isPhotoBusy}
                 className="w-full bg-purple-100 text-purple-700 font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
               >
                 Regenerer un zoom aleatoire
@@ -215,10 +251,14 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
                 Touche l'image pour deplacer le zoom
               </p>
               <button
-                onClick={submitPhoto}
-                className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all"
+                onClick={() => {
+                  void submitPhoto();
+                }}
+                disabled={isPhotoBusy}
+                className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
               >
-                <Send size={20} /> ENVOYER LE DEFI
+                {isSubmittingPhoto ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+                {isSubmittingPhoto ? 'ENVOI EN COURS...' : 'ENVOYER LE DEFI'}
               </button>
             </div>
           )}
@@ -359,6 +399,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
   const isAuthor = currentUserId === sharedData.authorId;
   const isCurrentGuesser = currentUserId === sharedData.currentGuesserId;
   const legacyZoomOrigin = getZoomOrigin(sharedData?.zoom);
+  const isPhotoBusy = isPreparingImage || isSubmittingPhoto;
 
   if (sharedData.step === 'PHOTO') {
     if (!isAuthor) {
@@ -403,12 +444,26 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               </div>
             </>
           ) : (
-            <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center text-gray-400 gap-3">
+            <button
+              onClick={() => {
+                if (isPhotoBusy) return;
+                fileInputRef.current?.click();
+              }}
+              disabled={isPhotoBusy}
+              className="flex flex-col items-center text-gray-400 gap-3 disabled:opacity-60"
+            >
               <div className="bg-white p-4 rounded-full shadow-sm text-purple-600">
-                <Camera size={32} />
+                {isPreparingImage ? <Loader2 size={32} className="animate-spin" /> : <Camera size={32} />}
               </div>
-              <span className="font-bold">Prendre la photo</span>
+              <span className="font-bold">{isPreparingImage ? 'Traitement de la photo...' : 'Prendre la photo'}</span>
             </button>
+          )}
+
+          {isSubmittingPhoto && (
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3">
+              <Loader2 className="animate-spin text-purple-600" size={30} />
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-purple-700">Envoi en cours...</p>
+            </div>
           )}
         </div>
 
@@ -422,10 +477,21 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
             const file = event.target.files?.[0];
             if (!file) return;
 
+            setIsPreparingImage(true);
             const reader = new FileReader();
             reader.onloadend = () => {
               setImageSrc(reader.result as string);
               setZoomPoint(getRandomZoomPoint());
+              setIsPreparingImage(false);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+            };
+            reader.onerror = () => {
+              setIsPreparingImage(false);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
             };
             reader.readAsDataURL(file);
           }}
@@ -435,6 +501,7 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
           <div className="space-y-3">
             <button
               onClick={resetZoomRandom}
+              disabled={isPhotoBusy}
               className="w-full bg-purple-100 text-purple-700 font-black py-3 rounded-2xl shadow-sm active:scale-95 transition-all uppercase text-xs tracking-wide"
             >
               Regenerer un zoom aleatoire
@@ -443,10 +510,14 @@ export default function ZoomGame({ session, currentUserId, participantMap, onAct
               Touche l'image pour deplacer le zoom
             </p>
             <button
-              onClick={submitPhoto}
-              className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all"
+              onClick={() => {
+                void submitPhoto();
+              }}
+              disabled={isPhotoBusy}
+              className="w-full bg-purple-600 text-white font-black py-5 rounded-2xl shadow-lg flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-60"
             >
-              <Send size={20} /> ENVOYER LE DEFI
+              {isSubmittingPhoto ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+              {isSubmittingPhoto ? 'ENVOI EN COURS...' : 'ENVOYER LE DEFI'}
             </button>
           </div>
         )}
