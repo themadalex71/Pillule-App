@@ -152,15 +152,30 @@ async function addScore(
   }
 }
 
-async function getNewRandomMeme(excludeIds: number[]) {
+function normalizeMemeId(id: unknown) {
+  if (id === null || id === undefined) return "";
+  return String(id);
+}
+
+async function getNewRandomMeme(excludeIds: Array<string | number>, currentId?: unknown) {
   const allMemes = (await kv.get<any[]>("missions:meme")) || [];
 
   if (allMemes.length === 0) {
     return null;
   }
 
-  const pool = allMemes.filter((m) => !excludeIds.includes(m.id));
-  const source = pool.length > 0 ? pool : allMemes;
+  const excludedSet = new Set(excludeIds.map((id) => normalizeMemeId(id)).filter(Boolean));
+  const currentIdAsString = normalizeMemeId(currentId);
+  if (currentIdAsString) {
+    excludedSet.add(currentIdAsString);
+  }
+
+  const pool = allMemes.filter((m) => !excludedSet.has(normalizeMemeId(m?.id)));
+  const fallbackWithoutCurrent = currentIdAsString
+    ? allMemes.filter((m) => normalizeMemeId(m?.id) !== currentIdAsString)
+    : allMemes;
+
+  const source = pool.length > 0 ? pool : fallbackWithoutCurrent.length > 0 ? fallbackWithoutCurrent : allMemes;
   return source[Math.floor(Math.random() * source.length)];
 }
 
@@ -401,14 +416,18 @@ export async function POST(request: Request) {
         }
 
         if (playerData.rerolls?.[memeIndex] > 0) {
+          const currentMemeId = playerData.memes?.[memeIndex]?.id;
+
           const usedIds = Object.entries(session.sharedData.players || {}).flatMap(([id, data]: [string, any]) => {
             const memes = Array.isArray(data?.memes) ? data.memes : [];
             return memes
-              .map((meme: any, index: number) => (id === playerId && index === memeIndex ? null : meme?.id))
-              .filter(Boolean) as number[];
+              .map((meme: any, index: number) =>
+                id === playerId && index === memeIndex ? null : normalizeMemeId(meme?.id),
+              )
+              .filter(Boolean) as string[];
           });
 
-          const newMeme = await getNewRandomMeme(usedIds);
+          const newMeme = await getNewRandomMeme(usedIds, currentMemeId);
           if (newMeme) {
             playerData.memes[memeIndex] = newMeme;
             playerData.rerolls[memeIndex] -= 1;

@@ -184,8 +184,14 @@ function buildRingTargets(participantIds: string[]) {
   return targets;
 }
 
-function getRandomMemes(allMemes: any[], count: number, excludeIds: number[] = []) {
-  const pool = allMemes.filter((m) => !excludeIds.includes(m.id));
+function normalizeMemeId(id: unknown) {
+  if (id === null || id === undefined) return "";
+  return String(id);
+}
+
+function getRandomMemes(allMemes: any[], count: number, excludeIds: string[] = []) {
+  const excludedSet = new Set(excludeIds.map((id) => normalizeMemeId(id)).filter(Boolean));
+  const pool = allMemes.filter((m) => !excludedSet.has(normalizeMemeId(m?.id)));
   const source = pool.length < count ? allMemes : pool;
   const shuffled = [...source].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
@@ -344,11 +350,11 @@ export async function GET(request: Request) {
         }
 
         const playersData: Record<string, any> = {};
-        let usedIds: number[] = [];
+        let usedIds: string[] = [];
 
         participantIds.forEach((participantId) => {
           const memes = getRandomMemes(allMemes, 2, usedIds);
-          usedIds = [...usedIds, ...memes.map((m) => m.id)];
+          usedIds = [...usedIds, ...memes.map((m) => normalizeMemeId(m?.id)).filter(Boolean)];
 
           playersData[participantId] = {
             memes,

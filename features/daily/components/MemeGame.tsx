@@ -1,7 +1,7 @@
 'use client';
 
-import { type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { RefreshCw, Send, Loader2, Check, Star, Move, Expand, Plus, Minus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { RefreshCw, Send, Loader2, Check, Star, Plus, Minus } from 'lucide-react';
 
 const EMOJIS = [
   { label: 'Nul', icon: ':/', score: 0 },
@@ -35,7 +35,6 @@ type ActiveZone = {
   zoneId: string;
 };
 
-type DragMode = 'move' | 'resize';
 type ControlMode = 'slider' | 'step';
 
 type StepperRowProps = {
@@ -44,15 +43,6 @@ type StepperRowProps = {
   unit?: string;
   onMinus: () => void;
   onPlus: () => void;
-};
-
-type ActiveDrag = {
-  memeIndex: number;
-  zoneId: string;
-  mode: DragMode;
-  startClientX: number;
-  startClientY: number;
-  startLayout: ZoneLayout;
 };
 
 type Props = {
@@ -170,90 +160,14 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
     Array.isArray(myData?.extraZones) ? myData.extraZones : [[], []],
   );
   const [activeZone, setActiveZone] = useState<ActiveZone | null>(null);
-  const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
   const [controlMode, setControlMode] = useState<ControlMode>('slider');
   const [votes, setVotes] = useState<number[]>([2, 2]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const canvasRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const finishedCount = useMemo(
     () => Object.values(players).filter((data: any) => data?.finished).length,
     [players],
   );
-
-  useEffect(() => {
-    if (!activeDrag) return;
-
-    const onPointerMove = (event: PointerEvent) => {
-      const canvas = canvasRefs.current[activeDrag.memeIndex];
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
-
-      const deltaXPercent = ((event.clientX - activeDrag.startClientX) / rect.width) * 100;
-      const deltaYPercent = ((event.clientY - activeDrag.startClientY) / rect.height) * 100;
-
-      let nextLayout = activeDrag.startLayout;
-
-      if (activeDrag.mode === 'move') {
-        nextLayout = {
-          ...nextLayout,
-          left: round1(clamp(activeDrag.startLayout.left + deltaXPercent, 0, 100 - activeDrag.startLayout.width)),
-          top: round1(clamp(activeDrag.startLayout.top + deltaYPercent, 0, 100 - activeDrag.startLayout.height)),
-        };
-      } else {
-        nextLayout = {
-          ...nextLayout,
-          width: round1(clamp(activeDrag.startLayout.width + deltaXPercent, 12, 100 - activeDrag.startLayout.left)),
-          height: round1(clamp(activeDrag.startLayout.height + deltaYPercent, 8, 100 - activeDrag.startLayout.top)),
-        };
-      }
-
-      setLocalZoneOverrides((previous) => {
-        const next = [...previous];
-        const byZone = { ...(next[activeDrag.memeIndex] || {}) };
-        byZone[activeDrag.zoneId] = nextLayout;
-        next[activeDrag.memeIndex] = byZone;
-        return next;
-      });
-    };
-
-    const stopDrag = () => {
-      setActiveDrag(null);
-    };
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', stopDrag);
-    window.addEventListener('pointercancel', stopDrag);
-
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', stopDrag);
-      window.removeEventListener('pointercancel', stopDrag);
-    };
-  }, [activeDrag]);
-
-  useEffect(() => {
-    if (!activeDrag || typeof document === 'undefined') return;
-
-    const body = document.body;
-    const html = document.documentElement;
-    const previousBodyOverflow = body.style.overflow;
-    const previousBodyTouchAction = body.style.touchAction;
-    const previousHtmlOverflow = html.style.overflow;
-
-    body.style.overflow = 'hidden';
-    body.style.touchAction = 'none';
-    html.style.overflow = 'hidden';
-
-    return () => {
-      body.style.overflow = previousBodyOverflow;
-      body.style.touchAction = previousBodyTouchAction;
-      html.style.overflow = previousHtmlOverflow;
-    };
-  }, [activeDrag]);
 
   if (!myData) {
     return (
@@ -366,24 +280,6 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
     setActiveZone(null);
   };
 
-  const startDrag = (event: ReactPointerEvent<HTMLButtonElement>, memeIndex: number, zone: any, mode: DragMode) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    const resolvedLayout = getResolvedLayout(memeIndex, zone);
-    const zoneId = zoneKey(zone?.id);
-
-    setActiveZone({ memeIndex, zoneId });
-    setActiveDrag({
-      memeIndex,
-      zoneId,
-      mode,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-      startLayout: resolvedLayout,
-    });
-  };
-
   if (phase === 'CREATION') {
     if (myData.finished) {
       return (
@@ -461,12 +357,7 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                 </div>
               </div>
 
-              <div
-                ref={(element) => {
-                  canvasRefs.current[index] = element;
-                }}
-                className="relative aspect-square bg-gray-900 rounded-2xl overflow-hidden"
-              >
+              <div className="relative aspect-square bg-gray-900 rounded-2xl overflow-hidden">
                 <img src={meme.url} className="w-full h-full object-contain pointer-events-none" alt="Meme" />
 
                 {zones.map((zone: any) => {
@@ -505,24 +396,6 @@ export default function MemeGame({ session, currentUserId, participantMap, onAct
                           isActive ? 'border-blue-400' : 'border-white/50 border-dashed'
                         }`}
                       />
-
-                      <button
-                        type="button"
-                        onPointerDown={(event) => startDrag(event, index, zone, 'move')}
-                        className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg"
-                        title="Deplacer la bulle"
-                      >
-                        <Move size={12} />
-                      </button>
-
-                      <button
-                        type="button"
-                        onPointerDown={(event) => startDrag(event, index, zone, 'resize')}
-                        className="absolute -bottom-2 -right-2 w-6 h-6 rounded-full bg-white text-blue-600 border border-blue-200 flex items-center justify-center shadow-lg"
-                        title="Agrandir / reduire"
-                      >
-                        <Expand size={12} />
-                      </button>
                     </div>
                   );
                 })}
