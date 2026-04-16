@@ -125,45 +125,45 @@ export default function CalendrierView() {
   const getCellClasses = (status: DayStatus, isToday: boolean) => {
     const base =
       'aspect-square rounded-[1.1rem] border flex flex-col items-center justify-center text-sm transition select-none';
-    const todayRing = isToday ? ' ring-2 ring-[#ef9a79]/45 border-[#ef9a79] shadow-[0_0_0_2px_rgba(239,154,121,0.16)]' : '';
+    const todayRing = isToday ? ' ring-2 ring-[#ef9a79]/45 border-[#ef9a79] shadow-[0_0_0_2px_rgba(239,154,121,0.18)]' : '';
 
     if (status === 'taken') {
       return `${base} bg-[#eef8f1] border-[#d8ecdf] text-[#3f8b5f] shadow-[0_8px_18px_rgba(79,160,112,0.10)] ${todayRing}`;
     }
 
     if (status === 'todo') {
-      return `${base} bg-[#fff7f1] border-[#ef9a79] text-[#b85b3a] shadow-[0_10px_20px_rgba(239,154,121,0.18)] active:scale-[0.98] cursor-pointer ${todayRing}`;
+      return `${base} bg-[#fff7f1] border-[#ef9a79] text-[#cf6f4a] shadow-[0_10px_20px_rgba(239,154,121,0.18)] active:scale-[0.98] cursor-pointer ${todayRing}`;
     }
 
     if (status === 'pause') {
-      return `${base} bg-[#f5f1fb] border-[#ece4f7] text-[#9c90b8] opacity-80 ${todayRing}`;
+      return `${base} bg-[#fffaf7] border-[#f5ddd0] text-[#bea89b] opacity-90 ${todayRing}`;
     }
 
-    return `${base} border-[#f6d5c2] bg-[#fff9f5] text-[#d3b8aa]`;
+    return `${base} border-[#f6e4db] bg-[#fffdfb] text-[#dac8bd]`;
   };
 
   return (
-    <div className="space-y-3 px-0">
-      <section className="w-full overflow-hidden border-y border-[#ef9a79] bg-white shadow-[0_14px_30px_rgba(239,154,121,0.22)] sm:rounded-[1.8rem] sm:border sm:border-[#ef9a79]">
-        <div className="border-b border-[#f6d5c2] bg-[linear-gradient(135deg,#fff4ea_0%,#fffafb_100%)] px-4 py-4">
+    <div className="space-y-4 px-3">
+      <section className="w-full overflow-hidden rounded-[1.6rem] border border-[#ef9a79] bg-white shadow-[0_14px_30px_rgba(239,154,121,0.24)]">
+        <div className="border-b border-[#ef9a79]/35 bg-[linear-gradient(135deg,#ef9a79_0%,#e88f6d_100%)] px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <button
               onClick={onPrevMonth}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#f6c8b3] bg-white text-[#d07e5d] shadow-[0_6px_14px_rgba(239,154,121,0.18)] transition active:scale-[0.97]"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-white shadow-[0_6px_14px_rgba(102,38,14,0.16)] transition active:scale-[0.97]"
               aria-label="Mois precedent"
             >
               <ChevronLeft size={20} />
             </button>
 
             <div className="text-center">
-              <h2 className="text-xl font-semibold capitalize tracking-[-0.03em] text-[#c26a4d]">
+              <h2 className="text-xl font-semibold capitalize tracking-[-0.03em] text-white">
                 {format(currentDate, 'MMMM yyyy', { locale: fr })}
               </h2>
             </div>
 
             <button
               onClick={onNextMonth}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#f6c8b3] bg-white text-[#d07e5d] shadow-[0_6px_14px_rgba(239,154,121,0.18)] transition active:scale-[0.97]"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-white shadow-[0_6px_14px_rgba(102,38,14,0.16)] transition active:scale-[0.97]"
               aria-label="Mois suivant"
             >
               <ChevronRight size={20} />
@@ -176,7 +176,7 @@ export default function CalendrierView() {
             {WEEK_DAYS.map((day, index) => (
               <div
                 key={`${day}-${index}`}
-                className="text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#c98768]"
+                className="text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#ef9a79]"
               >
                 {day}
               </div>
@@ -215,8 +215,8 @@ export default function CalendrierView() {
         </div>
       </section>
 
-      <section className="mx-3 rounded-[1.4rem] border border-[#ef9a79] bg-white p-4 shadow-[0_14px_28px_rgba(239,154,121,0.18)] sm:mx-0 sm:rounded-[1.8rem] sm:px-5 sm:py-5">
-        <label htmlFor="pill-cycle-start" className="mb-2 block text-sm font-semibold text-[#c26a4d]">
+      <section className="rounded-[1.4rem] border border-[#ef9a79] bg-white p-4 shadow-[0_14px_28px_rgba(239,154,121,0.18)] sm:rounded-[1.8rem] sm:px-5 sm:py-5">
+        <label htmlFor="pill-cycle-start" className="mb-2 block text-sm font-semibold text-[#ef9a79]">
           Debut de plaquette
         </label>
         <input
@@ -224,7 +224,7 @@ export default function CalendrierView() {
           type="date"
           value={datePickerValue}
           onChange={handleDateChange}
-          className="w-full rounded-2xl border border-[#f6c8b3] bg-white px-4 py-3 text-[#4b3d6d] outline-none transition focus:border-[#ef9a79] focus:ring-2 focus:ring-[#ef9a79]/25"
+          className="w-full rounded-2xl border border-[#f6d5c2] bg-[#fff9f5] px-4 py-3 text-[#4b3d6d] outline-none transition focus:border-[#ef9a79] focus:ring-2 focus:ring-[#ef9a79]/25"
         />
       </section>
     </div>
