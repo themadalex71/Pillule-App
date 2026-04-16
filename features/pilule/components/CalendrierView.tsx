@@ -125,10 +125,14 @@ export default function CalendrierView() {
   const getCellClasses = (status: DayStatus, isToday: boolean) => {
     const base =
       'aspect-square rounded-[1.1rem] border flex flex-col items-center justify-center text-sm transition select-none';
-    const todayRing = isToday ? ' ring-2 ring-[#ef9a79]/45 border-[#ef9a79] shadow-[0_0_0_2px_rgba(239,154,121,0.18)]' : '';
+    const todayRing = isToday
+      ? status === 'taken'
+        ? ' ring-2 ring-[#8d7ac6]/45 border-[#8d7ac6] shadow-[0_0_0_2px_rgba(141,122,198,0.18)]'
+        : ' ring-2 ring-[#ef9a79]/45 border-[#ef9a79] shadow-[0_0_0_2px_rgba(239,154,121,0.18)]'
+      : '';
 
     if (status === 'taken') {
-      return `${base} bg-[#eef8f1] border-[#d8ecdf] text-[#3f8b5f] shadow-[0_8px_18px_rgba(79,160,112,0.10)] ${todayRing}`;
+      return `${base} bg-[#f3edf9] border-[#d9cdf0] text-[#8d7ac6] shadow-[0_8px_18px_rgba(141,122,198,0.20)] ${todayRing}`;
     }
 
     if (status === 'todo') {
