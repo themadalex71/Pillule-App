@@ -15,10 +15,29 @@ import {
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Check, ChevronLeft, ChevronRight, MoonStar, Pill } from 'lucide-react';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 
 const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 type DayStatus = 'taken' | 'todo' | 'pause' | 'unknown';
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const auth = getFirebaseAuth();
+    const token = await auth.currentUser?.getIdToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {
+    // no-op
+  }
+
+  return headers;
+}
 
 export default function CalendrierView() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -78,9 +97,10 @@ export default function CalendrierView() {
     localStorage.setItem('takenDates', JSON.stringify(newTakenDates));
 
     try {
+      const headers = await getAuthHeaders();
       await fetch('/api/sync-pill', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ date: dateStr, status: newStatus }),
       });
     } catch (e) {
@@ -100,10 +120,14 @@ export default function CalendrierView() {
     localStorage.setItem('cycleStart', newDate.toISOString());
 
     try {
+      const headers = await getAuthHeaders();
       await fetch('/api/pilule/save-cycle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cycleStart: newDate.toISOString() }),
+        headers,
+        body: JSON.stringify({
+          cycleStartDate: dateValue,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris',
+        }),
       });
     } catch (err) {
       console.error('Erreur de sauvegarde', err);
