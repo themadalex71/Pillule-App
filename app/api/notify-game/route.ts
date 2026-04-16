@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { getFirebaseAdminDb } from '@/lib/firebase/admin';
+import { ensureCronAuthorized } from '@/lib/cron/auth';
 import { getGameOfTheDay } from '@/features/daily/services/gameUtils';
 import { sendPushNotificationToUser } from '@/lib/notifications/push';
 import {
@@ -12,7 +13,12 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const unauthorized = ensureCronAuthorized(request);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   const token = process.env.TELEGRAM_BOT_TOKEN;
 
   try {

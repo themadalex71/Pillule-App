@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import Redis from 'ioredis';
 import { getFirebaseAdminDb } from '@/lib/firebase/admin';
+import { ensureCronAuthorized } from '@/lib/cron/auth';
 import { sendPushNotificationToUser } from '@/lib/notifications/push';
 import {
   diffDaysFromDateKeys,
@@ -37,7 +38,12 @@ function getTakenKey(uid: string, dateKey: string) {
   return `pill_taken:${uid}:${dateKey}`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const unauthorized = ensureCronAuthorized(request);
+  if (unauthorized) {
+    return unauthorized;
+  }
+
   if (!process.env.REDIS_URL) {
     return NextResponse.json({ message: 'No Redis URL' }, { status: 500 });
   }
