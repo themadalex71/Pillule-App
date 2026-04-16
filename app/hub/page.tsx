@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client";
+import { requestBrowserPushToken } from "@/lib/firebase/messaging";
 import {
   createHouseholdInviteLink,
   createHouseholdForUser,
@@ -111,7 +112,7 @@ export default function HubPage() {
         {activeTab === "search" && <SearchView />}
         {activeTab === "hh" && <HHView user={user} onOpenHousehold={() => setActiveTab("household")} />}
         {activeTab === "household" && <HouseholdView user={user} onSignOut={handleSignOut} />}
-        {activeTab === "settings" && <SettingsView onSignOut={handleSignOut} />}
+        {activeTab === "settings" && <SettingsView user={user} onSignOut={handleSignOut} />}
       </div>
 
       <nav className="fixed bottom-0 left-0 right-0 border-t border-[#eee5dc] bg-[rgba(252,247,242,0.96)] backdrop-blur">
@@ -864,7 +865,261 @@ function ProfileView({ user }: { user: User }) {
   );
 }
 
-function SettingsView({ onSignOut }: { onSignOut: () => Promise<void> }) {
+function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
+  const getDetectedTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [timezone, setTimezone] = useState("Europe/Paris");
+  const [pilluleEnabled, setPilluleEnabled] = useState(true);
+  const [gameEnabled, setGameEnabled] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pilluleReminderHour, setPilluleReminderHour] = useState(20);
+  const [gameReminderHour, setGameReminderHour] = useState(19);
+  const [webPushTokenCount, setWebPushTokenCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isTelegramLinking, setIsTelegramLinking] = useState(false);
+  const [isPushConfiguring, setIsPushConfiguring] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">(
+    typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported",
+  );
+
+  const getAuthToken = async () => {
+    const auth = getFirebaseAuth();
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error("Session invalide.");
+    }
+    return token;
+  };
+
+  const loadSettings = async () => {
+    const token = await getAuthToken();
+    const response = await fetch("/api/user/notification-settings", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(data?.error || "Impossible de charger les parametres.");
+    }
+
+    const settings = data?.settings || {};
+    setTelegramChatId(String(settings.telegramChatId || ""));
+    setTimezone(String(settings.timezone || getDetectedTimezone()));
+    setPilluleEnabled(settings.pilluleEnabled !== false);
+    setGameEnabled(settings.gameEnabled !== false);
+    setPushEnabled(settings.pushEnabled !== false);
+    setPilluleReminderHour(Number.isFinite(settings.pilluleReminderHour) ? Number(settings.pilluleReminderHour) : 20);
+    setGameReminderHour(Number.isFinite(settings.gameReminderHour) ? Number(settings.gameReminderHour) : 19);
+    setWebPushTokenCount(Array.isArray(settings.webPushTokens) ? settings.webPushTokens.length : 0);
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      setIsLoading(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      try {
+        await loadSettings();
+      } catch (error: any) {
+        if (!active) return;
+        setErrorMessage(error?.message || "Impossible de charger les parametres.");
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, [user.uid]);
+
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const token = await getAuthToken();
+      const normalizedPilluleHour = Math.min(23, Math.max(0, Math.trunc(Number(pilluleReminderHour) || 0)));
+      const normalizedGameHour = Math.min(23, Math.max(0, Math.trunc(Number(gameReminderHour) || 0)));
+
+      const response = await fetch("/api/user/notification-settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          telegramChatId: telegramChatId.trim(),
+          timezone: timezone.trim(),
+          pilluleEnabled,
+          gameEnabled,
+          pushEnabled,
+          pilluleReminderHour: normalizedPilluleHour,
+          gameReminderHour: normalizedGameHour,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Impossible d'enregistrer les parametres.");
+      }
+
+      setPilluleReminderHour(normalizedPilluleHour);
+      setGameReminderHour(normalizedGameHour);
+      setSuccessMessage("Parametres enregistres.");
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Impossible d'enregistrer les parametres.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConnectTelegram = async () => {
+    setIsTelegramLinking(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/telegram/connect-token", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Impossible de creer le lien Telegram.");
+      }
+
+      const url = String(data?.connectUrl || "");
+      if (!url) {
+        throw new Error("Lien Telegram invalide.");
+      }
+
+      window.open(url, "_blank", "noopener,noreferrer");
+      setSuccessMessage("Telegram ouvert. Clique sur Start dans le bot pour connecter ton compte.");
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Impossible de connecter Telegram.");
+    } finally {
+      setIsTelegramLinking(false);
+    }
+  };
+
+  const handleEnablePushOnDevice = async () => {
+    setIsPushConfiguring(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const result = await requestBrowserPushToken();
+      if (!result.supported) {
+        setPushPermission("unsupported");
+        throw new Error(result.reason);
+      }
+
+      setPushPermission(result.permission);
+      if (result.permission !== "granted") {
+        throw new Error("Permission push refusee. Active les notifications dans ton navigateur.");
+      }
+
+      if (!result.token) {
+        throw new Error(result.reason || "Impossible de recuperer le token push.");
+      }
+
+      const token = await getAuthToken();
+      const response = await fetch("/api/user/push-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pushToken: result.token,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Impossible d'enregistrer ce token push.");
+      }
+
+      localStorage.setItem("harmohome_push_token", result.token);
+      await loadSettings();
+      setSuccessMessage("Notifications appareil activees sur ce device.");
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Impossible d'activer les notifications appareil.");
+    } finally {
+      setIsPushConfiguring(false);
+    }
+  };
+
+  const handleDisablePushOnDevice = async () => {
+    setIsPushConfiguring(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const savedToken = localStorage.getItem("harmohome_push_token");
+      if (!savedToken) {
+        throw new Error("Aucun token push local trouve sur cet appareil.");
+      }
+
+      const token = await getAuthToken();
+      const response = await fetch("/api/user/push-token", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pushToken: savedToken,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || "Impossible de supprimer ce token push.");
+      }
+
+      localStorage.removeItem("harmohome_push_token");
+      await loadSettings();
+      setSuccessMessage("Notifications push retirees pour cet appareil.");
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Impossible de desactiver ce token push.");
+    } finally {
+      setIsPushConfiguring(false);
+    }
+  };
+
+  const applyBrowserTimezone = () => {
+    const nextZone = getDetectedTimezone();
+    if (nextZone) {
+      setTimezone(nextZone);
+    }
+  };
+
+  const pushPermissionLabel =
+    pushPermission === "granted"
+      ? "autorisee"
+      : pushPermission === "denied"
+        ? "bloquee"
+        : pushPermission === "default"
+          ? "pas encore demandee"
+          : "non supportee";
+
   return (
     <section className="space-y-4 rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
       <div>
@@ -872,11 +1127,166 @@ function SettingsView({ onSignOut }: { onSignOut: () => Promise<void> }) {
         <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">Preferences</h2>
       </div>
 
-      <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-        <p className="text-sm text-[#6f628f]">
-          Cette zone servira pour les reglages du foyer, les notifications et la gestion du compte.
-        </p>
-      </div>
+      <form onSubmit={handleSave} className="space-y-4">
+        <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
+          <p className="text-sm text-[#6f628f]">
+            Push appareil prioritaire, Telegram en fallback. Chaque membre a ses propres horaires.
+          </p>
+        </div>
+
+        {isLoading ? (
+          <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4 text-sm text-[#6f628f]">
+            Chargement des parametres...
+          </div>
+        ) : (
+          <>
+            <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
+              <p className="text-sm font-semibold text-[#4b3d6d]">Telegram</p>
+              <p className="mt-1 text-xs text-[#8d82a8]">
+                Clique sur Connecter Telegram puis Start dans le bot. Le chat ID se remplit automatiquement.
+              </p>
+              <button
+                type="button"
+                onClick={handleConnectTelegram}
+                disabled={isTelegramLinking}
+                className="mt-3 w-full rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+              >
+                {isTelegramLinking ? "Ouverture..." : "Connecter Telegram"}
+              </button>
+            </div>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Chat ID Telegram (fallback manuel)</span>
+              <input
+                value={telegramChatId}
+                onChange={(event) => setTelegramChatId(event.target.value)}
+                placeholder="Ex: 123456789"
+                className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+              />
+            </label>
+
+            <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
+              <p className="text-sm font-semibold text-[#4b3d6d]">Notifications appareil</p>
+              <p className="mt-1 text-xs text-[#8d82a8]">
+                Permission: {pushPermissionLabel}. Tokens actifs sur ton compte: {webPushTokenCount}.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleEnablePushOnDevice}
+                  disabled={isPushConfiguring}
+                  className="rounded-2xl bg-[#8d7ac6] px-3 py-2.5 text-xs font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+                >
+                  Activer sur cet appareil
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisablePushOnDevice}
+                  disabled={isPushConfiguring}
+                  className="rounded-2xl border border-[#ece4f7] bg-white px-3 py-2.5 text-xs font-semibold text-[#6f628f] transition active:scale-[0.98] disabled:opacity-60"
+                >
+                  Desactiver cet appareil
+                </button>
+              </div>
+            </div>
+
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Fuseau horaire (IANA)</span>
+              <div className="flex gap-2">
+                <input
+                  value={timezone}
+                  onChange={(event) => setTimezone(event.target.value)}
+                  placeholder="Europe/Paris"
+                  className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+                />
+                <button
+                  type="button"
+                  onClick={applyBrowserTimezone}
+                  className="rounded-2xl border border-[#ece4f7] bg-white px-3 py-2 text-xs font-semibold text-[#6f628f] transition active:scale-[0.98]"
+                >
+                  Detecter
+                </button>
+              </div>
+            </label>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Rappel pilule (heure locale)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={pilluleReminderHour}
+                  onChange={(event) => setPilluleReminderHour(Number(event.target.value))}
+                  className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Rappel jeu (heure locale)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={gameReminderHour}
+                  onChange={(event) => setGameReminderHour(Number(event.target.value))}
+                  className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
+                />
+              </label>
+            </div>
+
+            <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
+              <span className="text-sm font-medium text-[#6f628f]">Activer rappel pilule</span>
+              <input
+                type="checkbox"
+                checked={pilluleEnabled}
+                onChange={(event) => setPilluleEnabled(event.target.checked)}
+                className="h-4 w-4 accent-[#ef9a79]"
+              />
+            </label>
+
+            <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
+              <span className="text-sm font-medium text-[#6f628f]">Activer rappel jeux</span>
+              <input
+                type="checkbox"
+                checked={gameEnabled}
+                onChange={(event) => setGameEnabled(event.target.checked)}
+                className="h-4 w-4 accent-[#ef9a79]"
+              />
+            </label>
+
+            <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
+              <span className="text-sm font-medium text-[#6f628f]">Activer notifications push (prioritaires)</span>
+              <input
+                type="checkbox"
+                checked={pushEnabled}
+                onChange={(event) => setPushEnabled(event.target.checked)}
+                className="h-4 w-4 accent-[#8d7ac6]"
+              />
+            </label>
+          </>
+        )}
+
+        {errorMessage && (
+          <div className="rounded-2xl border border-[#f5d1d8] bg-[#fff6f7] px-4 py-2.5 text-sm text-[#b4536b]">
+            {errorMessage}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="rounded-2xl border border-[#f4dec7] bg-[#fffaf3] px-4 py-2.5 text-sm text-[#a36a40]">
+            {successMessage}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={isLoading || isSaving}
+          className="w-full rounded-2xl bg-[#8d7ac6] px-5 py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
+        >
+          {isSaving ? "Enregistrement..." : "Enregistrer notifications"}
+        </button>
+      </form>
 
       <button
         onClick={onSignOut}

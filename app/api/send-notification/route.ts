@@ -1,74 +1,151 @@
 import { NextResponse } from 'next/server';
 import Redis from 'ioredis';
+import { getFirebaseAdminDb } from '@/lib/firebase/admin';
+import { sendPushNotificationToUser } from '@/lib/notifications/push';
+import {
+  diffDaysFromDateKeys,
+  getLocalDateInfo,
+  isDateKey,
+  isReminderDue,
+  normalizeUserNotificationSettings,
+} from '@/lib/notifications/settings';
 
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+function getCycleStartDateKey(raw: unknown) {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return null;
+
+  if (isDateKey(value)) {
+    return value;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+function getCycleStartKey(uid: string) {
+  return `pill_cycle_start:${uid}`;
+}
+
+function getTakenKey(uid: string, dateKey: string) {
+  return `pill_taken:${uid}:${dateKey}`;
+}
+
 export async function GET() {
-  if (!process.env.REDIS_URL) return NextResponse.json({ message: 'No Redis' });
+  if (!process.env.REDIS_URL) {
+    return NextResponse.json({ message: 'No Redis URL' }, { status: 500 });
+  }
+
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+
+  const redis = new Redis(process.env.REDIS_URL);
 
   try {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-    
-    // 👇 CORRECTION : On revient à la connexion simple qui marchait
-    const redis = new Redis(process.env.REDIS_URL);
+    const db = getFirebaseAdminDb();
+    const usersSnapshot = await db.collection('users').get();
+    const now = new Date();
 
-    // 1. On récupère la date du jour
-    const today = new Date();
-    today.setHours(12, 0, 0, 0); 
-    const dateStr = today.toISOString().split('T')[0];
+    let checkedUsers = 0;
+    let dueUsers = 0;
+    let sentCount = 0;
 
-    // 2. On récupère le DÉBUT DU CYCLE depuis la mémoire
-    const cycleStartRaw = await redis.get('cycle_start');
-    
-    // 🧠 CALCUL INTELLIGENT DU CYCLE (21/7)
-    let isPauseDay = false;
-    
-    if (cycleStartRaw) {
-      const start = new Date(cycleStartRaw);
-      start.setHours(12, 0, 0, 0);
+    for (const userDoc of usersSnapshot.docs) {
+      checkedUsers += 1;
+      const uid = userDoc.id;
+      const userData = userDoc.data() || {};
+      const settings = normalizeUserNotificationSettings(userData);
 
-      const diffTime = today.getTime() - start.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (!settings.pilluleEnabled) {
+        continue;
+      }
 
-      if (diffDays >= 0) {
-        const positionInCycle = diffDays % 28; 
-        if (positionInCycle >= 21) {
-          isPauseDay = true; 
+      const localNow = getLocalDateInfo(now, settings.timezone);
+      if (!isReminderDue(localNow.hour, localNow.minute, settings.pilluleReminderHour)) {
+        continue;
+      }
+
+      dueUsers += 1;
+
+      const sentKey = `notif:pillule:sent:${uid}:${localNow.dateKey}`;
+      const alreadySent = await redis.get(sentKey);
+      if (alreadySent) {
+        continue;
+      }
+
+      const cycleStartRaw =
+        (await redis.get(getCycleStartKey(uid))) ||
+        (await redis.get('cycle_start'));
+      const cycleStartDateKey = getCycleStartDateKey(cycleStartRaw);
+
+      if (!cycleStartDateKey) {
+        continue;
+      }
+
+      const diffDays = diffDaysFromDateKeys(localNow.dateKey, cycleStartDateKey);
+      if (diffDays === null || diffDays < 0) {
+        continue;
+      }
+
+      const positionInCycle = diffDays % 28;
+      if (positionInCycle >= 21) {
+        continue;
+      }
+
+      const isTaken =
+        (await redis.get(getTakenKey(uid, localNow.dateKey))) ||
+        (await redis.get(`pill_${localNow.dateKey}`));
+
+      if (isTaken === 'true') {
+        continue;
+      }
+
+      const message = `Rappel Pilule\n\nTu n'as pas encore coche la case d'aujourd'hui (${localNow.dateKey}).\n\nCoche-la ici : https://pillule-app.vercel.app/pillule`;
+      const pushResult = await sendPushNotificationToUser(uid, userData, {
+        title: 'HarmoHome - Rappel Pilule',
+        body: `Tu n'as pas encore coche la case du ${localNow.dateKey}.`,
+        url: '/pillule',
+      });
+      let delivered = pushResult.delivered;
+
+      if (!delivered && token && settings.telegramChatId) {
+        const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: settings.telegramChatId, text: message }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => '');
+          console.error(`Telegram error (pillule) for uid=${uid}:`, errorBody);
+        } else {
+          delivered = true;
         }
       }
+
+      if (!delivered) {
+        continue;
+      }
+
+      await redis.set(sentKey, 'true', 'EX', 86400 * 3);
+      sentCount += 1;
     }
 
-    // 3. VERDICT
-    if (isPauseDay) {
-      await redis.quit();
-      return NextResponse.json({ message: 'Jour de pause (semaine sans pilule). Pas de notif.' });
-    }
-
-    // Si ce n'est pas une pause, on vérifie si c'est pris
-    const key = `pill_${dateStr}`;
-    const isTaken = await redis.get(key);
-    await redis.quit(); 
-
-    if (isTaken === 'true') {
-      return NextResponse.json({ message: 'Déjà pris aujourd’hui. Silence radio.' });
-    }
-
-    // 4. Envoi Telegram
-    const message = `⚠️ Rappel Pilule ! \n\nTu n'as pas encore coché la case d'aujourd'hui (${dateStr}). \n\n✅ Coche-la vite ici : https://pillule-app.vercel.app/`;
-
-    if (token && chatId) {
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: message }),
-      });
-    }
-    
-    return NextResponse.json({ success: true, message: 'Rappel envoyé !' });
-
+    return NextResponse.json({
+      success: true,
+      checkedUsers,
+      dueUsers,
+      sentCount,
+    });
   } catch (error: any) {
-    console.error("Erreur:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Erreur send-notification:', error);
+    return NextResponse.json({ error: error?.message || 'Erreur serveur' }, { status: 500 });
+  } finally {
+    await redis.quit();
   }
 }

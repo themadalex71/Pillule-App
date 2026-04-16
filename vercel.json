@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/send-notification",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/notify-game",
+      "schedule": "*/10 * * * *"
+    }
+  ]
+}
