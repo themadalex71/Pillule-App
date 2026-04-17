@@ -352,36 +352,36 @@ function HHView({
           title={t("hub.home.apps.pillule.title")}
           subtitle={t("hub.home.apps.pillule.subtitle")}
           icon={Pill}
-          tileClassName="border-[#efd7ea] bg-[linear-gradient(145deg,#fff9fc,#fbf6ff)]"
-          iconWrapClassName="bg-[#f2d7ee]"
-          iconClassName="text-[#9f5f94]"
+          tileClassName="border-[#efd7ea] bg-[linear-gradient(145deg,#fff9fc,#fbf6ff)] dark:border-[#4a3551] dark:bg-[linear-gradient(145deg,#2a1f34,#1f1a2d)]"
+          iconWrapClassName="bg-[#f2d7ee] dark:bg-[#3b2a45]"
+          iconClassName="text-[#9f5f94] dark:text-[#d8a8d2]"
         />
         <AppTile
           href="/cinema"
           title={t("hub.home.apps.cinema.title")}
           subtitle={t("hub.home.apps.cinema.subtitle")}
           icon={Clapperboard}
-          tileClassName="border-[#f1e3bf] bg-[linear-gradient(145deg,#fffdf7,#fffaf0)]"
-          iconWrapClassName="bg-[#f4e6bd]"
-          iconClassName="text-[#9d8240]"
+          tileClassName="border-[#f1e3bf] bg-[linear-gradient(145deg,#fffdf7,#fffaf0)] dark:border-[#4b4531] dark:bg-[linear-gradient(145deg,#2c261a,#201d16)]"
+          iconWrapClassName="bg-[#f4e6bd] dark:bg-[#3d3422]"
+          iconClassName="text-[#9d8240] dark:text-[#e2c470]"
         />
         <AppTile
           href="/cuisine"
           title={t("hub.home.apps.cuisine.title")}
           subtitle={t("hub.home.apps.cuisine.subtitle")}
           icon={ChefHat}
-          tileClassName="border-[#f2decf] bg-[linear-gradient(145deg,#fffaf6,#fff8f3)]"
-          iconWrapClassName="bg-[#f3ddcf]"
-          iconClassName="text-[#a7704f]"
+          tileClassName="border-[#f2decf] bg-[linear-gradient(145deg,#fffaf6,#fff8f3)] dark:border-[#4b3a32] dark:bg-[linear-gradient(145deg,#2b211b,#211b18)]"
+          iconWrapClassName="bg-[#f3ddcf] dark:bg-[#3f2d25]"
+          iconClassName="text-[#a7704f] dark:text-[#e4b08f]"
         />
         <AppTile
           href="/daily"
           title={t("hub.home.apps.daily.title")}
           subtitle={t("hub.home.apps.daily.subtitle")}
           icon={PartyPopper}
-          tileClassName="border-[#d7e9f0] bg-[linear-gradient(145deg,#f7fcff,#f3fbff)]"
-          iconWrapClassName="bg-[#d2edf5]"
-          iconClassName="text-[#4f8fa7]"
+          tileClassName="border-[#d7e9f0] bg-[linear-gradient(145deg,#f7fcff,#f3fbff)] dark:border-[#304653] dark:bg-[linear-gradient(145deg,#1b2530,#161f28)]"
+          iconWrapClassName="bg-[#d2edf5] dark:bg-[#223745]"
+          iconClassName="text-[#4f8fa7] dark:text-[#8bc5da]"
         />
       </div>
     </div>
@@ -1536,8 +1536,8 @@ function AppTile({
       <div className={`mb-8 flex h-16 w-16 items-center justify-center rounded-2xl ${iconWrapClassName}`}>
         <Icon className={iconClassName} size={30} />
       </div>
-      <p className="text-[1.05rem] font-black text-[#4b3d6d]">{title}</p>
-      <p className="mt-2 text-sm text-[#6f628f]">{subtitle}</p>
+      <p className="text-[1.05rem] font-black text-[#4b3d6d] dark:text-[#f0ebff]">{title}</p>
+      <p className="mt-2 text-sm text-[#6f628f] dark:text-[#b9b2db]">{subtitle}</p>
     </Link>
   );
 }
