@@ -125,6 +125,23 @@ function formatTimeZoneLabel(zone: string) {
   return offset ? `${zone} (${offset})` : zone;
 }
 
+async function bootstrapVerifiedUserProfile(user: User) {
+  if (!user.emailVerified) return;
+
+  const token = await user.getIdToken();
+  const response = await fetch("/api/user/bootstrap", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error || "Initialisation du profil impossible.");
+  }
+}
+
 function HarmoHomeLogo({ tagline }: { tagline: string }) {
   return (
     <div className="text-center">
@@ -154,10 +171,16 @@ export default function HubPage() {
     }
 
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
       if (!nextUser || !nextUser.emailVerified) {
         router.replace("/");
         return;
+      }
+
+      try {
+        await bootstrapVerifiedUserProfile(nextUser);
+      } catch (error) {
+        console.error("bootstrap profile error:", error);
       }
 
       setUser(nextUser);
@@ -966,6 +989,8 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
   const [gameEnabled, setGameEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pilluleReminderHour, setPilluleReminderHour] = useState(20);
+  const [pilluleReminderRepeatCount, setPilluleReminderRepeatCount] = useState(1);
+  const [pilluleReminderRepeatIntervalMinutes, setPilluleReminderRepeatIntervalMinutes] = useState(60);
   const [webPushTokenCount, setWebPushTokenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -1006,6 +1031,16 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     setGameEnabled(settings.gameEnabled !== false);
     setPushEnabled(settings.pushEnabled !== false);
     setPilluleReminderHour(Number.isFinite(settings.pilluleReminderHour) ? Number(settings.pilluleReminderHour) : 20);
+    setPilluleReminderRepeatCount(
+      Number.isFinite(settings.pilluleReminderRepeatCount)
+        ? Number(settings.pilluleReminderRepeatCount)
+        : 1,
+    );
+    setPilluleReminderRepeatIntervalMinutes(
+      Number.isFinite(settings.pilluleReminderRepeatIntervalMinutes)
+        ? Number(settings.pilluleReminderRepeatIntervalMinutes)
+        : 60,
+    );
     setWebPushTokenCount(Array.isArray(settings.webPushTokens) ? settings.webPushTokens.length : 0);
   };
 
@@ -1045,6 +1080,14 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     try {
       const token = await getAuthToken();
       const normalizedPilluleHour = Math.min(23, Math.max(0, Math.trunc(Number(pilluleReminderHour) || 0)));
+      const normalizedPilluleRepeatCount = Math.min(
+        8,
+        Math.max(1, Math.trunc(Number(pilluleReminderRepeatCount) || 1)),
+      );
+      const normalizedPilluleRepeatIntervalMinutes = Math.min(
+        360,
+        Math.max(5, Math.trunc(Number(pilluleReminderRepeatIntervalMinutes) || 60)),
+      );
 
       const response = await fetch("/api/user/notification-settings", {
         method: "POST",
@@ -1059,6 +1102,8 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
           gameEnabled,
           pushEnabled,
           pilluleReminderHour: normalizedPilluleHour,
+          pilluleReminderRepeatCount: normalizedPilluleRepeatCount,
+          pilluleReminderRepeatIntervalMinutes: normalizedPilluleRepeatIntervalMinutes,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -1068,6 +1113,8 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
       }
 
       setPilluleReminderHour(normalizedPilluleHour);
+      setPilluleReminderRepeatCount(normalizedPilluleRepeatCount);
+      setPilluleReminderRepeatIntervalMinutes(normalizedPilluleRepeatIntervalMinutes);
       setSuccessMessage("Parametres enregistres.");
     } catch (error: any) {
       setErrorMessage(error?.message || "Impossible d'enregistrer les parametres.");
@@ -1305,17 +1352,55 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
               </div>
             </label>
 
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Rappel pilule (heure locale)</span>
-              <input
-                type="number"
-                min={0}
-                max={23}
-                value={pilluleReminderHour}
-                onChange={(event) => setPilluleReminderHour(Number(event.target.value))}
-                className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
-              />
-            </label>
+            <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
+              <p className="text-sm font-semibold text-[#4b3d6d]">Rappel pilule (heure locale)</p>
+              <p className="mt-1 text-xs text-[#8d82a8]">
+                Premier envoi a l'heure ci-dessous, puis repetition selon la cadence choisie.
+              </p>
+
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">Heure de debut</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={pilluleReminderHour}
+                    onChange={(event) => setPilluleReminderHour(Number(event.target.value))}
+                    className="w-full rounded-2xl border border-[#ece4f7] bg-white px-3 py-2.5 text-sm text-[#4c1d95] outline-none"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">Nombre d'envois</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8}
+                    value={pilluleReminderRepeatCount}
+                    onChange={(event) => setPilluleReminderRepeatCount(Number(event.target.value))}
+                    className="w-full rounded-2xl border border-[#ece4f7] bg-white px-3 py-2.5 text-sm text-[#4c1d95] outline-none"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">Intervalle (min)</span>
+                  <input
+                    type="number"
+                    min={5}
+                    max={360}
+                    step={5}
+                    value={pilluleReminderRepeatIntervalMinutes}
+                    onChange={(event) => setPilluleReminderRepeatIntervalMinutes(Number(event.target.value))}
+                    className="w-full rounded-2xl border border-[#ece4f7] bg-white px-3 py-2.5 text-sm text-[#4c1d95] outline-none"
+                  />
+                </label>
+              </div>
+
+              <p className="mt-2 text-[11px] text-[#8d82a8]">
+                Exemple: debut 21, nombre 4, intervalle 60 =&gt; 21h, 22h, 23h, 00h.
+              </p>
+            </div>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
               <p className="text-sm font-semibold text-[#4b3d6d]">Rappel jeux</p>

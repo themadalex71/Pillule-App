@@ -7,7 +7,6 @@ import {
   diffDaysFromDateKeys,
   getLocalDateInfo,
   isDateKey,
-  isReminderDue,
   normalizeUserNotificationSettings,
 } from '@/lib/notifications/settings';
 
@@ -36,6 +35,70 @@ function getCycleStartKey(uid: string) {
 
 function getTakenKey(uid: string, dateKey: string) {
   return `pill_taken:${uid}:${dateKey}`;
+}
+
+type DueReminderSlot = {
+  sourceDateKey: string;
+  reminderIndex: number;
+};
+
+function addDaysToDateKey(dateKey: string, days: number) {
+  if (!isDateKey(dateKey)) {
+    return null;
+  }
+
+  const [year, month, day] = dateKey.split('-').map((value) => Number(value));
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + days);
+  return utcDate.toISOString().slice(0, 10);
+}
+
+function getDueReminderSlot(input: {
+  localDateKey: string;
+  localHour: number;
+  localMinute: number;
+  reminderHour: number;
+  reminderRepeatCount: number;
+  reminderIntervalMinutes: number;
+  minuteWindow?: number;
+}): DueReminderSlot | null {
+  const minuteWindow = input.minuteWindow ?? 20;
+  const localMinuteOfDay = input.localHour * 60 + input.localMinute;
+
+  const previousDateKey = addDaysToDateKey(input.localDateKey, -1);
+  const sourceDateKeys = previousDateKey
+    ? [previousDateKey, input.localDateKey]
+    : [input.localDateKey];
+
+  for (const sourceDateKey of sourceDateKeys) {
+    for (let reminderIndex = 0; reminderIndex < input.reminderRepeatCount; reminderIndex += 1) {
+      const slotOffsetMinutes =
+        input.reminderHour * 60 + reminderIndex * input.reminderIntervalMinutes;
+      const dayOffset = Math.floor(slotOffsetMinutes / 1440);
+      const minuteOfDay = slotOffsetMinutes % 1440;
+      const targetDateKey = addDaysToDateKey(sourceDateKey, dayOffset);
+
+      if (!targetDateKey || targetDateKey !== input.localDateKey) {
+        continue;
+      }
+
+      const deltaMinutes = localMinuteOfDay - minuteOfDay;
+      if (deltaMinutes < 0 || deltaMinutes >= minuteWindow) {
+        continue;
+      }
+
+      return {
+        sourceDateKey,
+        reminderIndex,
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -72,13 +135,22 @@ export async function GET(request: Request) {
       }
 
       const localNow = getLocalDateInfo(now, settings.timezone);
-      if (!isReminderDue(localNow.hour, localNow.minute, settings.pilluleReminderHour)) {
+      const dueReminderSlot = getDueReminderSlot({
+        localDateKey: localNow.dateKey,
+        localHour: localNow.hour,
+        localMinute: localNow.minute,
+        reminderHour: settings.pilluleReminderHour,
+        reminderRepeatCount: settings.pilluleReminderRepeatCount,
+        reminderIntervalMinutes: settings.pilluleReminderRepeatIntervalMinutes,
+      });
+      if (!dueReminderSlot) {
         continue;
       }
 
       dueUsers += 1;
 
-      const sentKey = `notif:pillule:sent:${uid}:${localNow.dateKey}`;
+      const targetDateKey = dueReminderSlot.sourceDateKey;
+      const sentKey = `notif:pillule:sent:${uid}:${targetDateKey}:${dueReminderSlot.reminderIndex}`;
       const alreadySent = await redis.get(sentKey);
       if (alreadySent) {
         continue;
@@ -93,7 +165,7 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const diffDays = diffDaysFromDateKeys(localNow.dateKey, cycleStartDateKey);
+      const diffDays = diffDaysFromDateKeys(targetDateKey, cycleStartDateKey);
       if (diffDays === null || diffDays < 0) {
         continue;
       }
@@ -104,17 +176,21 @@ export async function GET(request: Request) {
       }
 
       const isTaken =
-        (await redis.get(getTakenKey(uid, localNow.dateKey))) ||
-        (await redis.get(`pill_${localNow.dateKey}`));
+        (await redis.get(getTakenKey(uid, targetDateKey))) ||
+        (await redis.get(`pill_${targetDateKey}`));
 
       if (isTaken === 'true') {
         continue;
       }
 
-      const message = `Rappel Pilule\n\nTu n'as pas encore coche la case d'aujourd'hui (${localNow.dateKey}).\n\nCoche-la ici : https://www.bardbaronproject.com/pillule`;
+      const reminderMeta =
+        settings.pilluleReminderRepeatCount > 1
+          ? `\nRappel ${dueReminderSlot.reminderIndex + 1}/${settings.pilluleReminderRepeatCount}`
+          : '';
+      const message = `Rappel Pilule\n\nTu n'as pas encore coche la case d'aujourd'hui (${targetDateKey}).${reminderMeta}\n\nCoche-la ici : https://www.bardbaronproject.com/pillule`;
       const pushResult = await sendPushNotificationToUser(uid, userData, {
         title: 'HarmoHome - Rappel Pilule',
-        body: `Tu n'as pas encore coche la case du ${localNow.dateKey}.`,
+        body: `Tu n'as pas encore coche la case du ${targetDateKey}.`,
         url: '/pillule',
       });
       let delivered = pushResult.delivered;
@@ -138,7 +214,7 @@ export async function GET(request: Request) {
         continue;
       }
 
-      await redis.set(sentKey, 'true', 'EX', 86400 * 3);
+      await redis.set(sentKey, 'true', 'EX', 86400 * 5);
       sentCount += 1;
     }
 

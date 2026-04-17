@@ -50,6 +50,23 @@ function BardBaronMark() {
   );
 }
 
+async function bootstrapVerifiedUserProfile(user: User) {
+  if (!user.emailVerified) return;
+
+  const token = await user.getIdToken();
+  const response = await fetch("/api/user/bootstrap", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error || "Initialisation du profil impossible.");
+  }
+}
+
 export default function Home() {
   return (
     <Suspense fallback={<LoginLoadingScreen />}>
@@ -88,6 +105,12 @@ function LoginPage() {
     const unsubscribe = onAuthStateChanged(auth, async (nextUser: User | null) => {
       if (nextUser && nextUser.emailVerified) {
         setAuthReady(true);
+        try {
+          await bootstrapVerifiedUserProfile(nextUser);
+        } catch (error: any) {
+          console.error("bootstrap profile error:", error);
+          setInfoMessage("Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.");
+        }
         router.replace("/hub");
         return;
       }
@@ -138,6 +161,13 @@ function LoginPage() {
         await signOut(auth);
         setErrorMessage("Verifie ton adresse mail avant de te connecter.");
         return;
+      }
+
+      try {
+        await bootstrapVerifiedUserProfile(credentials.user);
+      } catch (error: any) {
+        console.error("bootstrap profile error:", error);
+        setInfoMessage("Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.");
       }
 
       router.push("/hub");
@@ -194,7 +224,13 @@ function LoginPage() {
         return;
       }
 
-      await signInWithPopup(auth, provider);
+      const credentials = await signInWithPopup(auth, provider);
+      try {
+        await bootstrapVerifiedUserProfile(credentials.user);
+      } catch (error: any) {
+        console.error("bootstrap profile error:", error);
+        setInfoMessage("Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.");
+      }
       router.push("/hub");
     } catch (error: any) {
       setErrorMessage(error.message || "Connexion Google impossible.");

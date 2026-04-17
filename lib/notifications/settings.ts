@@ -1,5 +1,7 @@
 const DEFAULT_TIMEZONE = "Europe/Paris";
 const DEFAULT_PILLULE_REMINDER_HOUR = 20;
+const DEFAULT_PILLULE_REMINDER_REPEAT_COUNT = 1;
+const DEFAULT_PILLULE_REMINDER_REPEAT_INTERVAL_MINUTES = 60;
 const DEFAULT_GAME_REMINDER_HOUR = 19;
 const DEFAULT_GAME_RANDOM_MIN_HOUR = 10;
 const DEFAULT_GAME_RANDOM_MAX_HOUR = 21;
@@ -18,6 +20,8 @@ export type UserNotificationSettings = {
   pilluleEnabled: boolean;
   gameEnabled: boolean;
   pilluleReminderHour: number;
+  pilluleReminderRepeatCount: number;
+  pilluleReminderRepeatIntervalMinutes: number;
   gameReminderHour: number;
   pushEnabled: boolean;
   webPushTokens: string[];
@@ -28,6 +32,20 @@ function normalizeHour(value: unknown, fallback: number) {
   if (!Number.isFinite(parsed)) return fallback;
   if (parsed < 0 || parsed > 23) return fallback;
   return Math.trunc(parsed);
+}
+
+function normalizeIntegerInRange(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  const normalized = Math.trunc(parsed);
+  if (normalized < min || normalized > max) return fallback;
+  return normalized;
 }
 
 export function normalizeTimeZone(value: unknown, fallback = DEFAULT_TIMEZONE) {
@@ -57,6 +75,18 @@ export function normalizeUserNotificationSettings(source: any): UserNotification
     pilluleEnabled: settings.pilluleEnabled !== false,
     gameEnabled: settings.gameEnabled !== false,
     pilluleReminderHour: normalizeHour(settings.pilluleReminderHour, DEFAULT_PILLULE_REMINDER_HOUR),
+    pilluleReminderRepeatCount: normalizeIntegerInRange(
+      settings.pilluleReminderRepeatCount,
+      DEFAULT_PILLULE_REMINDER_REPEAT_COUNT,
+      1,
+      8,
+    ),
+    pilluleReminderRepeatIntervalMinutes: normalizeIntegerInRange(
+      settings.pilluleReminderRepeatIntervalMinutes,
+      DEFAULT_PILLULE_REMINDER_REPEAT_INTERVAL_MINUTES,
+      5,
+      360,
+    ),
     gameReminderHour: normalizeHour(settings.gameReminderHour, DEFAULT_GAME_REMINDER_HOUR),
     pushEnabled: settings.pushEnabled !== false,
     webPushTokens,

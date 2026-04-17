@@ -63,6 +63,8 @@ export async function POST(request: Request) {
       pilluleEnabled: normalized.pilluleEnabled,
       gameEnabled: normalized.gameEnabled,
       pilluleReminderHour: normalized.pilluleReminderHour,
+      pilluleReminderRepeatCount: normalized.pilluleReminderRepeatCount,
+      pilluleReminderRepeatIntervalMinutes: normalized.pilluleReminderRepeatIntervalMinutes,
       gameReminderHour: normalized.gameReminderHour,
       pushEnabled: normalized.pushEnabled,
       webPushTokens: normalized.webPushTokens,
