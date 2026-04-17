@@ -36,14 +36,14 @@ function HarmoHomeLogo({ tagline }: { tagline: string }) {
   );
 }
 
-function BardBaronMark() {
+function BardBaronMark({ poweredByLabel }: { poweredByLabel: string }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] border border-[#efe4d8] bg-white">
         <span className="text-sm font-black tracking-[0.16em] text-[#8d7ac6]">BB</span>
       </div>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#b2a7c9]">Powered By</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#b2a7c9]">{poweredByLabel}</p>
         <p className="mt-0.5 text-xs font-semibold text-[#6f628f]">BardBaron</p>
       </div>
     </div>
@@ -99,7 +99,7 @@ function LoginPage() {
     }, 4000);
 
     getRedirectResult(auth).catch((error) => {
-      setErrorMessage(error.message || "Connexion Google impossible.");
+      setErrorMessage(error.message || t("login.googleError"));
     });
 
     const unsubscribe = onAuthStateChanged(auth, async (nextUser: User | null) => {
@@ -109,7 +109,7 @@ function LoginPage() {
           await bootstrapVerifiedUserProfile(nextUser);
         } catch (error: any) {
           console.error("bootstrap profile error:", error);
-          setInfoMessage("Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.");
+          setInfoMessage(t("login.profileBootstrapInfo"));
         }
         router.replace("/hub");
         return;
@@ -117,7 +117,7 @@ function LoginPage() {
 
       if (nextUser && !nextUser.emailVerified) {
         await signOut(auth);
-        setErrorMessage("Verifie ton adresse mail avant de te connecter.");
+        setErrorMessage(t("login.verifyEmailBeforeLogin"));
       }
 
       setAuthReady(true);
@@ -127,7 +127,7 @@ function LoginPage() {
       window.clearTimeout(safetyTimeout);
       unsubscribe();
     };
-  }, [firebaseReady, router]);
+  }, [firebaseReady, router, t]);
 
   useEffect(() => {
     const emailFromQuery = searchParams.get("email");
@@ -142,12 +142,12 @@ function LoginPage() {
     setInfoMessage("");
 
     if (!identifier.trim() || !password.trim()) {
-      setErrorMessage("Renseigne ton email ou nom d'utilisateur et ton mot de passe.");
+      setErrorMessage(t("login.missingCredentials"));
       return;
     }
 
     if (!firebaseReady) {
-      setErrorMessage("Ajoute les variables Firebase dans .env.local avant de te connecter.");
+      setErrorMessage(t("login.firebaseBeforeLogin"));
       return;
     }
 
@@ -159,7 +159,7 @@ function LoginPage() {
 
       if (!credentials.user.emailVerified) {
         await signOut(auth);
-        setErrorMessage("Verifie ton adresse mail avant de te connecter.");
+        setErrorMessage(t("login.verifyEmailBeforeLogin"));
         return;
       }
 
@@ -167,12 +167,12 @@ function LoginPage() {
         await bootstrapVerifiedUserProfile(credentials.user);
       } catch (error: any) {
         console.error("bootstrap profile error:", error);
-        setInfoMessage("Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.");
+        setInfoMessage(t("login.profileBootstrapInfo"));
       }
 
       router.push("/hub");
     } catch (error: any) {
-      setErrorMessage(error.message || "Authentification impossible.");
+      setErrorMessage(error.message || t("login.authFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -183,12 +183,12 @@ function LoginPage() {
     setInfoMessage("");
 
     if (!identifier.trim()) {
-      setErrorMessage("Renseigne d'abord ton email pour recevoir le lien de reinitialisation.");
+      setErrorMessage(t("login.forgotNeedEmail"));
       return;
     }
 
     if (!firebaseReady) {
-      setErrorMessage("Ajoute les variables Firebase dans .env.local avant d'utiliser Firebase Auth.");
+      setErrorMessage(t("login.firebaseBeforeReset"));
       return;
     }
 
@@ -196,9 +196,9 @@ function LoginPage() {
 
     try {
       await sendPasswordResetEmail(getFirebaseAuth(), identifier.trim());
-      setInfoMessage("Email de reinitialisation envoye.");
+      setInfoMessage(t("login.resetSent"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible d'envoyer l'email de reinitialisation.");
+      setErrorMessage(error.message || t("login.resetFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -209,7 +209,7 @@ function LoginPage() {
     setInfoMessage("");
 
     if (!firebaseReady) {
-      setErrorMessage("Ajoute les variables Firebase dans .env.local avant d'utiliser Google.");
+      setErrorMessage(t("login.firebaseBeforeGoogle"));
       return;
     }
 
@@ -229,11 +229,11 @@ function LoginPage() {
         await bootstrapVerifiedUserProfile(credentials.user);
       } catch (error: any) {
         console.error("bootstrap profile error:", error);
-        setInfoMessage("Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.");
+        setInfoMessage(t("login.profileBootstrapInfo"));
       }
       router.push("/hub");
     } catch (error: any) {
-      setErrorMessage(error.message || "Connexion Google impossible.");
+      setErrorMessage(error.message || t("login.googleError"));
       setIsSubmitting(false);
       return;
     }
@@ -332,7 +332,7 @@ function LoginPage() {
         </section>
 
         <div className="flex justify-center pb-1">
-          <BardBaronMark />
+          <BardBaronMark poweredByLabel={t("common.poweredBy")} />
         </div>
       </div>
     </main>

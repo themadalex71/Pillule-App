@@ -3,7 +3,9 @@
     "loading": "Chargement...",
     "language": "Langue",
     "french": "Francais",
-    "english": "Anglais"
+    "english": "Anglais",
+    "backHome": "Retour a l'accueil",
+    "poweredBy": "Propulse par"
   },
   "login": {
     "tagline": "L'app du foyer pour partager vos routines, vos envies et vos moments a plusieurs.",
@@ -17,7 +19,55 @@
     "submit": "Se connecter",
     "submitPending": "Patiente...",
     "google": "Connexion avec Google",
-    "opening": "Connexion a HarmoHome..."
+    "opening": "Connexion a HarmoHome...",
+    "googleError": "Connexion Google impossible.",
+    "profileBootstrapInfo": "Connexion reussie, mais le profil Firestore sera finalise a la prochaine action.",
+    "verifyEmailBeforeLogin": "Verifie ton adresse mail avant de te connecter.",
+    "missingCredentials": "Renseigne ton email ou nom d'utilisateur et ton mot de passe.",
+    "firebaseBeforeLogin": "Ajoute les variables Firebase dans .env.local avant de te connecter.",
+    "authFailed": "Authentification impossible.",
+    "forgotNeedEmail": "Renseigne d'abord ton email pour recevoir le lien de reinitialisation.",
+    "firebaseBeforeReset": "Ajoute les variables Firebase dans .env.local avant d'utiliser Firebase Auth.",
+    "resetSent": "Email de reinitialisation envoye.",
+    "resetFailed": "Impossible d'envoyer l'email de reinitialisation.",
+    "firebaseBeforeGoogle": "Ajoute les variables Firebase dans .env.local avant d'utiliser Google."
+  },
+  "signup": {
+    "tagline": "L'app du foyer pour partager vos routines, vos envies et vos moments a plusieurs.",
+    "preparing": "Preparation...",
+    "backToLoginAria": "Retour connexion",
+    "title": "Creer compte",
+    "missingFirebase": "Configuration Firebase manquante. Ajoute les variables NEXT_PUBLIC_FIREBASE_* dans .env.local.",
+    "lastNameLabel": "Nom",
+    "lastNamePlaceholder": "Dupont",
+    "firstNameLabel": "Prenom",
+    "firstNamePlaceholder": "Alex",
+    "emailLabel": "Adresse mail",
+    "emailPlaceholder": "toi@harmohome.app",
+    "passwordLabel": "Mot de passe",
+    "usernameLabel": "Nom d'utilisateur",
+    "usernamePlaceholder": "@alex",
+    "requiredFields": "Remplis tous les champs pour creer ton compte.",
+    "firebaseBeforeCreate": "Ajoute les variables Firebase dans .env.local avant de creer un compte.",
+    "accountCreatedInfo": "Compte cree. Verifie ton adresse mail puis connecte-toi. Redirection dans 5 secondes...",
+    "createFailed": "Creation du compte impossible.",
+    "submitPending": "Patiente...",
+    "submit": "Creer mon compte"
+  },
+  "pillule": {
+    "appTitle": "Pilule",
+    "previousMonthAria": "Mois precedent",
+    "nextMonthAria": "Mois suivant",
+    "cycleStartLabel": "Debut de plaquette",
+    "weekDays": {
+      "mon": "L",
+      "tue": "M",
+      "wed": "M",
+      "thu": "J",
+      "fri": "V",
+      "sat": "S",
+      "sun": "D"
+    }
   },
   "hub": {
     "opening": "Ouverture de HarmoHome...",

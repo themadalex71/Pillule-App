@@ -3,7 +3,9 @@
     "loading": "Loading...",
     "language": "Language",
     "french": "French",
-    "english": "English"
+    "english": "English",
+    "backHome": "Back to home",
+    "poweredBy": "Powered by"
   },
   "login": {
     "tagline": "The household app to share routines, plans and moments together.",
@@ -17,7 +19,55 @@
     "submit": "Sign in",
     "submitPending": "Please wait...",
     "google": "Continue with Google",
-    "opening": "Connecting to HarmoHome..."
+    "opening": "Connecting to HarmoHome...",
+    "googleError": "Google sign-in failed.",
+    "profileBootstrapInfo": "Signed in, but Firestore profile setup will finish on your next action.",
+    "verifyEmailBeforeLogin": "Verify your email address before signing in.",
+    "missingCredentials": "Enter your email or username and your password.",
+    "firebaseBeforeLogin": "Add Firebase variables in .env.local before signing in.",
+    "authFailed": "Authentication failed.",
+    "forgotNeedEmail": "Enter your email first to receive the reset link.",
+    "firebaseBeforeReset": "Add Firebase variables in .env.local before using Firebase Auth.",
+    "resetSent": "Password reset email sent.",
+    "resetFailed": "Unable to send password reset email.",
+    "firebaseBeforeGoogle": "Add Firebase variables in .env.local before using Google."
+  },
+  "signup": {
+    "tagline": "The household app to share routines, plans and moments together.",
+    "preparing": "Preparing...",
+    "backToLoginAria": "Back to sign in",
+    "title": "Create account",
+    "missingFirebase": "Missing Firebase configuration. Add NEXT_PUBLIC_FIREBASE_* variables in .env.local.",
+    "lastNameLabel": "Last name",
+    "lastNamePlaceholder": "Smith",
+    "firstNameLabel": "First name",
+    "firstNamePlaceholder": "Alex",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@harmohome.app",
+    "passwordLabel": "Password",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "@alex",
+    "requiredFields": "Fill in all fields to create your account.",
+    "firebaseBeforeCreate": "Add Firebase variables in .env.local before creating an account.",
+    "accountCreatedInfo": "Account created. Verify your email, then sign in. Redirecting in 5 seconds...",
+    "createFailed": "Unable to create account.",
+    "submitPending": "Please wait...",
+    "submit": "Create my account"
+  },
+  "pillule": {
+    "appTitle": "Pill Tracker",
+    "previousMonthAria": "Previous month",
+    "nextMonthAria": "Next month",
+    "cycleStartLabel": "Start of blister pack",
+    "weekDays": {
+      "mon": "M",
+      "tue": "T",
+      "wed": "W",
+      "thu": "T",
+      "fri": "F",
+      "sat": "S",
+      "sun": "S"
+    }
   },
   "hub": {
     "opening": "Opening HarmoHome...",

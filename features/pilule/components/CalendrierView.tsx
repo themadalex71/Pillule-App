@@ -13,11 +13,10 @@ import {
   startOfMonth,
   subMonths,
 } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { enUS, fr } from 'date-fns/locale';
 import { Check, ChevronLeft, ChevronRight, MoonStar, Pill } from 'lucide-react';
 import { getFirebaseAuth } from '@/lib/firebase/client';
-
-const WEEK_DAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+import { useI18n } from '@/components/I18nProvider';
 
 type DayStatus = 'taken' | 'todo' | 'pause' | 'unknown';
 
@@ -40,9 +39,20 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 }
 
 export default function CalendrierView() {
+  const { locale, t } = useI18n();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [cycleStartDate, setCycleStartDate] = useState<Date | null>(null);
   const [takenDates, setTakenDates] = useState<string[]>([]);
+  const dateLocale = locale === 'en' ? enUS : fr;
+  const weekDays = [
+    t('pillule.weekDays.mon'),
+    t('pillule.weekDays.tue'),
+    t('pillule.weekDays.wed'),
+    t('pillule.weekDays.thu'),
+    t('pillule.weekDays.fri'),
+    t('pillule.weekDays.sat'),
+    t('pillule.weekDays.sun'),
+  ];
 
   useEffect(() => {
     const savedDate = localStorage.getItem('cycleStart');
@@ -178,21 +188,21 @@ export default function CalendrierView() {
             <button
               onClick={onPrevMonth}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-white shadow-[0_6px_14px_rgba(102,38,14,0.16)] transition active:scale-[0.97]"
-              aria-label="Mois precedent"
+              aria-label={t('pillule.previousMonthAria')}
             >
               <ChevronLeft size={20} />
             </button>
 
             <div className="text-center">
               <h2 className="text-xl font-semibold capitalize tracking-[-0.03em] text-white">
-                {format(currentDate, 'MMMM yyyy', { locale: fr })}
+                {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
               </h2>
             </div>
 
             <button
               onClick={onNextMonth}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-white shadow-[0_6px_14px_rgba(102,38,14,0.16)] transition active:scale-[0.97]"
-              aria-label="Mois suivant"
+              aria-label={t('pillule.nextMonthAria')}
             >
               <ChevronRight size={20} />
             </button>
@@ -201,7 +211,7 @@ export default function CalendrierView() {
 
         <div className="px-4 pb-4 pt-3">
           <div className="mb-3 grid grid-cols-7 gap-2">
-            {WEEK_DAYS.map((day, index) => (
+            {weekDays.map((day, index) => (
               <div
                 key={`${day}-${index}`}
                 className="text-center text-[11px] font-bold uppercase tracking-[0.14em] text-[#ef9a79]"
@@ -245,7 +255,7 @@ export default function CalendrierView() {
 
       <section className="rounded-[1.4rem] border border-[#ef9a79] bg-white p-4 shadow-[0_14px_28px_rgba(239,154,121,0.18)] sm:rounded-[1.8rem] sm:px-5 sm:py-5">
         <label htmlFor="pill-cycle-start" className="mb-2 block text-sm font-semibold text-[#ef9a79]">
-          Debut de plaquette
+          {t('pillule.cycleStartLabel')}
         </label>
         <input
           id="pill-cycle-start"
