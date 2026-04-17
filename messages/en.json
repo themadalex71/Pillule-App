@@ -82,6 +82,176 @@
       "kicker": "Search",
       "title": "Explore",
       "placeholder": "This area will handle search inside HarmoHome."
+    },
+    "home": {
+      "kicker": "HarmoHome",
+      "title": "Your hub",
+      "description": "Find every household mini-app in one place.",
+      "noHousehold": {
+        "title": "No household connected",
+        "description": "Create or join a household to share games and reminders.",
+        "create": "Create",
+        "join": "Join"
+      },
+      "apps": {
+        "pillule": {
+          "title": "Pill Tracker",
+          "subtitle": "Daily follow-up"
+        },
+        "cinema": {
+          "title": "Cinema",
+          "subtitle": "Pick a movie"
+        },
+        "cuisine": {
+          "title": "Cuisine",
+          "subtitle": "Meal ideas"
+        },
+        "daily": {
+          "title": "Games",
+          "subtitle": "Daily challenges"
+        }
+      }
+    },
+    "household": {
+      "kicker": "Household",
+      "title": "Household management",
+      "withHouseholdDescription": "Manage members, invites and household settings.",
+      "withoutHouseholdDescription": "Create or join a household to sync your shared experience.",
+      "signOutAria": "Sign out",
+      "loading": "Loading household...",
+      "inviteDetectedKicker": "Invite detected",
+      "inviteDetectedDescription": "An invite link was detected. You can join this household in one tap.",
+      "joinViaInvite": "Join via invite",
+      "createCta": "Create",
+      "joinCta": "Join",
+      "createSectionTitle": "Create a household",
+      "joinSectionTitle": "Join a household",
+      "back": "Back",
+      "householdNameLabel": "Household name",
+      "householdNamePlaceholder": "Ex: Harmo Home",
+      "householdPasswordLabel": "Household password",
+      "householdPasswordPlaceholder": "Choose a password",
+      "createMyHousehold": "Create my household",
+      "identifierLabel": "ID or invite code",
+      "identifierPlaceholder": "Household ID or code",
+      "joinPasswordPlaceholder": "Household password",
+      "joinThisHousehold": "Join this household",
+      "householdIdLabel": "Household ID",
+      "copyIdAria": "Copy household ID",
+      "inviteCodeLabel": "Invite code",
+      "inviteCodeDescription": "Share this code or generate an invite link for a member.",
+      "membersLabel": "Members",
+      "ownerBadge": "owner",
+      "removeMemberAriaPrefix": "Remove member",
+      "copyInviteLink": "Copy invite link",
+      "deleteHousehold": "Delete household",
+      "ownerHint": "As owner, you can invite or remove members.",
+      "memberHint": "Only the owner can manage household members.",
+      "connectedAsPrefix": "Signed in as",
+      "genericUser": "user",
+      "fallbackUser": "HarmoHome user",
+      "confirmDelete": "Delete this household for everyone? This action is permanent.",
+      "info": {
+        "created": "Household created successfully.",
+        "joined": "Joined household successfully.",
+        "inviteAccepted": "Invite accepted.",
+        "inviteCopied": "Invite link copied.",
+        "idCopied": "Household ID copied.",
+        "memberRemoved": "Member removed from household.",
+        "deleted": "Household deleted."
+      },
+      "errors": {
+        "load": "Unable to load household.",
+        "chooseName": "Choose a household name.",
+        "choosePassword": "Choose a household password.",
+        "create": "Unable to create household.",
+        "missingIdentifier": "Enter a household ID or invite code.",
+        "missingJoinPassword": "Enter the household password.",
+        "join": "Unable to join household.",
+        "inviteLink": "Invite link is invalid or expired.",
+        "inviteGenerate": "Unable to generate invite link.",
+        "removeMember": "Unable to remove this member.",
+        "delete": "Unable to delete household."
+      }
+    },
+    "profile": {
+      "kicker": "Profile",
+      "title": "My profile",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "genericUser": "User"
+    },
+    "settings": {
+      "kicker": "Settings",
+      "title": "Preferences",
+      "intro": "Device push is primary, Telegram is fallback. Each member has their own schedule.",
+      "loading": "Loading settings...",
+      "timezoneLabel": "Timezone (IANA)",
+      "detect": "Detect",
+      "save": "Save notifications",
+      "saving": "Saving...",
+      "signOut": "Sign out",
+      "utcUniversalLabel": "Universal time",
+      "telegram": {
+        "title": "Telegram",
+        "description": "Tap Connect Telegram, then press Start in the bot. Your chat ID will be filled automatically.",
+        "connect": "Connect Telegram",
+        "opening": "Opening...",
+        "chatIdLabel": "Telegram Chat ID (manual fallback)",
+        "chatIdPlaceholder": "Ex: 123456789"
+      },
+      "device": {
+        "title": "Device notifications",
+        "permissionPrefix": "Permission:",
+        "tokenCountPrefix": "Active tokens on your account:",
+        "enableDevice": "Enable on this device",
+        "disableDevice": "Disable this device"
+      },
+      "pushPermission": {
+        "granted": "granted",
+        "denied": "blocked",
+        "default": "not requested yet",
+        "unsupported": "not supported"
+      },
+      "pilluleReminder": {
+        "title": "Pill reminder (local time)",
+        "description": "First send at the hour below, then repeats with the selected cadence.",
+        "startHour": "Start hour",
+        "repeatCount": "Number of sends",
+        "intervalMinutes": "Interval (min)",
+        "example": "Example: start 21, count 4, interval 60 => 21h, 22h, 23h, 00h."
+      },
+      "gameReminder": {
+        "title": "Game reminder",
+        "description": "Game notification time is randomly picked each day (local time)."
+      },
+      "toggles": {
+        "pilluleEnabled": "Enable pill reminder",
+        "gameEnabled": "Enable game reminder",
+        "pushEnabled": "Enable push notifications (priority)"
+      },
+      "info": {
+        "saved": "Settings saved.",
+        "telegramOpened": "Telegram opened. Send Start to finish linking.",
+        "pushEnabledDevice": "Push notifications enabled on this device.",
+        "pushDisabledDevice": "Push notifications disabled on this device."
+      },
+      "errors": {
+        "invalidSession": "Invalid session. Please sign in again.",
+        "load": "Unable to load settings.",
+        "save": "Unable to save settings.",
+        "telegramLink": "Unable to generate Telegram link.",
+        "telegramInvalidLink": "Invalid Telegram link.",
+        "telegramConnect": "Unable to connect Telegram.",
+        "pushPermissionDenied": "Notification permission was denied.",
+        "pushTokenMissing": "Push token missing on this device.",
+        "pushSaveToken": "Unable to save push token.",
+        "pushEnableDevice": "Unable to enable push on this device.",
+        "pushNoLocalToken": "No local push token found.",
+        "pushDeleteToken": "Unable to delete push token.",
+        "pushDisableDevice": "Unable to disable push on this device."
+      }
     }
   }
 }

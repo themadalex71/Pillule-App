@@ -115,11 +115,11 @@ function getTimeZoneOffset(zone: string) {
   }
 }
 
-function formatTimeZoneLabel(zone: string) {
+function formatTimeZoneLabel(zone: string, utcUniversalLabel = "Temps universel") {
   const offset = getTimeZoneOffset(zone);
 
   if (zone === "UTC") {
-    return offset ? `UTC (Temps universel, ${offset})` : "UTC (Temps universel)";
+    return offset ? `UTC (${utcUniversalLabel}, ${offset})` : `UTC (${utcUniversalLabel})`;
   }
 
   return offset ? `${zone} (${offset})` : zone;
@@ -286,6 +286,7 @@ function HHView({
   user: User;
   onOpenHousehold: () => void;
 }) {
+  const { t } = useI18n();
   const [hasHousehold, setHasHousehold] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -315,18 +316,18 @@ function HHView({
     <div className="space-y-6">
       <section className="rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">HarmoHome</p>
-          <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">Accueil</h2>
+          <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">{t("hub.home.kicker")}</p>
+          <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">{t("hub.home.title")}</h2>
           <p className="mt-2 text-sm text-[#8d82a8]">
-            Retrouve ici les apps principales du foyer.
+            {t("hub.home.description")}
           </p>
         </div>
 
         {hasHousehold === false && (
           <div className="mt-5 rounded-[1.4rem] border border-[#f2decf] bg-[#fffaf3] p-4">
-            <p className="text-sm font-semibold text-[#4b3d6d]">Un foyer rend HarmoHome plus utile</p>
+            <p className="text-sm font-semibold text-[#4b3d6d]">{t("hub.home.noHousehold.title")}</p>
             <p className="mt-1.5 text-sm text-[#6f628f]">
-              Cree un foyer ou rejoins-en un pour partager les apps, les listes et les routines a plusieurs.
+              {t("hub.home.noHousehold.description")}
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               <button
@@ -334,14 +335,14 @@ function HHView({
                 onClick={onOpenHousehold}
                 className="rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
               >
-                Creer
+                {t("hub.home.noHousehold.create")}
               </button>
               <button
                 type="button"
                 onClick={onOpenHousehold}
                 className="rounded-2xl border border-[#ece4f7] bg-white px-4 py-3 text-sm font-semibold text-[#6f628f] transition active:scale-[0.98]"
               >
-                Rejoindre
+                {t("hub.home.noHousehold.join")}
               </button>
             </div>
           </div>
@@ -351,8 +352,8 @@ function HHView({
       <div className="grid grid-cols-2 gap-5">
         <AppTile
           href="/pillule"
-          title="Pilule"
-          subtitle="Suivi quotidien"
+          title={t("hub.home.apps.pillule.title")}
+          subtitle={t("hub.home.apps.pillule.subtitle")}
           icon={Pill}
           tileClassName="border-[#efd7ea] bg-[linear-gradient(145deg,#fff9fc,#fbf6ff)]"
           iconWrapClassName="bg-[#f2d7ee]"
@@ -360,8 +361,8 @@ function HHView({
         />
         <AppTile
           href="/cinema"
-          title="Cinema"
-          subtitle="CineMatch et listes"
+          title={t("hub.home.apps.cinema.title")}
+          subtitle={t("hub.home.apps.cinema.subtitle")}
           icon={Clapperboard}
           tileClassName="border-[#f1e3bf] bg-[linear-gradient(145deg,#fffdf7,#fffaf0)]"
           iconWrapClassName="bg-[#f4e6bd]"
@@ -369,8 +370,8 @@ function HHView({
         />
         <AppTile
           href="/cuisine"
-          title="Cuisine"
-          subtitle="Recettes et idees"
+          title={t("hub.home.apps.cuisine.title")}
+          subtitle={t("hub.home.apps.cuisine.subtitle")}
           icon={ChefHat}
           tileClassName="border-[#f2decf] bg-[linear-gradient(145deg,#fffaf6,#fff8f3)]"
           iconWrapClassName="bg-[#f3ddcf]"
@@ -378,8 +379,8 @@ function HHView({
         />
         <AppTile
           href="/daily"
-          title="Defi du Jour"
-          subtitle="Mini-jeux duo"
+          title={t("hub.home.apps.daily.title")}
+          subtitle={t("hub.home.apps.daily.subtitle")}
           icon={PartyPopper}
           tileClassName="border-[#d7e9f0] bg-[linear-gradient(145deg,#f7fcff,#f3fbff)]"
           iconWrapClassName="bg-[#d2edf5]"
@@ -391,6 +392,7 @@ function HHView({
 }
 
 function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
+  const { t } = useI18n();
   const [householdMode, setHouseholdMode] = useState<"create" | "join" | null>(null);
   const [household, setHousehold] = useState<Household | null>(null);
   const [isLoadingHousehold, setIsLoadingHousehold] = useState(true);
@@ -415,7 +417,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       const nextHousehold = await getUserHousehold(user.uid);
       setHousehold(nextHousehold);
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible de charger le foyer.");
+      setErrorMessage(error.message || t("hub.household.errors.load"));
     } finally {
       setIsLoadingHousehold(false);
     }
@@ -439,12 +441,12 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
     setInfoMessage("");
 
     if (!householdName.trim()) {
-      setErrorMessage("Choisis d'abord un nom de foyer.");
+      setErrorMessage(t("hub.household.errors.chooseName"));
       return;
     }
 
     if (!householdPassword.trim()) {
-      setErrorMessage("Choisis aussi un mot de passe de foyer.");
+      setErrorMessage(t("hub.household.errors.choosePassword"));
       return;
     }
 
@@ -454,7 +456,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       await createHouseholdForUser({
         uid: user.uid,
         email: user.email || "",
-        displayName: user.displayName || user.email || "Utilisateur HarmoHome",
+        displayName: user.displayName || user.email || t("hub.household.fallbackUser"),
         householdName,
         joinPassword: householdPassword,
       });
@@ -463,9 +465,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       setHouseholdMode(null);
       setHouseholdName("");
       setHouseholdPassword("");
-      setInfoMessage("Foyer cree avec succes.");
+      setInfoMessage(t("hub.household.info.created"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible de creer le foyer.");
+      setErrorMessage(error.message || t("hub.household.errors.create"));
     } finally {
       setIsCreatingHousehold(false);
     }
@@ -476,12 +478,12 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
     setInfoMessage("");
 
     if (!joinIdentifier.trim()) {
-      setErrorMessage("Renseigne l'identifiant ou le code du foyer.");
+      setErrorMessage(t("hub.household.errors.missingIdentifier"));
       return;
     }
 
     if (!joinPassword.trim()) {
-      setErrorMessage("Renseigne le mot de passe du foyer.");
+      setErrorMessage(t("hub.household.errors.missingJoinPassword"));
       return;
     }
 
@@ -491,7 +493,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       await joinHouseholdForUser({
         uid: user.uid,
         email: user.email || "",
-        displayName: user.displayName || user.email || "Utilisateur HarmoHome",
+        displayName: user.displayName || user.email || t("hub.household.fallbackUser"),
         identifier: joinIdentifier,
         joinPassword,
       });
@@ -500,9 +502,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       setHouseholdMode(null);
       setJoinIdentifier("");
       setJoinPassword("");
-      setInfoMessage("Tu as rejoint le foyer avec succes.");
+      setInfoMessage(t("hub.household.info.joined"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible de rejoindre ce foyer.");
+      setErrorMessage(error.message || t("hub.household.errors.join"));
     } finally {
       setIsJoiningHousehold(false);
     }
@@ -521,7 +523,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       await joinHouseholdWithInviteToken({
         uid: user.uid,
         email: user.email || "",
-        displayName: user.displayName || user.email || "Utilisateur HarmoHome",
+        displayName: user.displayName || user.email || t("hub.household.fallbackUser"),
         inviteToken,
       });
 
@@ -529,9 +531,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       setHouseholdMode("join");
       setInviteToken("");
       window.history.replaceState({}, "", "/hub");
-      setInfoMessage("Invitation acceptee. Tu as rejoint le foyer.");
+      setInfoMessage(t("hub.household.info.inviteAccepted"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible d'utiliser ce lien d'invitation.");
+      setErrorMessage(error.message || t("hub.household.errors.inviteLink"));
     } finally {
       setIsJoiningHousehold(false);
     }
@@ -553,9 +555,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
       });
       const inviteUrl = `${window.location.origin}/hub?inviteToken=${token}`;
       await navigator.clipboard.writeText(inviteUrl);
-      setInfoMessage("Lien d'invitation copie.");
+      setInfoMessage(t("hub.household.info.inviteCopied"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible de generer le lien d'invitation.");
+      setErrorMessage(error.message || t("hub.household.errors.inviteGenerate"));
     } finally {
       setIsGeneratingInviteLink(false);
     }
@@ -567,7 +569,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
     }
 
     await navigator.clipboard.writeText(household.id);
-    setInfoMessage("Identifiant du foyer copie.");
+    setInfoMessage(t("hub.household.info.idCopied"));
   };
 
   const handleRemoveMember = async (memberUid: string) => {
@@ -586,9 +588,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
         memberUid,
       });
       await loadHousehold();
-      setInfoMessage("Membre supprime du foyer.");
+      setInfoMessage(t("hub.household.info.memberRemoved"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible de supprimer ce membre.");
+      setErrorMessage(error.message || t("hub.household.errors.removeMember"));
     } finally {
       setRemovingMemberUid(null);
     }
@@ -600,7 +602,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
     }
 
     const confirmed = window.confirm(
-      "Supprimer ce foyer va retirer tous les membres et effacer le foyer pour tout le monde. Continuer ?",
+      t("hub.household.confirmDelete"),
     );
 
     if (!confirmed) {
@@ -617,9 +619,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
         actorUid: user.uid,
       });
       setHousehold(null);
-      setInfoMessage("Foyer supprime avec succes.");
+      setInfoMessage(t("hub.household.info.deleted"));
     } catch (error: any) {
-      setErrorMessage(error.message || "Impossible de supprimer le foyer.");
+      setErrorMessage(error.message || t("hub.household.errors.delete"));
     } finally {
       setIsDeletingHousehold(false);
     }
@@ -632,18 +634,18 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
     <section className="rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">HarmoHome</p>
-            <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">Foyer</h2>
+            <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">{t("hub.household.kicker")}</p>
+            <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">{t("hub.household.title")}</h2>
             <p className="mt-2 text-sm text-[#8d82a8]">
               {hasHousehold
-                ? "Ton foyer est pret. Tu peux maintenant partager les apps avec les autres membres."
-                : "Tu n'as pas encore de foyer. Cree-en un ou rejoins-en un pour commencer a partager l'app."}
+                ? t("hub.household.withHouseholdDescription")
+                : t("hub.household.withoutHouseholdDescription")}
             </p>
           </div>
           <button
             onClick={onSignOut}
             className="rounded-2xl border border-[#ece4f7] bg-[#fcfbff] p-3.5 text-[#7f68b7] transition active:scale-95"
-            aria-label="Se deconnecter"
+            aria-label={t("hub.household.signOutAria")}
           >
             <LogOut size={18} />
           </button>
@@ -653,7 +655,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
           <div className="mt-5 rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
             <div className="flex items-center gap-2 text-sm text-[#6f628f]">
               <Loader2 size={16} className="animate-spin" />
-              Chargement du foyer...
+              {t("hub.household.loading")}
             </div>
           </div>
         )}
@@ -662,9 +664,9 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
           <div className="mt-5 space-y-3">
             {inviteToken && (
               <div className="rounded-[1.4rem] border border-[#f2decf] bg-[#fffaf3] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#c08268]">Invitation recue</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#c08268]">{t("hub.household.inviteDetectedKicker")}</p>
                 <p className="mt-2 text-sm text-[#6f628f]">
-                  Un lien d'invitation a ete detecte. Tu peux rejoindre ce foyer en un clic.
+                  {t("hub.household.inviteDetectedDescription")}
                 </p>
                 <button
                   type="button"
@@ -673,7 +675,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {isJoiningHousehold ? <Loader2 size={17} className="animate-spin" /> : <Users size={17} />}
-                  Rejoindre via invitation
+                  {t("hub.household.joinViaInvite")}
                 </button>
               </div>
             )}
@@ -685,14 +687,14 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                   onClick={() => setHouseholdMode("create")}
                   className="rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98]"
                 >
-                  Creer
+                  {t("hub.household.createCta")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setHouseholdMode("join")}
                   className="rounded-2xl border border-[#ece4f7] bg-white px-4 py-3 text-sm font-semibold text-[#6f628f] transition active:scale-[0.98]"
                 >
-                  Rejoindre
+                  {t("hub.household.joinCta")}
                 </button>
               </div>
             )}
@@ -700,39 +702,39 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
             {householdMode === "create" && (
               <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Creer un foyer</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.household.createSectionTitle")}</p>
                   <button
                     type="button"
                     onClick={() => setHouseholdMode(null)}
                     className="text-xs font-medium text-[#8d82a8]"
                   >
-                    Retour
+                    {t("hub.household.back")}
                   </button>
                 </div>
 
                 <div className="mt-3 space-y-3">
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Nom du foyer</span>
+                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("hub.household.householdNameLabel")}</span>
                     <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-white px-4 py-3">
                       <Home size={17} className="text-[#b19bd6]" />
                       <input
                         value={householdName}
                         onChange={(event) => setHouseholdName(event.target.value)}
-                        placeholder="Ex: Maison Alex & Lea"
+                        placeholder={t("hub.household.householdNamePlaceholder")}
                         className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
                       />
                     </div>
                   </label>
 
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Mot de passe du foyer</span>
+                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("hub.household.householdPasswordLabel")}</span>
                     <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-white px-4 py-3">
                       <Shield size={17} className="text-[#b19bd6]" />
                       <input
                         type="password"
                         value={householdPassword}
                         onChange={(event) => setHouseholdPassword(event.target.value)}
-                        placeholder="Choisis un mot de passe"
+                        placeholder={t("hub.household.householdPasswordPlaceholder")}
                         className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
                       />
                     </div>
@@ -745,7 +747,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                     className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
                   >
                     {isCreatingHousehold ? <Loader2 size={17} className="animate-spin" /> : <Plus size={17} />}
-                    Creer mon foyer
+                    {t("hub.household.createMyHousehold")}
                   </button>
                 </div>
               </div>
@@ -754,39 +756,39 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
             {householdMode === "join" && (
               <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Rejoindre un foyer</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.household.joinSectionTitle")}</p>
                   <button
                     type="button"
                     onClick={() => setHouseholdMode(null)}
                     className="text-xs font-medium text-[#8d82a8]"
                   >
-                    Retour
+                    {t("hub.household.back")}
                   </button>
                 </div>
 
                 <div className="mt-3 space-y-3">
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Identifiant ou code foyer</span>
+                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("hub.household.identifierLabel")}</span>
                     <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-white px-4 py-3">
                       <Users size={17} className="text-[#b19bd6]" />
                       <input
                         value={joinIdentifier}
                         onChange={(event) => setJoinIdentifier(event.target.value)}
-                        placeholder="ID ou code invitation"
+                        placeholder={t("hub.household.identifierPlaceholder")}
                         className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
                       />
                     </div>
                   </label>
 
                   <label className="block">
-                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Mot de passe du foyer</span>
+                    <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("hub.household.householdPasswordLabel")}</span>
                     <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-white px-4 py-3">
                       <Shield size={17} className="text-[#b19bd6]" />
                       <input
                         type="password"
                         value={joinPassword}
                         onChange={(event) => setJoinPassword(event.target.value)}
-                        placeholder="Mot de passe partage"
+                        placeholder={t("hub.household.joinPasswordPlaceholder")}
                         className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
                       />
                     </div>
@@ -799,7 +801,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                     className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#ece4f7] bg-white px-4 py-3 text-sm font-semibold text-[#6f628f] transition active:scale-[0.98] disabled:opacity-60"
                   >
                     {isJoiningHousehold ? <Loader2 size={17} className="animate-spin" /> : <Users size={17} />}
-                    Rejoindre ce foyer
+                    {t("hub.household.joinThisHousehold")}
                   </button>
                 </div>
               </div>
@@ -822,21 +824,21 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
         {!isLoadingHousehold && hasHousehold && household && (
           <div className="mt-5 space-y-3">
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Nom du foyer</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.household.householdNameLabel")}</p>
               <p className="mt-2 text-base font-semibold text-[#4b3d6d]">{household.name}</p>
             </div>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Identifiant du foyer</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.household.householdIdLabel")}</p>
                   <p className="mt-2 break-all text-base font-semibold text-[#4b3d6d]">{household.id}</p>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyHouseholdId}
                   className="rounded-xl border border-[#ece4f7] bg-white p-2 text-[#7f68b7]"
-                  aria-label="Copier l'identifiant du foyer"
+                  aria-label={t("hub.household.copyIdAria")}
                 >
                   <Copy size={16} />
                 </button>
@@ -844,13 +846,13 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
             </div>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Code foyer</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.household.inviteCodeLabel")}</p>
               <p className="mt-2 text-base font-semibold tracking-[0.18em] text-[#4b3d6d]">{household.inviteCode}</p>
-              <p className="mt-2 text-xs text-[#9f93bc]">A partager avec le mot de passe du foyer si vous passez par le bouton rejoindre.</p>
+              <p className="mt-2 text-xs text-[#9f93bc]">{t("hub.household.inviteCodeDescription")}</p>
             </div>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Membres</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.household.membersLabel")}</p>
               <div className="mt-3 space-y-3">
                 {household.members.map((member) => {
                   const canRemove = isOwner && member.uid !== household.ownerId;
@@ -861,7 +863,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                         <p className="truncate text-sm font-semibold text-[#4b3d6d]">{member.displayName || member.email}</p>
                         <p className="truncate text-xs text-[#8d82a8]">
                           {member.email}
-                          {member.role === "owner" ? " · proprietaire" : ""}
+                          {member.role === "owner" ? ` - ${t("hub.household.ownerBadge")}` : ""}
                         </p>
                       </div>
                       {canRemove && (
@@ -870,7 +872,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                           onClick={() => handleRemoveMember(member.uid)}
                           disabled={removingMemberUid === member.uid}
                           className="rounded-xl border border-[#f2d6dd] bg-[#fff6f7] p-2 text-[#b4536b] disabled:opacity-60"
-                          aria-label={`Supprimer ${member.displayName || member.email}`}
+                          aria-label={`${t("hub.household.removeMemberAriaPrefix")} ${member.displayName || member.email}`}
                         >
                           {removingMemberUid === member.uid ? (
                             <Loader2 size={16} className="animate-spin" />
@@ -894,7 +896,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {isGeneratingInviteLink ? <Loader2 size={17} className="animate-spin" /> : <Copy size={17} />}
-                  Copier un lien d'invitation
+                  {t("hub.household.copyInviteLink")}
                 </button>
 
                 <button
@@ -908,7 +910,7 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
                   ) : (
                     <AlertTriangle size={17} />
                   )}
-                  Supprimer le foyer
+                  {t("hub.household.deleteHousehold")}
                 </button>
               </div>
             )}
@@ -930,12 +932,12 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
 
             <p className="text-xs text-[#9f93bc]">
               {isOwner
-                ? "Tu peux inviter des membres avec le lien ou leur partager l'identifiant du foyer et le mot de passe."
-                : "Seul le createur du foyer peut gerer les invitations et supprimer des membres."}
+                ? t("hub.household.ownerHint")
+                : t("hub.household.memberHint")}
             </p>
 
             <p className="text-xs text-[#9f93bc]">
-              Connecte en tant que {user.email || user.displayName || "Utilisateur"}.
+              {t("hub.household.connectedAsPrefix")} {user.email || user.displayName || t("hub.household.genericUser")}.
             </p>
           </div>
         )}
@@ -944,29 +946,30 @@ function HouseholdView({ user, onSignOut }: { user: User; onSignOut: () => Promi
 }
 
 function ProfileView({ user }: { user: User }) {
+  const { t } = useI18n();
   const nameParts = user.displayName?.trim().split(/\s+/) ?? [];
-  const firstName = nameParts[0] || "Utilisateur";
+  const firstName = nameParts[0] || t("hub.profile.genericUser");
   const lastName = nameParts.slice(1).join(" ");
 
   return (
     <section className="space-y-4 rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">Profil</p>
-        <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">Ton compte</h2>
+        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">{t("hub.profile.kicker")}</p>
+        <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">{t("hub.profile.title")}</h2>
       </div>
 
       <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Prenom</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.profile.firstName")}</p>
         <p className="mt-2 text-lg font-semibold text-[#4b3d6d]">{firstName}</p>
       </div>
 
       <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Nom</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.profile.lastName")}</p>
         <p className="mt-2 text-lg font-semibold text-[#4b3d6d]">{lastName || "-"}</p>
       </div>
 
       <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">Adresse mail</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#b2a7c9]">{t("hub.profile.email")}</p>
         <p className="mt-2 break-all text-lg font-semibold text-[#4b3d6d]">{user.email || "-"}</p>
       </div>
     </section>
@@ -974,14 +977,15 @@ function ProfileView({ user }: { user: User }) {
 }
 
 function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
+  const { t } = useI18n();
   const getDetectedTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
   const timezoneOptions = useMemo(() => getTimeZoneOptions(), []);
   const timezoneLabelMap = useMemo(
     () =>
       Object.fromEntries(
-        timezoneOptions.map((zone) => [zone, formatTimeZoneLabel(zone)]),
+        timezoneOptions.map((zone) => [zone, formatTimeZoneLabel(zone, t("hub.settings.utcUniversalLabel"))]),
       ) as Record<string, string>,
-    [timezoneOptions],
+    [t, timezoneOptions],
   );
   const [telegramChatId, setTelegramChatId] = useState("");
   const [timezone, setTimezone] = useState("Europe/Paris");
@@ -1006,7 +1010,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     const auth = getFirebaseAuth();
     const token = await auth.currentUser?.getIdToken();
     if (!token) {
-      throw new Error("Session invalide.");
+      throw new Error(t("hub.settings.errors.invalidSession"));
     }
     return token;
   };
@@ -1021,7 +1025,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(data?.error || "Impossible de charger les parametres.");
+      throw new Error(data?.error || t("hub.settings.errors.load"));
     }
 
     const settings = data?.settings || {};
@@ -1056,7 +1060,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
         await loadSettings();
       } catch (error: any) {
         if (!active) return;
-        setErrorMessage(error?.message || "Impossible de charger les parametres.");
+        setErrorMessage(error?.message || t("hub.settings.errors.load"));
       } finally {
         if (active) {
           setIsLoading(false);
@@ -1069,7 +1073,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     return () => {
       active = false;
     };
-  }, [user.uid]);
+  }, [t, user.uid]);
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1109,15 +1113,15 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data?.error || "Impossible d'enregistrer les parametres.");
+        throw new Error(data?.error || t("hub.settings.errors.save"));
       }
 
       setPilluleReminderHour(normalizedPilluleHour);
       setPilluleReminderRepeatCount(normalizedPilluleRepeatCount);
       setPilluleReminderRepeatIntervalMinutes(normalizedPilluleRepeatIntervalMinutes);
-      setSuccessMessage("Parametres enregistres.");
+      setSuccessMessage(t("hub.settings.info.saved"));
     } catch (error: any) {
-      setErrorMessage(error?.message || "Impossible d'enregistrer les parametres.");
+      setErrorMessage(error?.message || t("hub.settings.errors.save"));
     } finally {
       setIsSaving(false);
     }
@@ -1138,18 +1142,18 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || "Impossible de creer le lien Telegram.");
+        throw new Error(data?.error || t("hub.settings.errors.telegramLink"));
       }
 
       const url = String(data?.connectUrl || "");
       if (!url) {
-        throw new Error("Lien Telegram invalide.");
+        throw new Error(t("hub.settings.errors.telegramInvalidLink"));
       }
 
       window.open(url, "_blank", "noopener,noreferrer");
-      setSuccessMessage("Telegram ouvert. Clique sur Start dans le bot pour connecter ton compte.");
+      setSuccessMessage(t("hub.settings.info.telegramOpened"));
     } catch (error: any) {
-      setErrorMessage(error?.message || "Impossible de connecter Telegram.");
+      setErrorMessage(error?.message || t("hub.settings.errors.telegramConnect"));
     } finally {
       setIsTelegramLinking(false);
     }
@@ -1169,11 +1173,11 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
 
       setPushPermission(result.permission);
       if (result.permission !== "granted") {
-        throw new Error("Permission push refusee. Active les notifications dans ton navigateur.");
+        throw new Error(t("hub.settings.errors.pushPermissionDenied"));
       }
 
       if (!result.token) {
-        throw new Error(result.reason || "Impossible de recuperer le token push.");
+        throw new Error(result.reason || t("hub.settings.errors.pushTokenMissing"));
       }
 
       const token = await getAuthToken();
@@ -1189,14 +1193,14 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || "Impossible d'enregistrer ce token push.");
+        throw new Error(data?.error || t("hub.settings.errors.pushSaveToken"));
       }
 
       localStorage.setItem("harmohome_push_token", result.token);
       await loadSettings();
-      setSuccessMessage("Notifications appareil activees sur ce device.");
+      setSuccessMessage(t("hub.settings.info.pushEnabledDevice"));
     } catch (error: any) {
-      setErrorMessage(error?.message || "Impossible d'activer les notifications appareil.");
+      setErrorMessage(error?.message || t("hub.settings.errors.pushEnableDevice"));
     } finally {
       setIsPushConfiguring(false);
     }
@@ -1210,7 +1214,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     try {
       const savedToken = localStorage.getItem("harmohome_push_token");
       if (!savedToken) {
-        throw new Error("Aucun token push local trouve sur cet appareil.");
+        throw new Error(t("hub.settings.errors.pushNoLocalToken"));
       }
 
       const token = await getAuthToken();
@@ -1226,14 +1230,14 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data?.error || "Impossible de supprimer ce token push.");
+        throw new Error(data?.error || t("hub.settings.errors.pushDeleteToken"));
       }
 
       localStorage.removeItem("harmohome_push_token");
       await loadSettings();
-      setSuccessMessage("Notifications push retirees pour cet appareil.");
+      setSuccessMessage(t("hub.settings.info.pushDisabledDevice"));
     } catch (error: any) {
-      setErrorMessage(error?.message || "Impossible de desactiver ce token push.");
+      setErrorMessage(error?.message || t("hub.settings.errors.pushDisableDevice"));
     } finally {
       setIsPushConfiguring(false);
     }
@@ -1248,37 +1252,37 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
 
   const pushPermissionLabel =
     pushPermission === "granted"
-      ? "autorisee"
+      ? t("hub.settings.pushPermission.granted")
       : pushPermission === "denied"
-        ? "bloquee"
+        ? t("hub.settings.pushPermission.denied")
         : pushPermission === "default"
-          ? "pas encore demandee"
-          : "non supportee";
+          ? t("hub.settings.pushPermission.default")
+          : t("hub.settings.pushPermission.unsupported");
 
   return (
     <section className="space-y-4 rounded-[1.8rem] border border-[#eee5dc] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">Parametres</p>
-        <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">Preferences</h2>
+        <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-[#ef9a79]">{t("hub.settings.kicker")}</p>
+        <h2 className="mt-2 text-[2rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">{t("hub.settings.title")}</h2>
       </div>
 
       <form onSubmit={handleSave} className="space-y-4">
         <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
           <p className="text-sm text-[#6f628f]">
-            Push appareil prioritaire, Telegram en fallback. Chaque membre a ses propres horaires.
+            {t("hub.settings.intro")}
           </p>
         </div>
 
         {isLoading ? (
           <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4 text-sm text-[#6f628f]">
-            Chargement des parametres...
+            {t("hub.settings.loading")}
           </div>
         ) : (
           <>
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-sm font-semibold text-[#4b3d6d]">Telegram</p>
+              <p className="text-sm font-semibold text-[#4b3d6d]">{t("hub.settings.telegram.title")}</p>
               <p className="mt-1 text-xs text-[#8d82a8]">
-                Clique sur Connecter Telegram puis Start dans le bot. Le chat ID se remplit automatiquement.
+                {t("hub.settings.telegram.description")}
               </p>
               <button
                 type="button"
@@ -1286,24 +1290,24 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                 disabled={isTelegramLinking}
                 className="mt-3 w-full rounded-2xl bg-[#ef9a79] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
               >
-                {isTelegramLinking ? "Ouverture..." : "Connecter Telegram"}
+                {isTelegramLinking ? t("hub.settings.telegram.opening") : t("hub.settings.telegram.connect")}
               </button>
             </div>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Chat ID Telegram (fallback manuel)</span>
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("hub.settings.telegram.chatIdLabel")}</span>
               <input
                 value={telegramChatId}
                 onChange={(event) => setTelegramChatId(event.target.value)}
-                placeholder="Ex: 123456789"
+                placeholder={t("hub.settings.telegram.chatIdPlaceholder")}
                 className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
               />
             </label>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-sm font-semibold text-[#4b3d6d]">Notifications appareil</p>
+              <p className="text-sm font-semibold text-[#4b3d6d]">{t("hub.settings.device.title")}</p>
               <p className="mt-1 text-xs text-[#8d82a8]">
-                Permission: {pushPermissionLabel}. Tokens actifs sur ton compte: {webPushTokenCount}.
+                {t("hub.settings.device.permissionPrefix")} {pushPermissionLabel}. {t("hub.settings.device.tokenCountPrefix")} {webPushTokenCount}.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
@@ -1312,7 +1316,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                   disabled={isPushConfiguring}
                   className="rounded-2xl bg-[#8d7ac6] px-3 py-2.5 text-xs font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
                 >
-                  Activer sur cet appareil
+                  {t("hub.settings.device.enableDevice")}
                 </button>
                 <button
                   type="button"
@@ -1320,13 +1324,13 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                   disabled={isPushConfiguring}
                   className="rounded-2xl border border-[#ece4f7] bg-white px-3 py-2.5 text-xs font-semibold text-[#6f628f] transition active:scale-[0.98] disabled:opacity-60"
                 >
-                  Desactiver cet appareil
+                  {t("hub.settings.device.disableDevice")}
                 </button>
               </div>
             </div>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Fuseau horaire (IANA)</span>
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("hub.settings.timezoneLabel")}</span>
               <div className="flex gap-2">
                 <select
                   value={timezone}
@@ -1347,20 +1351,20 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                   onClick={applyBrowserTimezone}
                   className="rounded-2xl border border-[#ece4f7] bg-white px-3 py-2 text-xs font-semibold text-[#6f628f] transition active:scale-[0.98]"
                 >
-                  Detecter
+                  {t("hub.settings.detect")}
                 </button>
               </div>
             </label>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-sm font-semibold text-[#4b3d6d]">Rappel pilule (heure locale)</p>
+              <p className="text-sm font-semibold text-[#4b3d6d]">{t("hub.settings.pilluleReminder.title")}</p>
               <p className="mt-1 text-xs text-[#8d82a8]">
-                Premier envoi a l'heure ci-dessous, puis repetition selon la cadence choisie.
+                {t("hub.settings.pilluleReminder.description")}
               </p>
 
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">Heure de debut</span>
+                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">{t("hub.settings.pilluleReminder.startHour")}</span>
                   <input
                     type="number"
                     min={0}
@@ -1372,7 +1376,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                 </label>
 
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">Nombre d'envois</span>
+                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">{t("hub.settings.pilluleReminder.repeatCount")}</span>
                   <input
                     type="number"
                     min={1}
@@ -1384,7 +1388,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                 </label>
 
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">Intervalle (min)</span>
+                  <span className="mb-1.5 block text-xs font-medium text-[#6f628f]">{t("hub.settings.pilluleReminder.intervalMinutes")}</span>
                   <input
                     type="number"
                     min={5}
@@ -1398,19 +1402,19 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
               </div>
 
               <p className="mt-2 text-[11px] text-[#8d82a8]">
-                Exemple: debut 21, nombre 4, intervalle 60 =&gt; 21h, 22h, 23h, 00h.
+                {t("hub.settings.pilluleReminder.example")}
               </p>
             </div>
 
             <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
-              <p className="text-sm font-semibold text-[#4b3d6d]">Rappel jeux</p>
+              <p className="text-sm font-semibold text-[#4b3d6d]">{t("hub.settings.gameReminder.title")}</p>
               <p className="mt-1 text-xs text-[#8d82a8]">
-                L'heure de notification du jeu est tiree aleatoirement chaque jour (heure locale).
+                {t("hub.settings.gameReminder.description")}
               </p>
             </div>
 
             <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-              <span className="text-sm font-medium text-[#6f628f]">Activer rappel pilule</span>
+              <span className="text-sm font-medium text-[#6f628f]">{t("hub.settings.toggles.pilluleEnabled")}</span>
               <input
                 type="checkbox"
                 checked={pilluleEnabled}
@@ -1420,7 +1424,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
             </label>
 
             <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-              <span className="text-sm font-medium text-[#6f628f]">Activer rappel jeux</span>
+              <span className="text-sm font-medium text-[#6f628f]">{t("hub.settings.toggles.gameEnabled")}</span>
               <input
                 type="checkbox"
                 checked={gameEnabled}
@@ -1430,7 +1434,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
             </label>
 
             <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-              <span className="text-sm font-medium text-[#6f628f]">Activer notifications push (prioritaires)</span>
+              <span className="text-sm font-medium text-[#6f628f]">{t("hub.settings.toggles.pushEnabled")}</span>
               <input
                 type="checkbox"
                 checked={pushEnabled}
@@ -1458,7 +1462,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
           disabled={isLoading || isSaving}
           className="w-full rounded-2xl bg-[#8d7ac6] px-5 py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.99] disabled:opacity-60"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer notifications"}
+          {isSaving ? t("hub.settings.saving") : t("hub.settings.save")}
         </button>
       </form>
 
@@ -1466,7 +1470,7 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
         onClick={onSignOut}
         className="w-full rounded-2xl bg-[#ef9a79] px-5 py-3.5 text-[15px] font-semibold text-white transition active:scale-[0.99]"
       >
-        Se deconnecter
+        {t("hub.settings.signOut")}
       </button>
     </section>
   );
@@ -1534,3 +1538,4 @@ function BottomTab({
     </button>
   );
 }
+

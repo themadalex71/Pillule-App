@@ -82,6 +82,176 @@
       "kicker": "Recherche",
       "title": "Explorer",
       "placeholder": "Cette zone servira a la recherche dans HarmoHome."
+    },
+    "home": {
+      "kicker": "HarmoHome",
+      "title": "Ton foyer",
+      "description": "Retrouve toutes les mini-apps du foyer en un seul endroit.",
+      "noHousehold": {
+        "title": "Aucun foyer connecte",
+        "description": "Cree ou rejoins un foyer pour partager les jeux et rappels.",
+        "create": "Creer",
+        "join": "Rejoindre"
+      },
+      "apps": {
+        "pillule": {
+          "title": "Pilule",
+          "subtitle": "Suivi quotidien"
+        },
+        "cinema": {
+          "title": "Cinema",
+          "subtitle": "Trouve un film"
+        },
+        "cuisine": {
+          "title": "Cuisine",
+          "subtitle": "Idees repas"
+        },
+        "daily": {
+          "title": "Jeux",
+          "subtitle": "Defis du jour"
+        }
+      }
+    },
+    "household": {
+      "kicker": "Foyer",
+      "title": "Gestion du foyer",
+      "withHouseholdDescription": "Gere les membres, invitations et reglages du foyer.",
+      "withoutHouseholdDescription": "Cree ou rejoins un foyer pour synchroniser vos experiences.",
+      "signOutAria": "Se deconnecter",
+      "loading": "Chargement du foyer...",
+      "inviteDetectedKicker": "Invitation detectee",
+      "inviteDetectedDescription": "Un lien d'invitation a ete detecte. Tu peux rejoindre ce foyer en un clic.",
+      "joinViaInvite": "Rejoindre via invitation",
+      "createCta": "Creer",
+      "joinCta": "Rejoindre",
+      "createSectionTitle": "Creer un foyer",
+      "joinSectionTitle": "Rejoindre un foyer",
+      "back": "Retour",
+      "householdNameLabel": "Nom du foyer",
+      "householdNamePlaceholder": "Ex: Maison Harmo",
+      "householdPasswordLabel": "Mot de passe foyer",
+      "householdPasswordPlaceholder": "Choisis un mot de passe",
+      "createMyHousehold": "Creer mon foyer",
+      "identifierLabel": "ID ou code invitation",
+      "identifierPlaceholder": "ID du foyer ou code",
+      "joinPasswordPlaceholder": "Mot de passe du foyer",
+      "joinThisHousehold": "Rejoindre ce foyer",
+      "householdIdLabel": "Identifiant du foyer",
+      "copyIdAria": "Copier l'identifiant du foyer",
+      "inviteCodeLabel": "Code d'invitation",
+      "inviteCodeDescription": "Partage ce code ou genere un lien pour inviter un membre.",
+      "membersLabel": "Membres",
+      "ownerBadge": "proprietaire",
+      "removeMemberAriaPrefix": "Retirer le membre",
+      "copyInviteLink": "Copier le lien d'invitation",
+      "deleteHousehold": "Supprimer le foyer",
+      "ownerHint": "En tant que proprietaire, tu peux inviter ou retirer des membres.",
+      "memberHint": "Seul le proprietaire peut modifier les membres du foyer.",
+      "connectedAsPrefix": "Connecte en tant que",
+      "genericUser": "utilisateur",
+      "fallbackUser": "Utilisateur HarmoHome",
+      "confirmDelete": "Supprimer ce foyer pour tout le monde ? Cette action est definitive.",
+      "info": {
+        "created": "Foyer cree avec succes.",
+        "joined": "Foyer rejoint avec succes.",
+        "inviteAccepted": "Invitation acceptee.",
+        "inviteCopied": "Lien d'invitation copie.",
+        "idCopied": "Identifiant du foyer copie.",
+        "memberRemoved": "Membre retire du foyer.",
+        "deleted": "Foyer supprime."
+      },
+      "errors": {
+        "load": "Impossible de charger le foyer.",
+        "chooseName": "Choisis un nom de foyer.",
+        "choosePassword": "Choisis un mot de passe de foyer.",
+        "create": "Impossible de creer le foyer.",
+        "missingIdentifier": "Renseigne un identifiant ou un code d'invitation.",
+        "missingJoinPassword": "Renseigne le mot de passe du foyer.",
+        "join": "Impossible de rejoindre le foyer.",
+        "inviteLink": "Lien d'invitation invalide ou expire.",
+        "inviteGenerate": "Impossible de generer le lien d'invitation.",
+        "removeMember": "Impossible de retirer ce membre.",
+        "delete": "Impossible de supprimer le foyer."
+      }
+    },
+    "profile": {
+      "kicker": "Profil",
+      "title": "Mon profil",
+      "firstName": "Prenom",
+      "lastName": "Nom",
+      "email": "Email",
+      "genericUser": "Utilisateur"
+    },
+    "settings": {
+      "kicker": "Parametres",
+      "title": "Preferences",
+      "intro": "Push appareil prioritaire, Telegram en fallback. Chaque membre a ses propres horaires.",
+      "loading": "Chargement des parametres...",
+      "timezoneLabel": "Fuseau horaire (IANA)",
+      "detect": "Detecter",
+      "save": "Enregistrer notifications",
+      "saving": "Enregistrement...",
+      "signOut": "Se deconnecter",
+      "utcUniversalLabel": "Temps universel",
+      "telegram": {
+        "title": "Telegram",
+        "description": "Clique sur Connecter Telegram puis Start dans le bot. Le chat ID se remplit automatiquement.",
+        "connect": "Connecter Telegram",
+        "opening": "Ouverture...",
+        "chatIdLabel": "Chat ID Telegram (fallback manuel)",
+        "chatIdPlaceholder": "Ex: 123456789"
+      },
+      "device": {
+        "title": "Notifications appareil",
+        "permissionPrefix": "Permission:",
+        "tokenCountPrefix": "Tokens actifs sur ton compte:",
+        "enableDevice": "Activer sur cet appareil",
+        "disableDevice": "Desactiver cet appareil"
+      },
+      "pushPermission": {
+        "granted": "autorisee",
+        "denied": "bloquee",
+        "default": "pas encore demandee",
+        "unsupported": "non supportee"
+      },
+      "pilluleReminder": {
+        "title": "Rappel pilule (heure locale)",
+        "description": "Premier envoi a l'heure ci-dessous, puis repetition selon la cadence choisie.",
+        "startHour": "Heure de debut",
+        "repeatCount": "Nombre d'envois",
+        "intervalMinutes": "Intervalle (min)",
+        "example": "Exemple: debut 21, nombre 4, intervalle 60 => 21h, 22h, 23h, 00h."
+      },
+      "gameReminder": {
+        "title": "Rappel jeux",
+        "description": "L'heure de notification du jeu est tiree aleatoirement chaque jour (heure locale)."
+      },
+      "toggles": {
+        "pilluleEnabled": "Activer rappel pilule",
+        "gameEnabled": "Activer rappel jeux",
+        "pushEnabled": "Activer notifications push (prioritaires)"
+      },
+      "info": {
+        "saved": "Parametres enregistres.",
+        "telegramOpened": "Telegram ouvert. Envoie Start dans le bot pour terminer la liaison.",
+        "pushEnabledDevice": "Notifications push activees sur cet appareil.",
+        "pushDisabledDevice": "Notifications push desactivees sur cet appareil."
+      },
+      "errors": {
+        "invalidSession": "Session invalide. Reconnecte-toi.",
+        "load": "Impossible de charger les parametres.",
+        "save": "Impossible d'enregistrer les parametres.",
+        "telegramLink": "Impossible de generer le lien Telegram.",
+        "telegramInvalidLink": "Lien Telegram invalide.",
+        "telegramConnect": "Connexion Telegram impossible.",
+        "pushPermissionDenied": "Permission de notification refusee.",
+        "pushTokenMissing": "Token push introuvable sur cet appareil.",
+        "pushSaveToken": "Impossible d'enregistrer le token push.",
+        "pushEnableDevice": "Impossible d'activer le push sur cet appareil.",
+        "pushNoLocalToken": "Aucun token push local trouve.",
+        "pushDeleteToken": "Impossible de supprimer le token push.",
+        "pushDisableDevice": "Impossible de desactiver le push sur cet appareil."
+      }
     }
   }
 }
