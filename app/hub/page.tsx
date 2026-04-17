@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -39,6 +39,49 @@ import { useI18n } from "@/components/I18nProvider";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 type HubTab = "profile" | "search" | "hh" | "household" | "settings";
+
+const COMMON_TIMEZONES = [
+  "Europe/Paris",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Madrid",
+  "Europe/Rome",
+  "Europe/Brussels",
+  "Europe/Zurich",
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Toronto",
+  "America/Montreal",
+  "America/Sao_Paulo",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+];
+
+function getTimeZoneOptions() {
+  try {
+    const intlWithSupportedValues = Intl as unknown as {
+      supportedValuesOf?: (key: string) => string[];
+    };
+    if (typeof intlWithSupportedValues.supportedValuesOf === "function") {
+      const all = intlWithSupportedValues
+        .supportedValuesOf("timeZone")
+        .filter((zone) => zone.includes("/"));
+      return Array.from(new Set([...COMMON_TIMEZONES, ...all])).sort((a, b) => a.localeCompare(b));
+    }
+  } catch {
+    // ignore
+  }
+
+  return [...COMMON_TIMEZONES];
+}
 
 function HarmoHomeLogo({ tagline }: { tagline: string }) {
   return (
@@ -867,6 +910,7 @@ function ProfileView({ user }: { user: User }) {
 
 function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
   const getDetectedTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
+  const timezoneOptions = useMemo(() => getTimeZoneOptions(), []);
   const [telegramChatId, setTelegramChatId] = useState("");
   const [timezone, setTimezone] = useState("Europe/Paris");
   const [pilluleEnabled, setPilluleEnabled] = useState(true);
@@ -1188,12 +1232,20 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Fuseau horaire (IANA)</span>
               <div className="flex gap-2">
-                <input
+                <select
                   value={timezone}
                   onChange={(event) => setTimezone(event.target.value)}
-                  placeholder="Europe/Paris"
                   className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
-                />
+                >
+                  {!timezoneOptions.includes(timezone) && timezone ? (
+                    <option value={timezone}>{timezone}</option>
+                  ) : null}
+                  {timezoneOptions.map((zone) => (
+                    <option key={zone} value={zone}>
+                      {zone}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="button"
                   onClick={applyBrowserTimezone}

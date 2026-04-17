@@ -111,7 +111,7 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const message = `Rappel Pilule\n\nTu n'as pas encore coche la case d'aujourd'hui (${localNow.dateKey}).\n\nCoche-la ici : https://pillule-app.vercel.app/pillule`;
+      const message = `Rappel Pilule\n\nTu n'as pas encore coche la case d'aujourd'hui (${localNow.dateKey}).\n\nCoche-la ici : https://www.bardbaronproject.com/pillule`;
       const pushResult = await sendPushNotificationToUser(uid, userData, {
         title: 'HarmoHome - Rappel Pilule',
         body: `Tu n'as pas encore coche la case du ${localNow.dateKey}.`,
