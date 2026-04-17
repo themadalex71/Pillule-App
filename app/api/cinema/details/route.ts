@@ -3,15 +3,50 @@ import type { TmdbMovieDetailsResponse } from "@/modules/cinema/types";
 
 export const dynamic = "force-dynamic";
 
+type AppLocale = "fr" | "en";
+
+function normalizeLocale(value: string | null): AppLocale {
+  return value === "en" ? "en" : "fr";
+}
+
+function toTmdbLanguage(locale: AppLocale) {
+  return locale === "en" ? "en-US" : "fr-FR";
+}
+
+function toDateLocale(locale: AppLocale) {
+  return locale === "en" ? "en-US" : "fr-FR";
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
+  const locale = normalizeLocale(searchParams.get("lang"));
   const apiKey = process.env.TMDB_API_KEY;
+  const tmdbLanguage = toTmdbLanguage(locale);
+  const dateLocale = toDateLocale(locale);
+  const messages =
+    locale === "en"
+      ? {
+          missingConfig: "Missing movie ID or TMDB key.",
+          fetchFailed: "Unable to fetch movie details.",
+          unknownDate: "Unknown date",
+          unknownRuntime: "Unknown runtime",
+          unknownDirector: "Unknown",
+          genericError: "Details fetch error.",
+        }
+      : {
+          missingConfig: "ID ou cle TMDB manquante.",
+          fetchFailed: "Impossible de recuperer les details du film.",
+          unknownDate: "Date inconnue",
+          unknownRuntime: "Duree inconnue",
+          unknownDirector: "Inconnu",
+          genericError: "Erreur recuperation details.",
+        };
 
   if (!id || !apiKey) {
     return NextResponse.json(
-      { error: "ID ou clé TMDB manquante." },
-      { status: 400 }
+      { error: messages.missingConfig },
+      { status: 400 },
     );
   }
 
@@ -19,22 +54,22 @@ export async function GET(request: Request) {
     const url =
       `https://api.themoviedb.org/3/movie/${id}` +
       `?api_key=${apiKey}` +
-      `&language=fr-FR` +
+      `&language=${tmdbLanguage}` +
       `&append_to_response=credits`;
 
     const res = await fetch(url, { cache: "no-store" });
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: "Impossible de récupérer les détails du film." },
-        { status: res.status }
+        { error: messages.fetchFailed },
+        { status: res.status },
       );
     }
 
     const data = (await res.json()) as TmdbMovieDetailsResponse;
 
     const director = data.credits?.crew?.find(
-      (person) => person.job === "Director"
+      (person) => person.job === "Director",
     );
 
     const cast =
@@ -57,12 +92,12 @@ export async function GET(request: Request) {
         ? `https://image.tmdb.org/t/p/original${data.backdrop_path}`
         : null,
       release_date: data.release_date
-        ? new Date(data.release_date).toLocaleDateString("fr-FR")
-        : "Date inconnue",
+        ? new Date(data.release_date).toLocaleDateString(dateLocale)
+        : messages.unknownDate,
       runtime:
         typeof data.runtime === "number"
           ? `${Math.floor(data.runtime / 60)}h${data.runtime % 60}`
-          : "Durée inconnue",
+          : messages.unknownRuntime,
       genres: Array.isArray(data.genres)
         ? data.genres.map((g) => g.name).join(", ")
         : "",
@@ -70,17 +105,19 @@ export async function GET(request: Request) {
         typeof data.vote_average === "number"
           ? data.vote_average.toFixed(1)
           : "0.0",
-      director: director ? director.name : "Inconnu",
+      director: director
+        ? director.name
+        : messages.unknownDirector,
       cast,
       tagline: data.tagline,
     };
 
     return NextResponse.json(details);
   } catch (error) {
-    console.error("Erreur TMDB details:", error);
+    console.error("TMDB details error:", error);
     return NextResponse.json(
-      { error: "Erreur récupération détails." },
-      { status: 500 }
+      { error: messages.genericError },
+      { status: 500 },
     );
   }
 }

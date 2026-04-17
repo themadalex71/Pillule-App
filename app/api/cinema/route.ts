@@ -25,6 +25,20 @@ type UserHouseholdRecord = {
   householdId?: string | null;
 };
 
+type AppLocale = "fr" | "en";
+
+function normalizeLocale(value: unknown): AppLocale {
+  return value === "en" ? "en" : "fr";
+}
+
+function toTmdbLanguage(locale: AppLocale) {
+  return locale === "en" ? "en-US" : "fr-FR";
+}
+
+function toDateLocale(locale: AppLocale) {
+  return locale === "en" ? "en-US" : "fr-FR";
+}
+
 function normalizeCinemaListType(listType: string) {
   if (listType === "history") return "history";
   if (listType === "dismissed") return "dismissed";
@@ -282,6 +296,23 @@ export async function POST(request: Request) {
     if (action === "import") {
       const apiKey = process.env.TMDB_API_KEY;
       const { title, year, listType, userRating, watchedDate } = body;
+      const locale = normalizeLocale(body.lang);
+      const tmdbLanguage = toTmdbLanguage(locale);
+      const dateLocale = toDateLocale(locale);
+      const messages =
+        locale === "en"
+          ? {
+              notFound: "Movie not found",
+              updated: "Updated",
+              alreadyUpToDate: "Already up to date",
+              imported: "Imported",
+            }
+          : {
+              notFound: "Film introuvable",
+              updated: "Mis a jour",
+              alreadyUpToDate: "Deja a jour",
+              imported: "Importe",
+            };
 
       if (!title || !listType || !apiKey) {
         return NextResponse.json(
@@ -294,7 +325,7 @@ export async function POST(request: Request) {
         `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}` +
         `&query=${encodeURIComponent(title)}` +
         `${year ? `&year=${year}` : ""}` +
-        `&language=fr-FR`;
+        `&language=${tmdbLanguage}`;
 
       const searchRes = await fetch(searchUrl, { cache: "no-store" });
       const searchData = await searchRes.json();
@@ -305,7 +336,7 @@ export async function POST(request: Request) {
         const retryUrl =
           `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}` +
           `&query=${encodeURIComponent(title)}` +
-          `&language=fr-FR`;
+          `&language=${tmdbLanguage}`;
 
         const retryRes = await fetch(retryUrl, { cache: "no-store" });
         const retryData = await retryRes.json();
@@ -315,7 +346,7 @@ export async function POST(request: Request) {
       if (!movie) {
         return NextResponse.json({
           success: false,
-          message: "Film introuvable",
+          message: messages.notFound,
         });
       }
 
@@ -323,7 +354,7 @@ export async function POST(request: Request) {
       if (watchedDate) {
         const dateObj = new Date(watchedDate);
         if (!Number.isNaN(dateObj.getTime())) {
-          formattedDate = dateObj.toLocaleDateString("fr-FR");
+          formattedDate = dateObj.toLocaleDateString(dateLocale);
         }
       }
 
@@ -356,7 +387,7 @@ export async function POST(request: Request) {
 
           return NextResponse.json({
             success: true,
-            message: "Mis a jour",
+            message: messages.updated,
             movie: movie.title,
             updatedList: currentList,
             isMatch: false,
@@ -365,7 +396,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
           success: true,
-          message: "Deja a jour",
+          message: messages.alreadyUpToDate,
           movie: movie.title,
           updatedList: currentList,
           isMatch: false,
@@ -407,7 +438,7 @@ export async function POST(request: Request) {
 
       return NextResponse.json({
         success: true,
-        message: "Importe",
+        message: messages.imported,
         movie: movie.title,
         updatedList: currentList,
         isMatch,

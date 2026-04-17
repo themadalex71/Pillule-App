@@ -253,5 +253,144 @@
         "pushDisableDevice": "Impossible de desactiver le push sur cet appareil."
       }
     }
+  },
+  "cinema": {
+    "appTitle": "Cinema",
+    "common": {
+      "member": "Membre",
+      "movies": "films",
+      "members": "membres",
+      "noOverview": "Pas de resume disponible."
+    },
+    "errors": {
+      "matchSound": "Impossible de jouer le son de match:",
+      "notAuthenticated": "Utilisateur non connecte.",
+      "apiConnection": "Erreur de connexion a l'API Cinema",
+      "matchesConnection": "Erreur de connexion a l'API Matchs.",
+      "checkConsole": "Regarde la console (F12)."
+    },
+    "auth": {
+      "loadHouseholdError": "Impossible de charger ton foyer.",
+      "loadingSession": "Chargement de ta session...",
+      "requiredTitle": "Connexion requise",
+      "requiredDescription": "Reconnecte-toi pour continuer."
+    },
+    "import": {
+      "completedPrefix": "Importation de",
+      "completedSuffix": "terminee !",
+      "inProgressTitle": "Importation en cours.",
+      "inProgressSubtitle": "Ne quitte pas cette page."
+    },
+    "discover": {
+      "emptyByFilters": "Aucun film ne correspond a ces filtres.",
+      "emptyAlreadyHandled": "Tous les films trouves sont deja dans tes listes ou dans Pas envie."
+    },
+    "matches": {
+      "disabledMessage": "Le mode Match est disponible apres avoir rejoint un foyer."
+    },
+    "reset": {
+      "confirmAll": "Tu veux vraiment supprimer toutes tes listes cinema (A voir + Deja vus + Pas envie) ?",
+      "failed": "Impossible de reset les listes cinema."
+    },
+    "match": {
+      "defaultMember": "un membre de ton foyer",
+      "withPrefix": "Avec",
+      "title": "MATCH !"
+    },
+    "tabs": {
+      "cinematch": "CineMatch",
+      "myLists": "Mes Listes",
+      "catalogue": "Catalogue",
+      "watchlist": "A voir",
+      "watched": "Deja vus",
+      "notInterested": "Pas envie",
+      "matches": "Nos Matchs"
+    },
+    "hub": {
+      "watchlistSubtitle": "Ta watchlist personnelle",
+      "watchedSubtitle": "Ton historique note",
+      "dismissedSubtitle": "Les films ignores en CineMatch",
+      "matchesSubtitleEnabled": "Les films presents dans plusieurs wishlists",
+      "matchesSubtitleDisabled": "Rejoins un foyer pour activer cette fonctionnalite",
+      "importTitle": "Importer CSV",
+      "importSubtitle": "Watchlist / Diary / Ratings",
+      "resetTitle": "Reset mes listes",
+      "resetSubtitle": "Supprime A voir + Deja vus + Pas envie"
+    },
+    "cards": {
+      "loading": "Chargement des cartes...",
+      "noMoreTitle": "Plus de films a te proposer",
+      "noMoreSubtitle": "Relance une recherche ou change les filtres.",
+      "reload": "Recharger"
+    },
+    "catalogue": {
+      "loadMore": "Charger plus"
+    },
+    "list": {
+      "tmdbRatingPrefix": "Note TMDB :",
+      "myRatingPrefix": "Ma note :",
+      "ratedOnPrefix": "Le",
+      "matchWithPrefix": "Match avec",
+      "emptyTitle": "Liste vide",
+      "emptySubtitle": "Ajoute quelques films pour remplir cet espace."
+    },
+    "deleteModal": {
+      "title": "Supprimer ce film ?",
+      "subtitle": "sera retire de la liste.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    "details": {
+      "loading": "Chargement...",
+      "inWishlist": "Dans A voir",
+      "addToWishlist": "Ajouter",
+      "seen": "Vu",
+      "iHaveSeen": "J'ai vu",
+      "myRating": "Ma note",
+      "ratingPrompt": "Choisis une note pour ajouter ce film dans Deja vus.",
+      "savedInHistory": "Ce film est enregistre dans ta liste des films vus.",
+      "cast": "Distribution",
+      "close": "Fermer"
+    },
+    "filters": {
+      "title": "Filtres et Tri",
+      "searchLabel": "Recherche",
+      "searchPlaceholder": "Titre d'un film...",
+      "genreLabel": "Genre",
+      "genreAll": "Tous",
+      "minRatingLabel": "Note min.",
+      "noMinimum": "Aucune",
+      "minYearLabel": "Annee min.",
+      "minYearPlaceholder": "Ex: 1990",
+      "maxYearLabel": "Annee max.",
+      "examplePrefix": "Ex:",
+      "sortByLabel": "Trier par",
+      "sortNewest": "Plus recents",
+      "sortOldest": "Plus anciens",
+      "sortRating": "Mieux notes",
+      "sortPopularity": "Populaires",
+      "reset": "Reinitialiser",
+      "apply": "Appliquer"
+    },
+    "genres": {
+      "28": "Action",
+      "12": "Aventure",
+      "16": "Animation",
+      "35": "Comedie",
+      "80": "Crime",
+      "99": "Documentaire",
+      "18": "Drame",
+      "10751": "Famille",
+      "14": "Fantastique",
+      "36": "Histoire",
+      "27": "Horreur",
+      "10402": "Musique",
+      "9648": "Mystere",
+      "10749": "Romance",
+      "878": "Science-Fiction",
+      "53": "Thriller",
+      "10752": "Guerre",
+      "37": "Western"
+    }
   }
 }

@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+type AppLocale = "fr" | "en";
+
+function normalizeLocale(value: string | null): AppLocale {
+  return value === "en" ? "en" : "fr";
+}
+
+function toTmdbLanguage(locale: AppLocale) {
+  return locale === "en" ? "en-US" : "fr-FR";
+}
+
 type TmdbDiscoverMovie = {
   id: number;
   title: string;
@@ -27,10 +37,24 @@ export async function GET(request: Request) {
   const sortBy = searchParams.get("sortBy") || "popularity.desc";
   const page = searchParams.get("page") || "1";
   const query = searchParams.get("query");
+  const locale = normalizeLocale(searchParams.get("lang"));
+  const tmdbLanguage = toTmdbLanguage(locale);
+  const messages =
+    locale === "en"
+      ? {
+          missingKey: "TMDB_API_KEY is missing.",
+          fetchTmdb: "Unable to fetch TMDB movies.",
+          fetchGeneric: "Unable to fetch movies.",
+        }
+      : {
+          missingKey: "TMDB_API_KEY manquante.",
+          fetchTmdb: "Impossible de recuperer les films TMDB.",
+          fetchGeneric: "Impossible de recuperer les films.",
+        };
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "TMDB_API_KEY manquante." },
+      { error: messages.missingKey },
       { status: 500 }
     );
   }
@@ -42,7 +66,7 @@ export async function GET(request: Request) {
     if (query && query.trim() !== "") {
       url =
         `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}` +
-        `&language=fr-FR` +
+        `&language=${tmdbLanguage}` +
         `&include_adult=false` +
         `&page=${page}` +
         `&query=${encodeURIComponent(query)}`;
@@ -53,7 +77,7 @@ export async function GET(request: Request) {
     } else {
       const discoverBase =
         `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}` +
-        `&language=fr-FR` +
+        `&language=${tmdbLanguage}` +
         `&include_adult=false` +
         `${genre ? `&with_genres=${genre}` : ""}` +
         `${minYear ? `&primary_release_date.gte=${minYear}-01-01` : ""}` +
@@ -80,7 +104,7 @@ export async function GET(request: Request) {
 
         if (!firstRes.ok) {
           return NextResponse.json(
-            { error: "Impossible de recuperer les films TMDB." },
+            { error: messages.fetchTmdb },
             { status: firstRes.status }
           );
         }
@@ -132,7 +156,7 @@ export async function GET(request: Request) {
 
     if (!res.ok) {
       return NextResponse.json(
-        { error: "Impossible de récupérer les films TMDB." },
+        { error: messages.fetchTmdb },
         { status: res.status }
       );
     }
@@ -156,10 +180,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(finalResult);
   } catch (error) {
-    console.error("Erreur TMDB discover détaillée:", error);
+    console.error("TMDB discover error:", error);
     return NextResponse.json(
       {
-        error: "Impossible de récupérer les films.",
+        error: messages.fetchGeneric,
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }

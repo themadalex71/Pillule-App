@@ -14,9 +14,12 @@ import MovieDetailsModal from '@/features/cinema/components/MovieDetailsModal';
 import { getFirebaseAuth } from '@/lib/firebase/client';
 import { getUserHousehold, type Household } from '@/lib/firebase/households';
 import AppMiniHeader from '@/components/AppMiniHeader';
+import { useI18n } from '@/components/I18nProvider';
 
 export default function CinemaPage() {
   const router = useRouter();
+  const { t, locale } = useI18n();
+  const localeTag = locale === 'en' ? 'en-US' : 'fr-FR';
   const [activeTab, setActiveTab] = useState('cinematch');
   const [user, setUser] = useState<User | null>(null);
   const [household, setHousehold] = useState<Household | null>(null);
@@ -97,7 +100,7 @@ export default function CinemaPage() {
   const clapExplosionBaseDelay = 1.55;
 
   const getMemberDisplayName = (uid: string) =>
-    household?.members.find((member) => member.uid === uid)?.displayName || 'Membre';
+    household?.members.find((member) => member.uid === uid)?.displayName || t('cinema.common.member');
 
   const triggerMatchVibration = () => {
     if (typeof navigator === 'undefined') return;
@@ -151,7 +154,7 @@ export default function CinemaPage() {
       body.start(now);
       body.stop(now + 0.14);
     } catch (error) {
-      console.error('Impossible de jouer le son de match:', error);
+      console.error(t('cinema.errors.matchSound'), error);
     }
   };
 
@@ -160,7 +163,7 @@ export default function CinemaPage() {
     const currentUser = auth.currentUser;
 
     if (!currentUser) {
-      throw new Error('Utilisateur non connecte.');
+      throw new Error(t('cinema.errors.notAuthenticated'));
     }
 
     const token = await currentUser.getIdToken();
@@ -181,7 +184,7 @@ export default function CinemaPage() {
       setHousehold(householdData);
     } catch (error) {
       console.error(error);
-      setAuthError("Impossible de charger ton foyer.");
+      setAuthError(t("cinema.auth.loadHouseholdError"));
       setHousehold(null);
     } finally {
       setIsLoadingHousehold(false);
@@ -247,6 +250,16 @@ export default function CinemaPage() {
     }
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!authReady || isLoadingHousehold || !memberId) return;
+
+    if (activeTab === 'cinematch') {
+      fetchDiscoverMovies();
+    } else if (activeTab === 'catalogue') {
+      fetchCatalogueMovies(1, true, searchQuery);
+    }
+  }, [locale]);
+
   const handleFileClick = () => fileInputRef.current?.click();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,16 +300,16 @@ export default function CinemaPage() {
             try {
                 await fetchWithAuth('/api/cinema', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'import', title, year, userRating: importedRating, watchedDate, listType })
+                    body: JSON.stringify({ action: 'import', title, year, userRating: importedRating, watchedDate, listType, lang: locale })
                 });
-            } catch (e) { console.error('Erreur import', title, e); }
+            } catch (e) { console.error('Import error', title, e); }
         }
 
         count++;
         setImportProgress(prev => prev ? { current: prev.current + 1, total: prev.total } : { current: 1, total: rows.length });
     }
 
-    alert(`Importation de ${sourceFileName} terminée ! (${count} films traités)`);
+    alert(`${t("cinema.import.completedPrefix")} ${sourceFileName} ${t("cinema.import.completedSuffix")} (${count} ${t("cinema.common.movies")})`);
     if (activeTab === `list-${listType}`) fetchSavedList(listType);
     setIsImporting(false);
     setImportProgress(null);
@@ -307,7 +320,7 @@ export default function CinemaPage() {
     setLoading(true);
     setDiscoverEmptyMessage('');
     try {
-      let url = '/api/cinema/discover?mode=cinematch';
+      let url = `/api/cinema/discover?mode=cinematch&lang=${locale}`;
       if (filters.genre) url += `&genre=${filters.genre}`;
       if (filters.minYear) url += `&minYear=${filters.minYear}`;
       if (filters.maxYear) url += `&maxYear=${filters.maxYear}`;
@@ -339,9 +352,9 @@ export default function CinemaPage() {
           setMovies(filteredMovies);
 
           if (tmdbData.length === 0) {
-            setDiscoverEmptyMessage("Aucun film ne correspond a ces filtres.");
+            setDiscoverEmptyMessage(t("cinema.discover.emptyByFilters"));
           } else if (filteredMovies.length === 0) {
-            setDiscoverEmptyMessage("Tous les films trouves sont deja dans tes listes ou dans 'Pas envie'.");
+            setDiscoverEmptyMessage(t("cinema.discover.emptyAlreadyHandled"));
           }
       }
     } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -356,7 +369,7 @@ export default function CinemaPage() {
     setLoading(true);
     
     try {
-      let url = `/api/cinema/discover?mode=catalogue&page=${page}&sortBy=${sortOption}`;
+      let url = `/api/cinema/discover?mode=catalogue&page=${page}&sortBy=${sortOption}&lang=${locale}`;
       const queryToUse = queryOverride !== undefined ? queryOverride : searchQuery;
 
       if (queryToUse.trim() !== '') url += `&query=${encodeURIComponent(queryToUse)}`;
@@ -400,15 +413,15 @@ export default function CinemaPage() {
     if (!silent) setSavedMovies([]);
     try {
       const res = await fetchWithAuth(`/api/cinema?action=list&listType=${type}`);
-      if (!res.ok) throw new Error(`Erreur HTTP: ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      console.log(`[DEBUG] Films récupérés pour ${type}:`, data);
+      console.log(`[DEBUG] Retrieved movies for ${type}:`, data);
       const list = data.list || [];
       syncCachedList(type, list);
       if (!silent) setSavedMovies(list);
     } catch (e) { 
-      console.error("[DEBUG] Erreur fetchSavedList:", e);
-      alert(`Erreur de connexion à l'API Cinéma (${type}) ! Regarde la console (F12).`);
+      console.error("[DEBUG] fetchSavedList error:", e);
+      alert(`${t("cinema.errors.apiConnection")} (${type}). ${t("cinema.errors.checkConsole")}`);
     } finally { if (!silent) setLoading(false); }
   };
 
@@ -417,18 +430,18 @@ export default function CinemaPage() {
       setLoading(true); setSavedMovies([]);
       try {
           const res = await fetchWithAuth(`/api/cinema?action=matches`);
-          if (!res.ok) throw new Error(`Erreur HTTP: ${res.status}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          console.log('[DEBUG] Matchs recuperes:', data);
+          console.log('[DEBUG] Matches retrieved:', data);
           setSavedMovies(data.matches || []);
           if (data.matchesDisabled) {
-            setMatchesEmptyMessage('Le mode Match est disponible apres avoir rejoint un foyer.');
+            setMatchesEmptyMessage(t('cinema.matches.disabledMessage'));
           } else {
             setMatchesEmptyMessage('');
           }
       } catch (e) {
-          console.error('[DEBUG] Erreur fetchMatchesList:', e);
-          alert('Erreur de connexion a l\'API Matchs ! Regarde la console (F12).');
+          console.error('[DEBUG] fetchMatchesList error:', e);
+          alert(`${t("cinema.errors.matchesConnection")} ${t("cinema.errors.checkConsole")}`);
           setMatchesEmptyMessage('');
       } finally { setLoading(false); }
   };
@@ -437,7 +450,7 @@ export default function CinemaPage() {
       if (!memberId) return null;
       try {
         const movieToSave = {
-          ...movie, userRating: userRating ?? movie.userRating ?? null, ratedAt: userRating ? new Date().toLocaleDateString('fr-FR') : movie.ratedAt ?? null,
+          ...movie, userRating: userRating ?? movie.userRating ?? null, ratedAt: userRating ? new Date().toLocaleDateString(localeTag) : movie.ratedAt ?? null,
         };
         const res = await fetchWithAuth('/api/cinema', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -509,7 +522,7 @@ export default function CinemaPage() {
   const handleResetLists = async () => {
     if (!memberId || isResettingLists) return;
 
-    const confirmed = window.confirm("Tu veux vraiment supprimer toutes tes listes cinema (A voir + Deja vus + Pas envie) ?");
+    const confirmed = window.confirm(t("cinema.reset.confirmAll"));
     if (!confirmed) return;
 
     setIsResettingLists(true);
@@ -521,7 +534,7 @@ export default function CinemaPage() {
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data?.error || 'Reset impossible');
+        throw new Error(data?.error || t("cinema.reset.failed"));
       }
 
       setWishlistMovies([]);
@@ -535,7 +548,7 @@ export default function CinemaPage() {
       }
     } catch (error) {
       console.error(error);
-      alert("Impossible de reset les listes cinema.");
+      alert(t("cinema.reset.failed"));
     } finally {
       setIsResettingLists(false);
     }
@@ -589,7 +602,7 @@ export default function CinemaPage() {
         {
           ...movieDetails,
           userRating: selectedRating,
-          ratedAt: new Date().toLocaleDateString('fr-FR'),
+          ratedAt: new Date().toLocaleDateString(localeTag),
         },
         'history',
         selectedRating
@@ -600,7 +613,7 @@ export default function CinemaPage() {
       const updatedMovie = {
         ...movieDetails,
         userRating: selectedRating,
-        ratedAt: new Date().toLocaleDateString('fr-FR'),
+        ratedAt: new Date().toLocaleDateString(localeTag),
       };
 
       setMovieDetails(updatedMovie);
@@ -636,7 +649,7 @@ export default function CinemaPage() {
     setNeedsRatingPrompt(false);
     setRating(historyMovie?.userRating || wishlistMovie?.userRating || 0);
     try {
-      const res = await fetch(`/api/cinema/details?id=${id}`);
+      const res = await fetch(`/api/cinema/details?id=${id}&lang=${locale}`);
       const details = await res.json();
       setMovieDetails({
         ...details,
@@ -661,7 +674,7 @@ export default function CinemaPage() {
       <main className="h-[100dvh] bg-[#fcf7f2] text-[#4b3d6d] flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={36} className="animate-spin mx-auto mb-3 text-[#8d82a8]" />
-          <p className="text-sm text-[#8d82a8]">Chargement de ta session...</p>
+          <p className="text-sm text-[#8d82a8]">{t("cinema.auth.loadingSession")}</p>
         </div>
       </main>
     );
@@ -671,21 +684,21 @@ export default function CinemaPage() {
     return (
       <main className="h-[100dvh] bg-[#fcf7f2] text-[#4b3d6d] flex items-center justify-center p-6">
         <div className="max-w-sm w-full rounded-[1.8rem] border border-[#eee5dc] bg-white p-6 text-center shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
-          <p className="font-bold text-lg mb-2">Connexion requise</p>
-          <p className="text-sm text-[#8d82a8] mb-5">{authError || "Reconnecte-toi pour continuer."}</p>
+          <p className="font-bold text-lg mb-2">{t("cinema.auth.requiredTitle")}</p>
+          <p className="text-sm text-[#8d82a8] mb-5">{authError || t("cinema.auth.requiredDescription")}</p>
           <button
             onClick={() => router.push('/')}
             className="w-full py-3 rounded-2xl bg-[#ef9a79] text-white font-semibold"
           >
-            Retour a l'accueil
+            {t("common.backHome")}
           </button>
         </div>
       </main>
     );
   }
 
-  const matchLabel = matchMemberNames.length > 0 ? matchMemberNames.join(', ') : 'un membre de ton foyer';
-  const animatedMatchText = `Avec ${matchLabel}`;
+  const matchLabel = matchMemberNames.length > 0 ? matchMemberNames.join(', ') : t("cinema.match.defaultMember");
+  const animatedMatchText = `${t("cinema.match.withPrefix")} ${matchLabel}`;
 
   return (
     <main className="h-[100dvh] bg-[#fcf7f2] text-[#4b3d6d] flex flex-col relative overflow-hidden">
@@ -835,7 +848,7 @@ export default function CinemaPage() {
                 <div className="absolute left-1/2 top-[53%] z-20 h-[34dvh] min-h-[16rem] w-[88vw] max-w-[25rem] -translate-x-1/2 -translate-y-1/2 rounded-[1.9rem] border-[5px] border-slate-100 bg-gradient-to-br from-[#0a1432] to-[#111827] shadow-[0_28px_70px_rgba(0,0,0,0.6)]">
                   <div className="flex h-full flex-col items-center justify-center px-6 text-center">
                     <Heart size={42} className="mt-3 text-pink-500 fill-pink-500" />
-                    <p className="mt-2 text-[2.3rem] font-black leading-none text-white">MATCH !</p>
+                    <p className="mt-2 text-[2.3rem] font-black leading-none text-white">{t("cinema.match.title")}</p>
                     <p className="mt-4 text-[1.03rem] font-semibold">
                       {Array.from(animatedMatchText).map((char, index) => (
                         <span
@@ -881,7 +894,7 @@ export default function CinemaPage() {
         </div>
       )}
 
-      <AppMiniHeader title="Cinema" />
+      <AppMiniHeader title="Cinema" titleKey="cinema.appTitle" />
 
       <div className="px-4 shrink-0 z-10 bg-[#fcf7f2]">
         <div className="flex items-center justify-between py-3">
@@ -892,13 +905,13 @@ export default function CinemaPage() {
                   </button>
                 )}
                 <h2 className="text-xl font-semibold text-[#4b3d6d] tracking-[-0.02em]">
-                  {activeTab === 'cinematch' && <><Flame className="inline text-[#ef9a79] mr-2" fill="currentColor"/>CineMatch</>}
-                  {activeTab === 'hub' && <><Library className="text-[#7f68b7] inline mr-2"/>Mes Listes</>}
-                  {activeTab === 'catalogue' && <><LayoutGrid className="text-[#7f68b7] inline mr-2"/>Catalogue</>}
-                  {activeTab === 'list-wishlist' && <><Popcorn className="text-[#d4a642] inline mr-2"/>A voir</>}
-                  {activeTab === 'list-history' && <><Eye className="text-[#4fa070] inline mr-2"/>Deja vus</>}
-                  {activeTab === 'list-dismissed' && <><CircleOff className="text-[#d2778b] inline mr-2"/>Pas envie</>}
-                  {activeTab === 'list-matches' && <><Heart className="text-[#d27295] fill-[#d27295] inline mr-2"/>Nos Matchs</>}
+                  {activeTab === 'cinematch' && <><Flame className="inline text-[#ef9a79] mr-2" fill="currentColor"/>{t("cinema.tabs.cinematch")}</>}
+                  {activeTab === 'hub' && <><Library className="text-[#7f68b7] inline mr-2"/>{t("cinema.tabs.myLists")}</>}
+                  {activeTab === 'catalogue' && <><LayoutGrid className="text-[#7f68b7] inline mr-2"/>{t("cinema.tabs.catalogue")}</>}
+                  {activeTab === 'list-wishlist' && <><Popcorn className="text-[#d4a642] inline mr-2"/>{t("cinema.tabs.watchlist")}</>}
+                  {activeTab === 'list-history' && <><Eye className="text-[#4fa070] inline mr-2"/>{t("cinema.tabs.watched")}</>}
+                  {activeTab === 'list-dismissed' && <><CircleOff className="text-[#d2778b] inline mr-2"/>{t("cinema.tabs.notInterested")}</>}
+                  {activeTab === 'list-matches' && <><Heart className="text-[#d27295] fill-[#d27295] inline mr-2"/>{t("cinema.tabs.matches")}</>}
                 </h2>
             </div>
 
@@ -913,12 +926,12 @@ export default function CinemaPage() {
       {isImporting && (
           <div className="fixed inset-0 z-[1000] bg-[rgba(252,247,242,0.96)] backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center text-[#4b3d6d]">
               <Loader2 size={48} className="animate-spin text-[#ef9a79] mb-4"/>
-              <h2 className="text-xl font-semibold mb-2">Importation en cours.</h2>
-              <p className="text-[#8d82a8] mb-4">Ne quitte pas cette page.</p>
+              <h2 className="text-xl font-semibold mb-2">{t("cinema.import.inProgressTitle")}</h2>
+              <p className="text-[#8d82a8] mb-4">{t("cinema.import.inProgressSubtitle")}</p>
               <div className="w-full max-w-xs bg-white rounded-full h-4 overflow-hidden border border-[#ece4f7]">
                   <div className="bg-[#ef9a79] h-full transition-all duration-200" style={{ width: `${(((importProgress?.current || 0) / (importProgress?.total || 1)) * 100)}%` }}></div>
               </div>
-              <p className="mt-2 text-xs font-mono">{importProgress?.current || 0} / {importProgress?.total || 0} films</p>
+              <p className="mt-2 text-xs font-mono">{importProgress?.current || 0} / {importProgress?.total || 0} {t("cinema.common.movies")}</p>
           </div>
       )}
 
@@ -929,9 +942,9 @@ export default function CinemaPage() {
         {activeTab === 'hub' && (
           <div className="animate-in fade-in duration-300">
             <div className="grid grid-cols-1 gap-4">
-              <button onClick={() => setActiveTab('list-wishlist')} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#fff6de] flex items-center justify-center shrink-0"><Popcorn size={28} className="text-[#d4a642]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">A voir</p><p className="text-[#8d82a8] text-sm">Ta watchlist personnelle</p></div><ChevronRight className="text-[#b9accf]"/></button>
-              <button onClick={() => setActiveTab('list-history')} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#e9f8ef] flex items-center justify-center shrink-0"><Eye size={28} className="text-[#4fa070]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">Deja vus</p><p className="text-[#8d82a8] text-sm">Ton historique note</p></div><ChevronRight className="text-[#b9accf]"/></button>
-              <button onClick={() => setActiveTab('list-dismissed')} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#fdeef2] flex items-center justify-center shrink-0"><CircleOff size={28} className="text-[#d2778b]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">Pas envie</p><p className="text-[#8d82a8] text-sm">Les films ignores en CineMatch</p></div><ChevronRight className="text-[#b9accf]"/></button>
+              <button onClick={() => setActiveTab('list-wishlist')} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#fff6de] flex items-center justify-center shrink-0"><Popcorn size={28} className="text-[#d4a642]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">{t("cinema.tabs.watchlist")}</p><p className="text-[#8d82a8] text-sm">{t("cinema.hub.watchlistSubtitle")}</p></div><ChevronRight className="text-[#b9accf]"/></button>
+              <button onClick={() => setActiveTab('list-history')} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#e9f8ef] flex items-center justify-center shrink-0"><Eye size={28} className="text-[#4fa070]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">{t("cinema.tabs.watched")}</p><p className="text-[#8d82a8] text-sm">{t("cinema.hub.watchedSubtitle")}</p></div><ChevronRight className="text-[#b9accf]"/></button>
+              <button onClick={() => setActiveTab('list-dismissed')} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#fdeef2] flex items-center justify-center shrink-0"><CircleOff size={28} className="text-[#d2778b]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">{t("cinema.tabs.notInterested")}</p><p className="text-[#8d82a8] text-sm">{t("cinema.hub.dismissedSubtitle")}</p></div><ChevronRight className="text-[#b9accf]"/></button>
               <button
                 onClick={() => hasHousehold && setActiveTab('list-matches')}
                 disabled={!hasHousehold}
@@ -943,15 +956,15 @@ export default function CinemaPage() {
               >
                 <div className="w-14 h-14 rounded-xl bg-[#fdeef7] flex items-center justify-center shrink-0"><Heart size={28} className="text-[#d27295] fill-[#d27295]"/></div>
                 <div className="text-left flex-1">
-                  <p className="font-semibold text-lg text-[#4b3d6d]">Nos Matchs</p>
+                  <p className="font-semibold text-lg text-[#4b3d6d]">{t("cinema.tabs.matches")}</p>
                   <p className="text-[#8d82a8] text-sm">
-                    {hasHousehold ? 'Les films presents dans plusieurs wishlists' : 'Rejoins un foyer pour activer cette fonctionnalite'}
+                    {hasHousehold ? t("cinema.hub.matchesSubtitleEnabled") : t("cinema.hub.matchesSubtitleDisabled")}
                   </p>
                 </div>
                 <ChevronRight className="text-[#b9accf]"/>
               </button>
-              <button onClick={handleFileClick} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#eaf2ff] flex items-center justify-center shrink-0"><FileUp size={28} className="text-[#7298de]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">Importer CSV</p><p className="text-[#8d82a8] text-sm">Watchlist / Diary / Ratings</p></div><ChevronRight className="text-[#b9accf]"/></button>
-              <button onClick={handleResetLists} disabled={isResettingLists} className="bg-white p-4 rounded-[1.6rem] border border-[#f3d9d8] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition disabled:opacity-70"><div className="w-14 h-14 rounded-xl bg-[#ffeef0] flex items-center justify-center shrink-0">{isResettingLists ? <Loader2 size={28} className="text-[#d56f7a] animate-spin"/> : <Trash2 size={28} className="text-[#d56f7a]"/>}</div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">Reset mes listes</p><p className="text-[#8d82a8] text-sm">Supprime A voir + Deja vus + Pas envie</p></div><ChevronRight className="text-[#b9accf]"/></button>
+              <button onClick={handleFileClick} className="bg-white p-4 rounded-[1.6rem] border border-[#eee5dc] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition"><div className="w-14 h-14 rounded-xl bg-[#eaf2ff] flex items-center justify-center shrink-0"><FileUp size={28} className="text-[#7298de]"/></div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">{t("cinema.hub.importTitle")}</p><p className="text-[#8d82a8] text-sm">{t("cinema.hub.importSubtitle")}</p></div><ChevronRight className="text-[#b9accf]"/></button>
+              <button onClick={handleResetLists} disabled={isResettingLists} className="bg-white p-4 rounded-[1.6rem] border border-[#f3d9d8] shadow-[0_10px_22px_rgba(111,98,143,0.08)] flex items-center gap-4 active:scale-[0.98] transition disabled:opacity-70"><div className="w-14 h-14 rounded-xl bg-[#ffeef0] flex items-center justify-center shrink-0">{isResettingLists ? <Loader2 size={28} className="text-[#d56f7a] animate-spin"/> : <Trash2 size={28} className="text-[#d56f7a]"/>}</div><div className="text-left flex-1"><p className="font-semibold text-lg text-[#4b3d6d]">{t("cinema.hub.resetTitle")}</p><p className="text-[#8d82a8] text-sm">{t("cinema.hub.resetSubtitle")}</p></div><ChevronRight className="text-[#b9accf]"/></button>
             </div>
             <input ref={fileInputRef} type="file" accept=".csv" multiple className="hidden" onChange={handleFileUpload} />
           </div>
@@ -960,7 +973,7 @@ export default function CinemaPage() {
         {/* COMPOSANT CINEMATCH CARDS */}
         {activeTab === 'cinematch' && (
           <div className="relative h-full animate-in fade-in duration-300">
-            <CineMatchCards movies={movies} loading={loading} onSwipe={onSwipe} openMovieDetails={openMovieDetails} fetchDiscoverMovies={fetchDiscoverMovies} emptySubtitle={discoverEmptyMessage || 'Relance une recherche ou change les filtres.'} />
+            <CineMatchCards movies={movies} loading={loading} onSwipe={onSwipe} openMovieDetails={openMovieDetails} fetchDiscoverMovies={fetchDiscoverMovies} emptySubtitle={discoverEmptyMessage || t("cinema.cards.noMoreSubtitle")} />
           </div>
         )}
 
@@ -982,7 +995,7 @@ export default function CinemaPage() {
               </div>
             )}
             {loading && <div className="flex justify-center py-6"><Loader2 className="animate-spin text-[#8d82a8]" /></div>}
-            {!loading && catalogueMovies.length > 0 && <button onClick={() => fetchCatalogueMovies(cataloguePage + 1)} className="w-full mt-6 py-4 rounded-2xl bg-white border border-[#eee5dc] text-[#4b3d6d] font-semibold active:scale-[0.98] transition shadow-[0_8px_18px_rgba(111,98,143,0.08)]">Charger plus</button>}
+            {!loading && catalogueMovies.length > 0 && <button onClick={() => fetchCatalogueMovies(cataloguePage + 1)} className="w-full mt-6 py-4 rounded-2xl bg-white border border-[#eee5dc] text-[#4b3d6d] font-semibold active:scale-[0.98] transition shadow-[0_8px_18px_rgba(111,98,143,0.08)]">{t("cinema.catalogue.loadMore")}</button>}
           </div>
         )}
 
@@ -1001,15 +1014,15 @@ export default function CinemaPage() {
                       <div className="flex justify-between gap-2">
                         <div className="min-w-0">
                           <h3 className="font-semibold line-clamp-2 text-[#4b3d6d]">{movie.title}</h3>
-                          <p className="text-xs text-[#8d82a8] mt-1">Note TMDB : {movie.vote}/10</p>
-                          {movie.userRating !== undefined && movie.userRating !== null && <p className="text-xs text-[#d4a642] font-semibold mt-1">Ma note : {movie.userRating}/5</p>}
-                          {movie.ratedAt && <p className="text-xs text-[#b9accf] mt-1">Le {movie.ratedAt}</p>}
+                          <p className="text-xs text-[#8d82a8] mt-1">{t("cinema.list.tmdbRatingPrefix")} {movie.vote}/10</p>
+                          {movie.userRating !== undefined && movie.userRating !== null && <p className="text-xs text-[#d4a642] font-semibold mt-1">{t("cinema.list.myRatingPrefix")} {movie.userRating}/5</p>}
+                          {movie.ratedAt && <p className="text-xs text-[#b9accf] mt-1">{t("cinema.list.ratedOnPrefix")} {movie.ratedAt}</p>}
                           {activeTab === 'list-matches' && Array.isArray(movie.matchedMemberIds) && (
                             <p className="text-xs text-[#d27295] mt-1">
-                              Match avec {movie.matchedMemberIds
+                              {t("cinema.list.matchWithPrefix")} {movie.matchedMemberIds
                                 .filter((uid) => uid !== memberId)
                                 .map((uid) => getMemberDisplayName(uid))
-                                .join(', ') || `${movie.matchedCount || 2} membres`}
+                                .join(', ') || `${movie.matchedCount || 2} ${t("cinema.common.members")}`}
                             </p>
                           )}
                         </div>
@@ -1017,7 +1030,7 @@ export default function CinemaPage() {
                           <button onClick={(e) => handleDeleteClick(e, movie.title, movie.id)} className="shrink-0 p-2 rounded-full bg-[#f6f0eb] hover:bg-[#ffeef0] text-[#b9accf] hover:text-[#d56f7a] transition self-start"><Trash2 size={16}/></button>
                         )}
                       </div>
-                      <p className="text-xs text-[#8d82a8] mt-2 line-clamp-2">{movie.overview || "Pas de résumé disponible."}</p>
+                      <p className="text-xs text-[#8d82a8] mt-2 line-clamp-2">{movie.overview || t("cinema.common.noOverview")}</p>
                     </div>
                   </button>
                 ))}
@@ -1025,11 +1038,11 @@ export default function CinemaPage() {
             ) : (
               <div className="text-center py-16 text-[#b9accf]">
                 <Library size={48} className="mx-auto mb-4"/>
-                <p className="font-semibold text-[#4b3d6d] mb-1">Liste vide</p>
+                <p className="font-semibold text-[#4b3d6d] mb-1">{t("cinema.list.emptyTitle")}</p>
                 <p className="text-sm">
                   {activeTab === 'list-matches' && matchesEmptyMessage
                     ? matchesEmptyMessage
-                    : "Ajoute quelques films pour remplir cet espace."}
+                    : t("cinema.list.emptySubtitle")}
                 </p>
               </div>
             )}
@@ -1041,11 +1054,11 @@ export default function CinemaPage() {
         <div className="fixed inset-0 z-[999] bg-[rgba(76,44,128,0.16)] backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setDeleteModal({ show: false, movieId: null, title: '' })}>
           <div className="bg-white border border-[#eee5dc] rounded-3xl p-6 w-full max-w-sm text-center animate-in zoom-in-95 duration-200 shadow-[0_14px_30px_rgba(111,98,143,0.14)]" onClick={e => e.stopPropagation()}>
             <div className="w-16 h-16 rounded-full bg-[#ffeef0] flex items-center justify-center mx-auto mb-4"><Trash2 size={28} className="text-red-500"/></div>
-            <h2 className="text-xl font-semibold text-[#4b3d6d] mb-2">Supprimer ce film ?</h2>
-            <p className="text-[#8d82a8] text-sm mb-6">"{deleteModal.title}" sera retire de la liste.</p>
+            <h2 className="text-xl font-semibold text-[#4b3d6d] mb-2">{t("cinema.deleteModal.title")}</h2>
+            <p className="text-[#8d82a8] text-sm mb-6">"{deleteModal.title}" {t("cinema.deleteModal.subtitle")}</p>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setDeleteModal({ show: false, movieId: null, title: '' })} className="w-full py-3 bg-[#f6f0eb] hover:bg-[#efe7de] text-[#6f628f] rounded-xl font-semibold transition">Annuler</button>
-              <button onClick={confirmDelete} className="w-full py-3 bg-[#d56f7a] hover:bg-[#c85f6d] text-white rounded-xl font-semibold transition">Supprimer</button>
+              <button onClick={() => setDeleteModal({ show: false, movieId: null, title: '' })} className="w-full py-3 bg-[#f6f0eb] hover:bg-[#efe7de] text-[#6f628f] rounded-xl font-semibold transition">{t("cinema.deleteModal.cancel")}</button>
+              <button onClick={confirmDelete} className="w-full py-3 bg-[#d56f7a] hover:bg-[#c85f6d] text-white rounded-xl font-semibold transition">{t("cinema.deleteModal.confirm")}</button>
             </div>
           </div>
         </div>
@@ -1070,9 +1083,9 @@ export default function CinemaPage() {
 
       <nav className="p-2 pb-safe bg-[rgba(252,247,242,0.96)] border-t border-[#eee5dc] z-[900] shrink-0 backdrop-blur">
         <div className="flex justify-around items-center">
-          <button onClick={() => setActiveTab('hub')} className={`nav-btn flex flex-col items-center transition ${['hub', 'list-wishlist', 'list-history', 'list-dismissed', 'list-matches'].includes(activeTab) ? 'text-[#7f68b7]' : 'text-[#b2a7c9]'}`}><Library size={24} /><span className="text-[10px] mt-1">Mes Listes</span></button>
+          <button onClick={() => setActiveTab('hub')} className={`nav-btn flex flex-col items-center transition ${['hub', 'list-wishlist', 'list-history', 'list-dismissed', 'list-matches'].includes(activeTab) ? 'text-[#7f68b7]' : 'text-[#b2a7c9]'}`}><Library size={24} /><span className="text-[10px] mt-1">{t("cinema.tabs.myLists")}</span></button>
           <button onClick={() => setActiveTab('cinematch')} className="relative -top-6"><div className={`p-4 rounded-full border-4 border-[#fcf7f2] transition ${activeTab === 'cinematch' ? 'bg-[#ef9a79] text-white shadow-[0_10px_24px_rgba(239,154,121,0.4)]' : 'bg-white border border-[#ece4f7] text-[#b2a7c9]'}`}><Flame size={28} fill={activeTab === 'cinematch' ? "currentColor" : "none"} /></div></button>
-          <button onClick={() => setActiveTab('catalogue')} className={`nav-btn flex flex-col items-center transition ${activeTab === 'catalogue' ? 'text-[#7f68b7]' : 'text-[#b2a7c9]'}`}><LayoutGrid size={24} /><span className="text-[10px] mt-1">Catalogue</span></button>
+          <button onClick={() => setActiveTab('catalogue')} className={`nav-btn flex flex-col items-center transition ${activeTab === 'catalogue' ? 'text-[#7f68b7]' : 'text-[#b2a7c9]'}`}><LayoutGrid size={24} /><span className="text-[10px] mt-1">{t("cinema.tabs.catalogue")}</span></button>
         </div>
       </nav>
     </main>

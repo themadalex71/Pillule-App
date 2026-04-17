@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader2, X, Heart, Eye, Star, Calendar, StarHalf, Clock, Users, Clapperboard } from 'lucide-react';
 import { MovieFull } from '../types';
+import { useI18n } from '@/components/I18nProvider';
 
 interface MovieDetailsModalProps {
   movieDetails: MovieFull | null;
@@ -29,11 +30,12 @@ export default function MovieDetailsModal({
   onRatingSelect,
   promptWatchedRating
 }: MovieDetailsModalProps) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-[1000] bg-[rgba(76,44,128,0.2)] backdrop-blur-md flex items-end justify-center" onClick={closeModale}>
       <div className="relative bg-[#fffdfb] w-full max-w-lg h-[92vh] rounded-t-[2rem] border-t border-x border-[#eee5dc] overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 duration-300 text-[#4b3d6d]" onClick={e => e.stopPropagation()}>
         {loadingDetails || !movieDetails ? (
-          <div className="flex-1 flex flex-col items-center justify-center"><Loader2 className="animate-spin text-[#8d82a8] mb-4"/><p className="text-[#8d82a8]">Chargement...</p></div>
+          <div className="flex-1 flex flex-col items-center justify-center"><Loader2 className="animate-spin text-[#8d82a8] mb-4"/><p className="text-[#8d82a8]">{t("cinema.details.loading")}</p></div>
         ) : (
           <>
             <div className="relative h-[38vh] shrink-0">
@@ -56,17 +58,17 @@ export default function MovieDetailsModal({
               <div className="flex gap-3 mb-6">
                 <button onClick={toggleWishlist} className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${isInWishlist ? 'bg-[#fdeef7] text-[#c0698d] border border-[#f6d4e3]' : 'bg-[#ef9a79] text-white'}`}>
                   <Heart size={18} className={isInWishlist ? 'fill-current' : ''}/>
-                  {isInWishlist ? 'Dans A voir' : 'Ajouter'}
+                  {isInWishlist ? t("cinema.details.inWishlist") : t("cinema.details.addToWishlist")}
                 </button>
                 <button onClick={promptWatchedRating} className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${isInHistory ? 'bg-[#e9f8ef] text-[#3f8b5f] border border-[#cdecd8]' : 'bg-[#7f68b7] text-white'}`}>
                   <Eye size={18} className={isInHistory ? 'fill-current' : ''}/>
-                  {isInHistory ? 'Vu' : "J'ai vu"}
+                  {isInHistory ? t("cinema.details.seen") : t("cinema.details.iHaveSeen")}
                 </button>
               </div>
 
               <div className="mb-6">
                 <div className="flex items-center justify-between gap-3 mb-3">
-                  <p className="text-sm font-semibold text-[#8d82a8]">Ma note</p>
+                  <p className="text-sm font-semibold text-[#8d82a8]">{t("cinema.details.myRating")}</p>
                   {isSavingRating && <Loader2 size={16} className="animate-spin text-[#d4a642]" />}
                 </div>
                 <div className="flex gap-2">
@@ -78,12 +80,12 @@ export default function MovieDetailsModal({
                 </div>
                 {needsRatingPrompt && (
                   <p className="text-xs text-[#7f68b7] mt-3">
-                    Choisis une note pour ajouter ce film dans "Deja vus".
+                    {t("cinema.details.ratingPrompt")}
                   </p>
                 )}
                 {isInHistory && !needsRatingPrompt && (
                   <p className="text-xs text-[#4fa070] mt-3">
-                    Ce film est enregistre dans ta liste des films vus.
+                    {t("cinema.details.savedInHistory")}
                   </p>
                 )}
               </div>
@@ -99,7 +101,7 @@ export default function MovieDetailsModal({
               </div>
 
               <div>
-                <h3 className="text-[#8d82a8] text-xs uppercase tracking-wider font-semibold mb-3 flex items-center gap-2"><Users size={16}/> Distribution</h3>
+                <h3 className="text-[#8d82a8] text-xs uppercase tracking-wider font-semibold mb-3 flex items-center gap-2"><Users size={16}/>{t("cinema.details.cast")}</h3>
                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                   <div className="flex flex-col items-center min-w-[80px]">
                     <div className="w-16 h-16 rounded-full bg-[#f6f0eb] border-2 border-[#f0ddac] flex items-center justify-center mb-2 overflow-hidden"><Clapperboard size={24} className="text-[#8d82a8]"/></div>
@@ -118,7 +120,7 @@ export default function MovieDetailsModal({
             </div>
 
             <div className="p-4 border-t border-[#eee5dc] bg-white shrink-0 absolute bottom-0 w-full">
-              <button onClick={closeModale} className="w-full py-4 bg-[#f6f0eb] hover:bg-[#efe7de] text-[#5e4e89] rounded-xl font-semibold transition">Fermer</button>
+              <button onClick={closeModale} className="w-full py-4 bg-[#f6f0eb] hover:bg-[#efe7de] text-[#5e4e89] rounded-xl font-semibold transition">{t("cinema.details.close")}</button>
             </div>
           </>
         )}

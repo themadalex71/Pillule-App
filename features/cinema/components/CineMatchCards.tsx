@@ -2,6 +2,7 @@ import React, { memo, useMemo, useRef } from 'react';
 import TinderCard from 'react-tinder-card';
 import { Loader2, Popcorn, Star, Info, EyeOff } from 'lucide-react';
 import { MovieBasic } from '../types';
+import { useI18n } from '@/components/I18nProvider';
 
 interface CineMatchCardsProps {
   movies: MovieBasic[];
@@ -27,6 +28,7 @@ const CineMatchCardItem = memo(function CineMatchCardItem({
   onSwipe: (direction: string, movie: MovieBasic) => void;
   openMovieDetails: (id: number) => void;
 }) {
+  const { t } = useI18n();
   return (
     <TinderCard
       ref={registerRef}
@@ -69,7 +71,7 @@ const CineMatchCardItem = memo(function CineMatchCardItem({
 
         <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
           <h2 className="text-3xl font-black mb-2 drop-shadow-lg line-clamp-2">{movie.title}</h2>
-          <p className="text-[#f4eef8] text-sm leading-relaxed line-clamp-3 drop-shadow-md">{movie.overview || 'Pas de resume disponible.'}</p>
+          <p className="text-[#f4eef8] text-sm leading-relaxed line-clamp-3 drop-shadow-md">{movie.overview || t("cinema.common.noOverview")}</p>
         </div>
       </div>
     </TinderCard>
@@ -77,6 +79,7 @@ const CineMatchCardItem = memo(function CineMatchCardItem({
 });
 
 export default function CineMatchCards({ movies, loading, onSwipe, openMovieDetails, fetchDiscoverMovies, emptySubtitle }: CineMatchCardsProps) {
+  const { t } = useI18n();
   const cardRefs = useRef<any[]>([]);
   const visibleMovies = useMemo(() => movies.slice(-VISIBLE_STACK_SIZE), [movies]);
 
@@ -84,7 +87,7 @@ export default function CineMatchCards({ movies, loading, onSwipe, openMovieDeta
     return (
       <div className="h-full flex flex-col justify-center items-center text-[#8d82a8]">
         <Loader2 size={40} className="animate-spin mb-4" />
-        <p>Chargement des cartes...</p>
+        <p>{t("cinema.cards.loading")}</p>
       </div>
     );
   }
@@ -93,9 +96,9 @@ export default function CineMatchCards({ movies, loading, onSwipe, openMovieDeta
     return (
       <div className="h-full flex flex-col justify-center items-center text-center text-[#8d82a8] px-8">
         <EyeOff size={48} className="mb-4 text-[#b2a7c9]" />
-        <h2 className="font-semibold text-xl text-[#4b3d6d] mb-2">Plus de films a te proposer</h2>
-        <p className="text-sm mb-6">{emptySubtitle || 'Relance une recherche ou change les filtres.'}</p>
-        <button onClick={fetchDiscoverMovies} className="bg-[#ef9a79] text-white font-semibold px-6 py-3 rounded-2xl">Recharger</button>
+        <h2 className="font-semibold text-xl text-[#4b3d6d] mb-2">{t("cinema.cards.noMoreTitle")}</h2>
+        <p className="text-sm mb-6">{emptySubtitle || t("cinema.cards.noMoreSubtitle")}</p>
+        <button onClick={fetchDiscoverMovies} className="bg-[#ef9a79] text-white font-semibold px-6 py-3 rounded-2xl">{t("cinema.cards.reload")}</button>
       </div>
     );
   }

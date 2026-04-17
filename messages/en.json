@@ -253,5 +253,144 @@
         "pushDisableDevice": "Unable to disable push on this device."
       }
     }
+  },
+  "cinema": {
+    "appTitle": "Cinema",
+    "common": {
+      "member": "Member",
+      "movies": "movies",
+      "members": "members",
+      "noOverview": "No overview available."
+    },
+    "errors": {
+      "matchSound": "Unable to play match sound:",
+      "notAuthenticated": "User not authenticated.",
+      "apiConnection": "Unable to connect to Cinema API",
+      "matchesConnection": "Unable to connect to Matches API.",
+      "checkConsole": "Check the console (F12)."
+    },
+    "auth": {
+      "loadHouseholdError": "Unable to load your household.",
+      "loadingSession": "Loading your session...",
+      "requiredTitle": "Sign-in required",
+      "requiredDescription": "Sign in again to continue."
+    },
+    "import": {
+      "completedPrefix": "Import from",
+      "completedSuffix": "completed!",
+      "inProgressTitle": "Import in progress.",
+      "inProgressSubtitle": "Please do not leave this page."
+    },
+    "discover": {
+      "emptyByFilters": "No movie matches these filters.",
+      "emptyAlreadyHandled": "All found movies are already in your lists or in Not interested."
+    },
+    "matches": {
+      "disabledMessage": "Match mode is available after joining a household."
+    },
+    "reset": {
+      "confirmAll": "Do you really want to delete all your cinema lists (Watchlist + Watched + Not interested)?",
+      "failed": "Unable to reset cinema lists."
+    },
+    "match": {
+      "defaultMember": "a household member",
+      "withPrefix": "With",
+      "title": "MATCH!"
+    },
+    "tabs": {
+      "cinematch": "CineMatch",
+      "myLists": "My Lists",
+      "catalogue": "Catalog",
+      "watchlist": "Watchlist",
+      "watched": "Watched",
+      "notInterested": "Not interested",
+      "matches": "Our Matches"
+    },
+    "hub": {
+      "watchlistSubtitle": "Your personal watchlist",
+      "watchedSubtitle": "Your rated history",
+      "dismissedSubtitle": "Movies dismissed in CineMatch",
+      "matchesSubtitleEnabled": "Movies present in multiple wishlists",
+      "matchesSubtitleDisabled": "Join a household to enable this feature",
+      "importTitle": "Import CSV",
+      "importSubtitle": "Watchlist / Diary / Ratings",
+      "resetTitle": "Reset my lists",
+      "resetSubtitle": "Delete Watchlist + Watched + Not interested"
+    },
+    "cards": {
+      "loading": "Loading cards...",
+      "noMoreTitle": "No more movies to suggest",
+      "noMoreSubtitle": "Run a new search or change filters.",
+      "reload": "Reload"
+    },
+    "catalogue": {
+      "loadMore": "Load more"
+    },
+    "list": {
+      "tmdbRatingPrefix": "TMDB rating:",
+      "myRatingPrefix": "My rating:",
+      "ratedOnPrefix": "On",
+      "matchWithPrefix": "Match with",
+      "emptyTitle": "Empty list",
+      "emptySubtitle": "Add some movies to fill this space."
+    },
+    "deleteModal": {
+      "title": "Delete this movie?",
+      "subtitle": "will be removed from the list.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
+    "details": {
+      "loading": "Loading...",
+      "inWishlist": "In Watchlist",
+      "addToWishlist": "Add",
+      "seen": "Seen",
+      "iHaveSeen": "I've seen it",
+      "myRating": "My rating",
+      "ratingPrompt": "Choose a rating to add this movie to Watched.",
+      "savedInHistory": "This movie is saved in your watched list.",
+      "cast": "Cast",
+      "close": "Close"
+    },
+    "filters": {
+      "title": "Filters and sorting",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Movie title...",
+      "genreLabel": "Genre",
+      "genreAll": "All",
+      "minRatingLabel": "Min rating",
+      "noMinimum": "None",
+      "minYearLabel": "Min year",
+      "minYearPlaceholder": "Ex: 1990",
+      "maxYearLabel": "Max year",
+      "examplePrefix": "Ex:",
+      "sortByLabel": "Sort by",
+      "sortNewest": "Newest",
+      "sortOldest": "Oldest",
+      "sortRating": "Best rated",
+      "sortPopularity": "Popular",
+      "reset": "Reset",
+      "apply": "Apply"
+    },
+    "genres": {
+      "28": "Action",
+      "12": "Adventure",
+      "16": "Animation",
+      "35": "Comedy",
+      "80": "Crime",
+      "99": "Documentary",
+      "18": "Drama",
+      "10751": "Family",
+      "14": "Fantasy",
+      "36": "History",
+      "27": "Horror",
+      "10402": "Music",
+      "9648": "Mystery",
+      "10749": "Romance",
+      "878": "Science Fiction",
+      "53": "Thriller",
+      "10752": "War",
+      "37": "Western"
+    }
   }
 }
