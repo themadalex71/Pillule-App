@@ -4,6 +4,7 @@
     "theme": "Theme",
     "light": "Clair",
     "dark": "Sombre",
+    "system": "Comme le navigateur",
     "toggleTheme": "Basculer le theme",
     "language": "Langue",
     "french": "Francais",

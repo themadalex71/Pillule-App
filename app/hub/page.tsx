@@ -36,6 +36,7 @@ import {
   type Household,
 } from "@/lib/firebase/households";
 import { useI18n } from "@/components/I18nProvider";
+import { useTheme } from "@/components/ThemeProvider";
 
 type HubTab = "profile" | "search" | "hh" | "household" | "settings";
 
@@ -974,6 +975,7 @@ function ProfileView({ user }: { user: User }) {
 
 function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
   const { t, locale, setLocale } = useI18n();
+  const { themePreference, setThemePreference } = useTheme();
   const getDetectedTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
   const timezoneOptions = useMemo(() => getTimeZoneOptions(), []);
   const timezoneLabelMap = useMemo(
@@ -1250,6 +1252,14 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     setLocale(value === "en" ? "en" : "fr");
   };
 
+  const handleThemePreferenceChange = (value: string) => {
+    if (value === "light" || value === "dark" || value === "system") {
+      setThemePreference(value);
+      return;
+    }
+    setThemePreference("system");
+  };
+
   const pushPermissionLabel =
     pushPermission === "granted"
       ? t("hub.settings.pushPermission.granted")
@@ -1282,6 +1292,19 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
           >
             <option value="fr">{t("common.french")}</option>
             <option value="en">{t("common.english")}</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("common.theme")}</span>
+          <select
+            value={themePreference}
+            onChange={(event) => handleThemePreferenceChange(event.target.value)}
+            className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
+          >
+            <option value="light">{t("common.light")}</option>
+            <option value="dark">{t("common.dark")}</option>
+            <option value="system">{t("common.system")}</option>
           </select>
         </label>
 

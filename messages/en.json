@@ -4,6 +4,7 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
+    "system": "Browser default",
     "toggleTheme": "Toggle theme",
     "language": "Language",
     "french": "French",

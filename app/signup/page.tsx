@@ -23,7 +23,7 @@ function HarmoHomeLogo({ tagline }: { tagline: string }) {
         <span className="text-[#8d7ac6]">Harmo</span>
         <span className="text-[#ef9a79]">Home</span>
       </h1>
-      <p className="mx-auto mt-3 max-w-[18rem] text-sm leading-5 text-[#8d82a8]">
+      <p className="mx-auto mt-3 max-w-[18rem] text-sm leading-5 text-[#8d82a8] dark:text-[#b9b2db]">
         {tagline}
       </p>
     </div>
@@ -33,12 +33,12 @@ function HarmoHomeLogo({ tagline }: { tagline: string }) {
 function BardBaronMark({ poweredByLabel }: { poweredByLabel: string }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] border border-[#efe4d8] bg-white">
+      <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] border border-[#efe4d8] bg-white dark:border-[#3b375b] dark:bg-[#17152b]">
         <span className="text-sm font-black tracking-[0.16em] text-[#8d7ac6]">BB</span>
       </div>
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#b2a7c9]">{poweredByLabel}</p>
-        <p className="mt-0.5 text-xs font-semibold text-[#6f628f]">BardBaron</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#b2a7c9] dark:text-[#8f88b5]">{poweredByLabel}</p>
+        <p className="mt-0.5 text-xs font-semibold text-[#6f628f] dark:text-[#cec8f4]">BardBaron</p>
       </div>
     </div>
   );
@@ -126,38 +126,38 @@ export default function SignUpPage() {
 
   if (!authReady) {
     return (
-      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fcf7f2] text-[#4c1d95]">
+      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fcf7f2] text-[#4c1d95] dark:bg-[#0f1020] dark:text-[#ece9ff]">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#efe5ff] border-t-[#ef9a79]" />
-          <p className="text-sm text-[#6b21a8]">{t("signup.preparing")}</p>
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#efe5ff] border-t-[#ef9a79] dark:border-[#2d2b4b] dark:border-t-[#ef9a79]" />
+          <p className="text-sm text-[#6b21a8] dark:text-[#d8d2fb]">{t("signup.preparing")}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] px-5 py-5 text-[#2e1065]">
+    <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] px-5 py-5 text-[#2e1065] dark:bg-[#0f1020] dark:text-[#ece9ff]">
       <div className="mx-auto flex h-[calc(100dvh-2.5rem)] w-full max-w-sm flex-col justify-between">
         <div className="pt-1">
           <HarmoHomeLogo tagline={t("signup.tagline")} />
         </div>
 
-        <section className="rounded-[1.8rem] border border-[#eee5dc] bg-white px-4 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
+        <section className="rounded-[1.8rem] border border-[#eee5dc] bg-white px-4 py-5 shadow-[0_12px_30px_rgba(111,98,143,0.08)] dark:border-[#2a2944] dark:bg-[#1a1830] dark:shadow-[0_14px_32px_rgba(0,0,0,0.38)]">
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ece4f7] bg-[#fcfbff] text-[#7f68b7]"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ece4f7] bg-[#fcfbff] text-[#7f68b7] dark:border-[#3b375a] dark:bg-[#221f3d] dark:text-[#b9adff]"
               aria-label={t("signup.backToLoginAria")}
             >
               <ArrowLeft size={18} />
             </Link>
-            <h2 className="text-left text-[1.65rem] font-semibold tracking-[-0.03em] text-[#4b3d6d]">
+            <h2 className="text-left text-[1.65rem] font-semibold tracking-[-0.03em] text-[#4b3d6d] dark:text-[#f0ebff]">
               {t("signup.title")}
             </h2>
           </div>
 
           {!firebaseReady && (
-            <div className="mt-3 rounded-2xl border border-[#f6d5c2] bg-[#fff8f3] px-4 py-3 text-sm text-[#9a5a39]">
+            <div className="mt-3 rounded-2xl border border-[#f6d5c2] bg-[#fff8f3] px-4 py-3 text-sm text-[#9a5a39] dark:border-[#5e4a3f] dark:bg-[#2b2018] dark:text-[#f2c8a9]">
               {t("signup.missingFirebase")}
             </div>
           )}
@@ -165,82 +165,82 @@ export default function SignUpPage() {
           <form className="mt-4 space-y-3" onSubmit={handleCreateAccount}>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("signup.lastNameLabel")}</span>
-                <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-                  <UserRound size={17} className="text-[#b19bd6]" />
+                <span className="mb-1.5 block text-sm font-medium text-[#6f628f] dark:text-[#c8c0e9]">{t("signup.lastNameLabel")}</span>
+                <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 dark:border-[#3b375a] dark:bg-[#221f3d]">
+                  <UserRound size={17} className="text-[#b19bd6] dark:text-[#a999e5]" />
                   <input
                     value={lastName}
                     onChange={(event) => setLastName(event.target.value)}
                     placeholder={t("signup.lastNamePlaceholder")}
-                    className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+                    className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7] dark:text-[#f0ebff] dark:placeholder:text-[#887fb4]"
                   />
                 </div>
               </label>
 
               <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("signup.firstNameLabel")}</span>
-                <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-                  <UserRound size={17} className="text-[#b19bd6]" />
+                <span className="mb-1.5 block text-sm font-medium text-[#6f628f] dark:text-[#c8c0e9]">{t("signup.firstNameLabel")}</span>
+                <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 dark:border-[#3b375a] dark:bg-[#221f3d]">
+                  <UserRound size={17} className="text-[#b19bd6] dark:text-[#a999e5]" />
                   <input
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
                     placeholder={t("signup.firstNamePlaceholder")}
-                    className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+                    className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7] dark:text-[#f0ebff] dark:placeholder:text-[#887fb4]"
                   />
                 </div>
               </label>
             </div>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("signup.emailLabel")}</span>
-              <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-                <Mail size={17} className="text-[#b19bd6]" />
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f] dark:text-[#c8c0e9]">{t("signup.emailLabel")}</span>
+              <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 dark:border-[#3b375a] dark:bg-[#221f3d]">
+                <Mail size={17} className="text-[#b19bd6] dark:text-[#a999e5]" />
                 <input
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder={t("signup.emailPlaceholder")}
-                  className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+                  className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7] dark:text-[#f0ebff] dark:placeholder:text-[#887fb4]"
                   autoComplete="email"
                 />
               </div>
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("signup.passwordLabel")}</span>
-              <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-                <Lock size={17} className="text-[#b19bd6]" />
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f] dark:text-[#c8c0e9]">{t("signup.passwordLabel")}</span>
+              <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 dark:border-[#3b375a] dark:bg-[#221f3d]">
+                <Lock size={17} className="text-[#b19bd6] dark:text-[#a999e5]" />
                 <input
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="********"
-                  className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+                  className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7] dark:text-[#f0ebff] dark:placeholder:text-[#887fb4]"
                   autoComplete="new-password"
                 />
               </div>
             </label>
 
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("signup.usernameLabel")}</span>
-              <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">
-                <User size={17} className="text-[#b19bd6]" />
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f] dark:text-[#c8c0e9]">{t("signup.usernameLabel")}</span>
+              <div className="flex items-center gap-3 rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 dark:border-[#3b375a] dark:bg-[#221f3d]">
+                <User size={17} className="text-[#b19bd6] dark:text-[#a999e5]" />
                 <input
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder={t("signup.usernamePlaceholder")}
-                  className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
+                  className="w-full bg-transparent text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7] dark:text-[#f0ebff] dark:placeholder:text-[#887fb4]"
                 />
               </div>
             </label>
 
             {errorMessage && (
-              <div className="rounded-2xl border border-[#f5d1d8] bg-[#fff6f7] px-4 py-2.5 text-sm text-[#b4536b]">
+              <div className="rounded-2xl border border-[#f5d1d8] bg-[#fff6f7] px-4 py-2.5 text-sm text-[#b4536b] dark:border-[#693149] dark:bg-[#2a1420] dark:text-[#f2a6be]">
                 {errorMessage}
               </div>
             )}
 
             {infoMessage && (
-              <div className="rounded-2xl border border-[#f4dec7] bg-[#fffaf3] px-4 py-2.5 text-sm text-[#a36a40]">
+              <div className="rounded-2xl border border-[#f4dec7] bg-[#fffaf3] px-4 py-2.5 text-sm text-[#a36a40] dark:border-[#5c4a2f] dark:bg-[#2a2418] dark:text-[#f0c995]">
                 {infoMessage}
               </div>
             )}
