@@ -15,7 +15,6 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase/client";
 import { useI18n } from "@/components/I18nProvider";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 function HarmoHomeLogo({ tagline }: { tagline: string }) {
   return (
@@ -140,9 +139,6 @@ export default function SignUpPage() {
     <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] px-5 py-5 text-[#2e1065]">
       <div className="mx-auto flex h-[calc(100dvh-2.5rem)] w-full max-w-sm flex-col justify-between">
         <div className="pt-1">
-          <div className="mb-3 flex justify-end">
-            <LanguageSwitcher compact />
-          </div>
           <HarmoHomeLogo tagline={t("signup.tagline")} />
         </div>
 

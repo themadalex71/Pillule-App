@@ -1,6 +1,10 @@
 {
   "common": {
     "loading": "Loading...",
+    "theme": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "toggleTheme": "Toggle theme",
     "language": "Language",
     "french": "French",
     "english": "English",

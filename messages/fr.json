@@ -1,6 +1,10 @@
 {
   "common": {
     "loading": "Chargement...",
+    "theme": "Theme",
+    "light": "Clair",
+    "dark": "Sombre",
+    "toggleTheme": "Basculer le theme",
     "language": "Langue",
     "french": "Francais",
     "english": "Anglais",

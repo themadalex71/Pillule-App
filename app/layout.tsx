@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import AppBootstrap from "@/components/AppBootstrap";
 import { I18nProvider } from "@/components/I18nProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "HarmoHome",
@@ -16,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
-        <I18nProvider>
-          <AppBootstrap />
-          {children}
-        </I18nProvider>
+        <ThemeProvider>
+          <I18nProvider>
+            <AppBootstrap />
+            {children}
+          </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -36,7 +36,6 @@ import {
   type Household,
 } from "@/lib/firebase/households";
 import { useI18n } from "@/components/I18nProvider";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 type HubTab = "profile" | "search" | "hh" | "household" | "settings";
 
@@ -210,9 +209,6 @@ export default function HubPage() {
     <main className="min-h-[100dvh] bg-[#fcf7f2] px-5 pb-28 pt-5 text-[#2e1065]">
       <div className="mx-auto w-full max-w-sm">
         <div className="pb-6 pt-1">
-          <div className="mb-3 flex justify-end">
-            <LanguageSwitcher compact />
-          </div>
           <HarmoHomeLogo tagline={t("login.tagline")} />
         </div>
 
@@ -977,7 +973,7 @@ function ProfileView({ user }: { user: User }) {
 }
 
 function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
-  const { t } = useI18n();
+  const { t, locale, setLocale } = useI18n();
   const getDetectedTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
   const timezoneOptions = useMemo(() => getTimeZoneOptions(), []);
   const timezoneLabelMap = useMemo(
@@ -1250,6 +1246,10 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     }
   };
 
+  const handleLocaleChange = (value: string) => {
+    setLocale(value === "en" ? "en" : "fr");
+  };
+
   const pushPermissionLabel =
     pushPermission === "granted"
       ? t("hub.settings.pushPermission.granted")
@@ -1272,6 +1272,18 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
             {t("hub.settings.intro")}
           </p>
         </div>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">{t("common.language")}</span>
+          <select
+            value={locale}
+            onChange={(event) => handleLocaleChange(event.target.value)}
+            className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
+          >
+            <option value="fr">{t("common.french")}</option>
+            <option value="en">{t("common.english")}</option>
+          </select>
+        </label>
 
         {isLoading ? (
           <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4 text-sm text-[#6f628f]">
