@@ -83,6 +83,48 @@ function getTimeZoneOptions() {
   return [...COMMON_TIMEZONES];
 }
 
+function toUtcOffsetLabel(rawOffset: string) {
+  const normalized = rawOffset.trim().toUpperCase();
+
+  if (normalized === "UTC" || normalized === "GMT") {
+    return "UTC+00:00";
+  }
+
+  const match = normalized.match(/^GMT([+-])(\d{1,2})(?::?(\d{2}))?$/);
+  if (!match) {
+    return null;
+  }
+
+  const sign = match[1];
+  const hours = match[2].padStart(2, "0");
+  const minutes = (match[3] || "00").padStart(2, "0");
+  return `UTC${sign}${hours}:${minutes}`;
+}
+
+function getTimeZoneOffset(zone: string) {
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      timeZoneName: "shortOffset",
+    });
+    const parts = formatter.formatToParts(new Date());
+    const offsetPart = parts.find((part) => part.type === "timeZoneName")?.value || "";
+    return toUtcOffsetLabel(offsetPart);
+  } catch {
+    return null;
+  }
+}
+
+function formatTimeZoneLabel(zone: string) {
+  const offset = getTimeZoneOffset(zone);
+
+  if (zone === "UTC") {
+    return offset ? `UTC (Temps universel, ${offset})` : "UTC (Temps universel)";
+  }
+
+  return offset ? `${zone} (${offset})` : zone;
+}
+
 function HarmoHomeLogo({ tagline }: { tagline: string }) {
   return (
     <div className="text-center">
@@ -911,6 +953,13 @@ function ProfileView({ user }: { user: User }) {
 function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promise<void> }) {
   const getDetectedTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
   const timezoneOptions = useMemo(() => getTimeZoneOptions(), []);
+  const timezoneLabelMap = useMemo(
+    () =>
+      Object.fromEntries(
+        timezoneOptions.map((zone) => [zone, formatTimeZoneLabel(zone)]),
+      ) as Record<string, string>,
+    [timezoneOptions],
+  );
   const [telegramChatId, setTelegramChatId] = useState("");
   const [timezone, setTimezone] = useState("Europe/Paris");
   const [pilluleEnabled, setPilluleEnabled] = useState(true);
@@ -1238,11 +1287,11 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
                   className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none placeholder:text-[#b9add7]"
                 >
                   {!timezoneOptions.includes(timezone) && timezone ? (
-                    <option value={timezone}>{timezone}</option>
+                    <option value={timezone}>{formatTimeZoneLabel(timezone)}</option>
                   ) : null}
                   {timezoneOptions.map((zone) => (
                     <option key={zone} value={zone}>
-                      {zone}
+                      {timezoneLabelMap[zone] || zone}
                     </option>
                   ))}
                 </select>
