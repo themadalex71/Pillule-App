@@ -1,6 +1,8 @@
 const DEFAULT_TIMEZONE = "Europe/Paris";
 const DEFAULT_PILLULE_REMINDER_HOUR = 20;
 const DEFAULT_GAME_REMINDER_HOUR = 19;
+const DEFAULT_GAME_RANDOM_MIN_HOUR = 10;
+const DEFAULT_GAME_RANDOM_MAX_HOUR = 21;
 
 type DateParts = {
   year: number;
@@ -104,6 +106,29 @@ export function isReminderDue(
   minuteWindow = 20,
 ) {
   return localHour === targetHour && localMinute >= 0 && localMinute < minuteWindow;
+}
+
+function hashToPositiveInt(value: string) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+export function getDailyRandomGameHour(
+  uid: string,
+  dateKey: string,
+  minHour = DEFAULT_GAME_RANDOM_MIN_HOUR,
+  maxHour = DEFAULT_GAME_RANDOM_MAX_HOUR,
+) {
+  const safeMin = Math.min(minHour, maxHour);
+  const safeMax = Math.max(minHour, maxHour);
+  const hourRange = safeMax - safeMin + 1;
+  const seed = `${uid}:${dateKey}`;
+  const hash = hashToPositiveInt(seed);
+  return safeMin + (hash % hourRange);
 }
 
 function parseDateKey(dateKey: string) {

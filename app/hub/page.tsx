@@ -873,7 +873,6 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
   const [gameEnabled, setGameEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [pilluleReminderHour, setPilluleReminderHour] = useState(20);
-  const [gameReminderHour, setGameReminderHour] = useState(19);
   const [webPushTokenCount, setWebPushTokenCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -914,7 +913,6 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     setGameEnabled(settings.gameEnabled !== false);
     setPushEnabled(settings.pushEnabled !== false);
     setPilluleReminderHour(Number.isFinite(settings.pilluleReminderHour) ? Number(settings.pilluleReminderHour) : 20);
-    setGameReminderHour(Number.isFinite(settings.gameReminderHour) ? Number(settings.gameReminderHour) : 19);
     setWebPushTokenCount(Array.isArray(settings.webPushTokens) ? settings.webPushTokens.length : 0);
   };
 
@@ -954,7 +952,6 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
     try {
       const token = await getAuthToken();
       const normalizedPilluleHour = Math.min(23, Math.max(0, Math.trunc(Number(pilluleReminderHour) || 0)));
-      const normalizedGameHour = Math.min(23, Math.max(0, Math.trunc(Number(gameReminderHour) || 0)));
 
       const response = await fetch("/api/user/notification-settings", {
         method: "POST",
@@ -969,7 +966,6 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
           gameEnabled,
           pushEnabled,
           pilluleReminderHour: normalizedPilluleHour,
-          gameReminderHour: normalizedGameHour,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -979,7 +975,6 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
       }
 
       setPilluleReminderHour(normalizedPilluleHour);
-      setGameReminderHour(normalizedGameHour);
       setSuccessMessage("Parametres enregistres.");
     } catch (error: any) {
       setErrorMessage(error?.message || "Impossible d'enregistrer les parametres.");
@@ -1209,30 +1204,23 @@ function SettingsView({ user, onSignOut }: { user: User; onSignOut: () => Promis
               </div>
             </label>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Rappel pilule (heure locale)</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={pilluleReminderHour}
-                  onChange={(event) => setPilluleReminderHour(Number(event.target.value))}
-                  className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
-                />
-              </label>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Rappel pilule (heure locale)</span>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                value={pilluleReminderHour}
+                onChange={(event) => setPilluleReminderHour(Number(event.target.value))}
+                className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
+              />
+            </label>
 
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-[#6f628f]">Rappel jeu (heure locale)</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={23}
-                  value={gameReminderHour}
-                  onChange={(event) => setGameReminderHour(Number(event.target.value))}
-                  className="w-full rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3 text-[15px] text-[#4c1d95] outline-none"
-                />
-              </label>
+            <div className="rounded-[1.4rem] border border-[#ece4f7] bg-[#fcfbff] p-4">
+              <p className="text-sm font-semibold text-[#4b3d6d]">Rappel jeux</p>
+              <p className="mt-1 text-xs text-[#8d82a8]">
+                L'heure de notification du jeu est tiree aleatoirement chaque jour (heure locale).
+              </p>
             </div>
 
             <label className="flex items-center justify-between rounded-2xl border border-[#ece4f7] bg-[#fcfbff] px-4 py-3">

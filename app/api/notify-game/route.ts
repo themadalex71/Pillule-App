@@ -5,6 +5,7 @@ import { ensureCronAuthorized } from '@/lib/cron/auth';
 import { getGameOfTheDay } from '@/features/daily/services/gameUtils';
 import { sendPushNotificationToUser } from '@/lib/notifications/push';
 import {
+  getDailyRandomGameHour,
   getLocalDateInfo,
   isReminderDue,
   normalizeUserNotificationSettings,
@@ -41,7 +42,8 @@ export async function GET(request: Request) {
       }
 
       const localNow = getLocalDateInfo(now, settings.timezone);
-      if (!isReminderDue(localNow.hour, localNow.minute, settings.gameReminderHour)) {
+      const targetGameHour = getDailyRandomGameHour(uid, localNow.dateKey);
+      if (!isReminderDue(localNow.hour, localNow.minute, targetGameHour)) {
         continue;
       }
 
