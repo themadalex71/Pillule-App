@@ -126,7 +126,7 @@ export default function SignUpPage() {
 
   if (!authReady) {
     return (
-      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fcf7f2] text-[#4c1d95] dark:bg-[#0f1020] dark:text-[#ece9ff]">
+      <main className="flex h-[100dvh] overflow-x-hidden items-center justify-center bg-[#fcf7f2] text-[#4c1d95] dark:bg-[#0f1020] dark:text-[#ece9ff]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#efe5ff] border-t-[#ef9a79] dark:border-[#2d2b4b] dark:border-t-[#ef9a79]" />
           <p className="text-sm text-[#6b21a8] dark:text-[#d8d2fb]">{t("signup.preparing")}</p>
@@ -136,8 +136,8 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] px-5 py-5 text-[#2e1065] dark:bg-[#0f1020] dark:text-[#ece9ff]">
-      <div className="mx-auto flex h-[calc(100dvh-2.5rem)] w-full max-w-sm flex-col justify-between">
+    <main className="min-h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#fcf7f2] px-5 py-5 text-[#2e1065] dark:bg-[#0f1020] dark:text-[#ece9ff]">
+      <div className="mx-auto flex min-h-[calc(100dvh-2.5rem)] w-full max-w-sm flex-col justify-between">
         <div className="pt-1">
           <HarmoHomeLogo tagline={t("signup.tagline")} />
         </div>

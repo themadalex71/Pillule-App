@@ -671,7 +671,7 @@ export default function CinemaPage() {
 
   if (!authReady || isLoadingHousehold) {
     return (
-      <main className="h-[100dvh] bg-[#fcf7f2] text-[#4b3d6d] flex items-center justify-center">
+      <main className="h-[100dvh] overflow-x-hidden bg-[#fcf7f2] text-[#4b3d6d] flex items-center justify-center">
         <div className="text-center">
           <Loader2 size={36} className="animate-spin mx-auto mb-3 text-[#8d82a8]" />
           <p className="text-sm text-[#8d82a8]">{t("cinema.auth.loadingSession")}</p>
@@ -682,7 +682,7 @@ export default function CinemaPage() {
 
   if (!user) {
     return (
-      <main className="h-[100dvh] bg-[#fcf7f2] text-[#4b3d6d] flex items-center justify-center p-6">
+      <main className="h-[100dvh] overflow-x-hidden bg-[#fcf7f2] text-[#4b3d6d] flex items-center justify-center p-6">
         <div className="max-w-sm w-full rounded-[1.8rem] border border-[#eee5dc] bg-white p-6 text-center shadow-[0_12px_30px_rgba(111,98,143,0.08)]">
           <p className="font-bold text-lg mb-2">{t("cinema.auth.requiredTitle")}</p>
           <p className="text-sm text-[#8d82a8] mb-5">{authError || t("cinema.auth.requiredDescription")}</p>
@@ -701,7 +701,7 @@ export default function CinemaPage() {
   const animatedMatchText = `${t("cinema.match.withPrefix")} ${matchLabel}`;
 
   return (
-    <main className="h-[100dvh] bg-[#fcf7f2] text-[#4b3d6d] flex flex-col relative overflow-hidden">
+    <main className="h-[100dvh] overflow-x-hidden bg-[#fcf7f2] text-[#4b3d6d] flex flex-col relative overflow-hidden">
       
       {showMatchAnimation && (
         <div className="fixed inset-0 z-[1000] bg-black/92 backdrop-blur-sm animate-in fade-in duration-300">
@@ -938,7 +938,11 @@ export default function CinemaPage() {
       {/* COMPOSANT FILTRES */}
       <FilterModal showFilters={showFilters} setShowFilters={setShowFilters} activeTab={activeTab} searchQuery={searchQuery} setSearchQuery={setSearchQuery} filters={filters} setFilters={setFilters} sortOption={sortOption} setSortOption={setSortOption} applyFilters={applyFilters} resetFilters={resetFilters} />
 
-      <div className={`flex-1 min-h-0 relative px-4 pt-4 pb-24 ${activeTab === 'cinematch' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+      <div
+        className={`flex-1 min-h-0 relative overflow-x-hidden px-4 pt-4 ${
+          activeTab === 'cinematch' ? 'overflow-hidden pb-4' : 'overflow-y-auto pb-24'
+        }`}
+      >
         {activeTab === 'hub' && (
           <div className="animate-in fade-in duration-300">
             <div className="grid grid-cols-1 gap-4">

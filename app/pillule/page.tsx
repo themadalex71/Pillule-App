@@ -3,7 +3,7 @@ import AppMiniHeader from '@/components/AppMiniHeader';
 
 export default function PillPage() {
   return (
-    <main className="min-h-[100dvh] overflow-hidden bg-[#fcf7f2] text-[#2e1065]">
+    <main className="min-h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#fcf7f2] text-[#2e1065]">
       <AppMiniHeader title="Pilule" titleKey="pillule.appTitle" />
 
       <div className="w-full px-0 py-4">

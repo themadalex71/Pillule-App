@@ -197,7 +197,7 @@ export default function HubPage() {
 
   if (!authReady || !user) {
     return (
-      <main className="flex min-h-[100dvh] items-center justify-center bg-[#fcf7f2] text-[#4c1d95]">
+      <main className="flex h-[100dvh] overflow-x-hidden items-center justify-center bg-[#fcf7f2] text-[#4c1d95]">
         <div className="text-center">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#efe5ff] border-t-[#ef9a79]" />
           <p className="text-sm text-[#6b21a8]">{t("hub.opening")}</p>
@@ -207,7 +207,7 @@ export default function HubPage() {
   }
 
   return (
-    <main className="min-h-[100dvh] bg-[#fcf7f2] px-5 pb-28 pt-5 text-[#2e1065]">
+    <main className="h-[100dvh] overflow-x-hidden overflow-y-auto bg-[#fcf7f2] px-5 pb-28 pt-5 text-[#2e1065]">
       <div className="mx-auto w-full max-w-sm">
         <div className="pb-6 pt-1">
           <HarmoHomeLogo tagline={t("login.tagline")} />

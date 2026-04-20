@@ -35,10 +35,10 @@ const CineMatchCardItem = memo(function CineMatchCardItem({
       key={movie.id}
       onSwipe={(dir) => onSwipe(dir, movie)}
       preventSwipe={['up']}
-      className="absolute inset-0 w-full touch-pan-y"
+      className="absolute inset-0 flex items-center justify-center touch-pan-y"
     >
       <div
-        className="relative h-[60vh] min-h-[24rem] max-h-[39rem] w-full rounded-[2rem] overflow-hidden shadow-[0_18px_40px_rgba(111,98,143,0.2)] border-2 border-[#efe4d8] bg-white will-change-transform sm:h-[66vh]"
+        className="relative h-full min-h-0 max-h-[39rem] w-full max-w-[22.5rem] rounded-[2rem] overflow-hidden border-2 border-[#efe4d8] bg-white shadow-[0_18px_40px_rgba(111,98,143,0.2)] will-change-transform"
         style={{
           zIndex: stackIndex + 1,
           transform: `scale(${1 - stackIndex * 0.03}) translateY(${stackIndex * 10}px)`,
@@ -104,7 +104,7 @@ export default function CineMatchCards({ movies, loading, onSwipe, openMovieDeta
   }
 
   return (
-    <div className="relative w-full h-full max-w-sm mx-auto">
+    <div className="relative mx-auto h-full w-full max-w-sm overflow-hidden">
       {visibleMovies.map((movie, index) => (
         <CineMatchCardItem
           key={movie.id}
